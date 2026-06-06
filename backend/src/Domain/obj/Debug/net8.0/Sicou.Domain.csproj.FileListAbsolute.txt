@@ -1,0 +1,11 @@
+C:\Users\kinha\sicou\backend\src\Domain\bin\Debug\net8.0\Sicou.Domain.deps.json
+C:\Users\kinha\sicou\backend\src\Domain\bin\Debug\net8.0\Sicou.Domain.dll
+C:\Users\kinha\sicou\backend\src\Domain\bin\Debug\net8.0\Sicou.Domain.pdb
+C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\Sicou.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\Sicou.Domain.AssemblyInfoInputs.cache
+C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\Sicou.Domain.AssemblyInfo.cs
+C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\Sicou.Domain.csproj.CoreCompileInputs.cache
+C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\Sicou.Domain.dll
+C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\refint\Sicou.Domain.dll
+C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\Sicou.Domain.pdb
+C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\ref\Sicou.Domain.dll

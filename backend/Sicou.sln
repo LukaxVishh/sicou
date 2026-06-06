@@ -1,0 +1,64 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{34CD3D45-42C9-49F4-970A-726791377081}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sicou.UnitTests", "tests\Sicou.UnitTests\Sicou.UnitTests.csproj", "{3576025B-7065-4008-BE10-EB20766422A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sicou.IntegrationTests", "tests\Sicou.IntegrationTests\Sicou.IntegrationTests.csproj", "{7BD6227D-C2A2-48D8-96FE-10C0526385EB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{EAAB93AF-594C-4797-A157-88D40502A230}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sicou.Api", "src\Api\Sicou.Api.csproj", "{363F96E6-7DE2-49FC-9C5C-67E453AB8E07}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sicou.Domain", "src\Domain\Sicou.Domain.csproj", "{D2336210-2FD4-4F70-BF03-E5E29721CF3B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sicou.Application", "src\Application\Sicou.Application.csproj", "{BC4C3312-A4AA-4D22-AC78-C7FE19DAFC72}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sicou.Infrastructure", "src\Infrastructure\Sicou.Infrastructure.csproj", "{DA71FFB0-9583-45B3-8336-84C8B0AAA788}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3576025B-7065-4008-BE10-EB20766422A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3576025B-7065-4008-BE10-EB20766422A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3576025B-7065-4008-BE10-EB20766422A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3576025B-7065-4008-BE10-EB20766422A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BD6227D-C2A2-48D8-96FE-10C0526385EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BD6227D-C2A2-48D8-96FE-10C0526385EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BD6227D-C2A2-48D8-96FE-10C0526385EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BD6227D-C2A2-48D8-96FE-10C0526385EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{363F96E6-7DE2-49FC-9C5C-67E453AB8E07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{363F96E6-7DE2-49FC-9C5C-67E453AB8E07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{363F96E6-7DE2-49FC-9C5C-67E453AB8E07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{363F96E6-7DE2-49FC-9C5C-67E453AB8E07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2336210-2FD4-4F70-BF03-E5E29721CF3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2336210-2FD4-4F70-BF03-E5E29721CF3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2336210-2FD4-4F70-BF03-E5E29721CF3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2336210-2FD4-4F70-BF03-E5E29721CF3B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC4C3312-A4AA-4D22-AC78-C7FE19DAFC72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC4C3312-A4AA-4D22-AC78-C7FE19DAFC72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC4C3312-A4AA-4D22-AC78-C7FE19DAFC72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC4C3312-A4AA-4D22-AC78-C7FE19DAFC72}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA71FFB0-9583-45B3-8336-84C8B0AAA788}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA71FFB0-9583-45B3-8336-84C8B0AAA788}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA71FFB0-9583-45B3-8336-84C8B0AAA788}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA71FFB0-9583-45B3-8336-84C8B0AAA788}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3576025B-7065-4008-BE10-EB20766422A5} = {34CD3D45-42C9-49F4-970A-726791377081}
+		{7BD6227D-C2A2-48D8-96FE-10C0526385EB} = {34CD3D45-42C9-49F4-970A-726791377081}
+		{363F96E6-7DE2-49FC-9C5C-67E453AB8E07} = {EAAB93AF-594C-4797-A157-88D40502A230}
+		{D2336210-2FD4-4F70-BF03-E5E29721CF3B} = {EAAB93AF-594C-4797-A157-88D40502A230}
+		{BC4C3312-A4AA-4D22-AC78-C7FE19DAFC72} = {EAAB93AF-594C-4797-A157-88D40502A230}
+		{DA71FFB0-9583-45B3-8336-84C8B0AAA788} = {EAAB93AF-594C-4797-A157-88D40502A230}
+	EndGlobalSection
+EndGlobal

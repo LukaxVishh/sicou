@@ -1,0 +1,388 @@
+{
+  "format": 1,
+  "restore": {
+    "c:\\Users\\kinha\\sicou\\backend\\tests\\Sicou.IntegrationTests\\Sicou.IntegrationTests.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\kinha\\sicou\\backend\\src\\Api\\Sicou.Api.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\kinha\\sicou\\backend\\src\\Api\\Sicou.Api.csproj",
+        "projectName": "Sicou.Api",
+        "projectPath": "C:\\Users\\kinha\\sicou\\backend\\src\\Api\\Sicou.Api.csproj",
+        "packagesPath": "C:\\Users\\kinha\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\kinha\\sicou\\backend\\src\\Api\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\kinha\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "c:\\Users\\kinha\\sicou\\backend\\src\\Application\\Sicou.Application.csproj": {
+                "projectPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Application\\Sicou.Application.csproj"
+              },
+              "C:\\Users\\kinha\\sicou\\backend\\src\\Infrastructure\\Sicou.Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\kinha\\sicou\\backend\\src\\Infrastructure\\Sicou.Infrastructure.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.AspNetCore.OpenApi": {
+              "target": "Package",
+              "version": "[8.0.14, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.6.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.407/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "c:\\Users\\kinha\\sicou\\backend\\src\\Application\\Sicou.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "c:\\Users\\kinha\\sicou\\backend\\src\\Application\\Sicou.Application.csproj",
+        "projectName": "Sicou.Application",
+        "projectPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Application\\Sicou.Application.csproj",
+        "packagesPath": "C:\\Users\\kinha\\.nuget\\packages\\",
+        "outputPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Application\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\kinha\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj": {
+                "projectPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "FluentValidation": {
+              "target": "Package",
+              "version": "[12.1.1, )"
+            },
+            "FluentValidation.DependencyInjectionExtensions": {
+              "target": "Package",
+              "version": "[12.1.1, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.407/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj",
+        "projectName": "Sicou.Domain",
+        "projectPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj",
+        "packagesPath": "C:\\Users\\kinha\\.nuget\\packages\\",
+        "outputPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\kinha\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.407/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\kinha\\sicou\\backend\\src\\Infrastructure\\Sicou.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\kinha\\sicou\\backend\\src\\Infrastructure\\Sicou.Infrastructure.csproj",
+        "projectName": "Sicou.Infrastructure",
+        "projectPath": "C:\\Users\\kinha\\sicou\\backend\\src\\Infrastructure\\Sicou.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\kinha\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\kinha\\sicou\\backend\\src\\Infrastructure\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\kinha\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "c:\\Users\\kinha\\sicou\\backend\\src\\Application\\Sicou.Application.csproj": {
+                "projectPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Application\\Sicou.Application.csproj"
+              },
+              "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj": {
+                "projectPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.407/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "c:\\Users\\kinha\\sicou\\backend\\tests\\Sicou.IntegrationTests\\Sicou.IntegrationTests.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "c:\\Users\\kinha\\sicou\\backend\\tests\\Sicou.IntegrationTests\\Sicou.IntegrationTests.csproj",
+        "projectName": "Sicou.IntegrationTests",
+        "projectPath": "c:\\Users\\kinha\\sicou\\backend\\tests\\Sicou.IntegrationTests\\Sicou.IntegrationTests.csproj",
+        "packagesPath": "C:\\Users\\kinha\\.nuget\\packages\\",
+        "outputPath": "c:\\Users\\kinha\\sicou\\backend\\tests\\Sicou.IntegrationTests\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\kinha\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\kinha\\sicou\\backend\\src\\Api\\Sicou.Api.csproj": {
+                "projectPath": "C:\\Users\\kinha\\sicou\\backend\\src\\Api\\Sicou.Api.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.NET.Test.Sdk": {
+              "target": "Package",
+              "version": "[17.8.0, )"
+            },
+            "coverlet.collector": {
+              "target": "Package",
+              "version": "[6.0.0, )"
+            },
+            "xunit": {
+              "target": "Package",
+              "version": "[2.5.3, )"
+            },
+            "xunit.runner.visualstudio": {
+              "target": "Package",
+              "version": "[2.5.3, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.407/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+c:\Users\kinha\sicou\backend\src\Application\bin\Debug\net8.0\Sicou.Application.deps.json
+C:\Users\kinha\sicou\backend\src\Application\bin\Debug\net8.0\Sicou.Application.dll
+C:\Users\kinha\sicou\backend\src\Application\bin\Debug\net8.0\Sicou.Application.pdb
+C:\Users\kinha\sicou\backend\src\Application\bin\Debug\net8.0\Sicou.Domain.dll
+C:\Users\kinha\sicou\backend\src\Application\bin\Debug\net8.0\Sicou.Domain.pdb
+C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Application.csproj.AssemblyReference.cache
+C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Application.AssemblyInfoInputs.cache
+C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Application.AssemblyInfo.cs
+C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Application.csproj.CoreCompileInputs.cache
+c:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Ap.2DDFC4E8.Up2Date
+C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Application.dll
+C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\refint\Sicou.Application.dll
+C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Application.pdb
+c:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\ref\Sicou.Application.dll
