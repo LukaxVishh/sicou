@@ -105,3 +105,4 @@ C:\Users\kinha\sicou\backend\tests\Sicou.UnitTests\obj\Debug\net8.0\refint\Sicou
 C:\Users\kinha\sicou\backend\tests\Sicou.UnitTests\obj\Debug\net8.0\Sicou.UnitTests.pdb
 C:\Users\kinha\sicou\backend\tests\Sicou.UnitTests\obj\Debug\net8.0\Sicou.UnitTests.genruntimeconfig.cache
 C:\Users\kinha\sicou\backend\tests\Sicou.UnitTests\obj\Debug\net8.0\ref\Sicou.UnitTests.dll
+C:\Users\kinha\sicou\backend\tests\Sicou.UnitTests\obj\Debug\net8.0\Sicou.UnitTests.sourcelink.json

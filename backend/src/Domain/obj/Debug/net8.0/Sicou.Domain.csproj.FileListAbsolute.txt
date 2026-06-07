@@ -9,3 +9,4 @@ C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\Sicou.Domain.dll
 C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\refint\Sicou.Domain.dll
 C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\Sicou.Domain.pdb
 C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\ref\Sicou.Domain.dll
+C:\Users\kinha\sicou\backend\src\Domain\obj\Debug\net8.0\Sicou.Domain.sourcelink.json

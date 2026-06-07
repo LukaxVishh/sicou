@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj": {}
+    "C:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj": {}
   },
   "projects": {
-    "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj": {
+    "C:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj",
+        "projectUniqueName": "C:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj",
         "projectName": "Sicou.Domain",
-        "projectPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj",
+        "projectPath": "C:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj",
         "packagesPath": "C:\\Users\\kinha\\.nuget\\packages\\",
-        "outputPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\obj\\",
+        "outputPath": "C:\\Users\\kinha\\sicou\\backend\\src\\Domain\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\kinha\\AppData\\Roaming\\NuGet\\NuGet.Config"

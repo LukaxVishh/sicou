@@ -13,3 +13,4 @@ C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Application.
 C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\refint\Sicou.Application.dll
 C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Application.pdb
 c:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\ref\Sicou.Application.dll
+C:\Users\kinha\sicou\backend\src\Application\obj\Debug\net8.0\Sicou.Application.sourcelink.json

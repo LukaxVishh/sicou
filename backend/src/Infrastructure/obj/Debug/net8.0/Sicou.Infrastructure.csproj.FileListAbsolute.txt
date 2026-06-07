@@ -17,3 +17,4 @@ C:\Users\kinha\sicou\backend\src\Infrastructure\obj\Debug\net8.0\Sicou.Infrastru
 C:\Users\kinha\sicou\backend\src\Infrastructure\obj\Debug\net8.0\ref\Sicou.Infrastructure.dll
 C:\Users\kinha\sicou\backend\src\Infrastructure\bin\Debug\net8.0\Sicou.Infrastructure.runtimeconfig.json
 C:\Users\kinha\sicou\backend\src\Infrastructure\obj\Debug\net8.0\Sicou.Infrastructure.genruntimeconfig.cache
+C:\Users\kinha\sicou\backend\src\Infrastructure\obj\Debug\net8.0\Sicou.Infrastructure.sourcelink.json

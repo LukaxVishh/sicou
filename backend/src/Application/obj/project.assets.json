@@ -139,8 +139,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj": {
-              "projectPath": "c:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj"
+            "C:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj": {
+              "projectPath": "C:\\Users\\kinha\\sicou\\backend\\src\\Domain\\Sicou.Domain.csproj"
             }
           }
         }

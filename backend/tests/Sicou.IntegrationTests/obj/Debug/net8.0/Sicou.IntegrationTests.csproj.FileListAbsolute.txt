@@ -132,3 +132,4 @@ C:\Users\kinha\sicou\backend\tests\Sicou.IntegrationTests\bin\Debug\net8.0\Micro
 C:\Users\kinha\sicou\backend\tests\Sicou.IntegrationTests\bin\Debug\net8.0\Npgsql.dll
 C:\Users\kinha\sicou\backend\tests\Sicou.IntegrationTests\bin\Debug\net8.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
 C:\Users\kinha\sicou\backend\tests\Sicou.IntegrationTests\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\kinha\sicou\backend\tests\Sicou.IntegrationTests\obj\Debug\net8.0\Sicou.IntegrationTests.sourcelink.json
