@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Sicou.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7fbf3bc98f09743d1fd1a65c52c093d1ae88fe42")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0259023a6cf78d4289df1e4285f4d2f40b34b22d")]
 [assembly: System.Reflection.AssemblyProductAttribute("Sicou.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Sicou.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

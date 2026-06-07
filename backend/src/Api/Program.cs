@@ -1,10 +1,12 @@
 using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using Sicou.Infrastructure.Extensions;
+using Sicou.Domain.Constants;
 using Microsoft.OpenApi.Models;
 using Sicou.Infrastructure.Seed;
 using System.Text.Json.Serialization;
+using Microsoft.IdentityModel.Tokens;
+using Sicou.Infrastructure.Extensions;
+using Sicou.Infrastructure.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,7 +88,27 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(SystemPolicies.CanViewArea, policy =>
+        policy.Requirements.Add(new AreaPermissionRequirement(SystemPolicies.CanViewArea)));
+
+    options.AddPolicy(SystemPolicies.CanManageArea, policy =>
+        policy.Requirements.Add(new AreaPermissionRequirement(SystemPolicies.CanManageArea)));
+
+    options.AddPolicy(SystemPolicies.CanPublishInformative, policy =>
+        policy.Requirements.Add(new AreaPermissionRequirement(SystemPolicies.CanPublishInformative)));
+
+    options.AddPolicy(SystemPolicies.CanManageGuide, policy =>
+        policy.Requirements.Add(new AreaPermissionRequirement(SystemPolicies.CanManageGuide)));
+
+    options.AddPolicy(SystemPolicies.CanManageWorkflow, policy =>
+        policy.Requirements.Add(new AreaPermissionRequirement(SystemPolicies.CanManageWorkflow)));
+
+    options.AddPolicy(SystemPolicies.CanHandleWorkflow, policy =>
+        policy.Requirements.Add(new AreaPermissionRequirement(SystemPolicies.CanHandleWorkflow)));
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

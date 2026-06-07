@@ -21,6 +21,8 @@ public class ApplicationDbContext
 
     public DbSet<AreaModule> AreaModules => Set<AreaModule>();
 
+    public DbSet<UserAreaAccess> UserAreaAccesses => Set<UserAreaAccess>();
+
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
@@ -252,6 +254,58 @@ public class ApplicationDbContext
 
             entity.HasIndex(x => new { x.AreaId, x.ModuleId })
                 .IsUnique();
+        });
+
+        builder.Entity<UserAreaAccess>(entity =>
+        {
+            entity.ToTable("user_area_accesses");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.UserId)
+                .IsRequired()
+                .HasMaxLength(450);
+
+            entity.Property(x => x.CanView)
+                .IsRequired();
+
+            entity.Property(x => x.CanManage)
+                .IsRequired();
+
+            entity.Property(x => x.CanPublishInformatives)
+                .IsRequired();
+
+            entity.Property(x => x.CanManageGuide)
+                .IsRequired();
+
+            entity.Property(x => x.CanManageWorkflows)
+                .IsRequired();
+
+            entity.Property(x => x.CanHandleWorkflowRequests)
+                .IsRequired();
+
+            entity.HasOne(x => x.Company)
+                .WithMany()
+                .HasForeignKey(x => x.CompanyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Unit)
+                .WithMany()
+                .HasForeignKey(x => x.UnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Area)
+                .WithMany()
+                .HasForeignKey(x => x.AreaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => new { x.UserId, x.CompanyId, x.UnitId, x.AreaId })
+                .IsUnique();
+
+            entity.HasIndex(x => x.UserId);
+            entity.HasIndex(x => x.CompanyId);
+            entity.HasIndex(x => x.UnitId);
+            entity.HasIndex(x => x.AreaId);
         });
     }
 

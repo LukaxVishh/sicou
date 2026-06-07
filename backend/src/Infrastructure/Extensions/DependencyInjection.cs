@@ -1,14 +1,16 @@
+using Sicou.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Sicou.Application.Interfaces.Auth;
-using Sicou.Infrastructure.Data;
-using Sicou.Infrastructure.Identity;
 using Sicou.Infrastructure.Services;
-using Sicou.Application.Interfaces.Repositories;
-using Sicou.Application.Interfaces.Services;
+using Sicou.Infrastructure.Identity;
+using Sicou.Application.Interfaces.Auth;
 using Sicou.Infrastructure.Repositories;
+using Microsoft.AspNetCore.Authorization;
+using Sicou.Infrastructure.Authorization;
+using Microsoft.Extensions.Configuration;
+using Sicou.Application.Interfaces.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Sicou.Application.Interfaces.Repositories;
 
 
 namespace Sicou.Infrastructure.Extensions;
@@ -44,17 +46,26 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IJwtTokenService, JwtTokenService>();
         
-        services.AddScoped<ICompanyRepository, CompanyRepository>();
-        services.AddScoped<ICompanyService, CompanyService>();
+        services.AddHttpContextAccessor();
 
         services.AddScoped<IUnitRepository, UnitRepository>();
-        services.AddScoped<IUnitService, UnitService>();
-
         services.AddScoped<IAreaRepository, AreaRepository>();
+        services.AddScoped<ICompanyRepository, CompanyRepository>();
+        services.AddScoped<IUserAreaAccessRepository, UserAreaAccessRepository>();
+
+        services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUnitService, UnitService>();
         services.AddScoped<IAreaService, AreaService>();
+        services.AddScoped<ICompanyService, CompanyService>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IUserAreaAccessService, UserAreaAccessService>();
+
+        services.AddScoped<IAuthorizationHandler, AreaPermissionHandler>();
+
 
         return services;
     }

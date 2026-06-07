@@ -335,6 +335,69 @@ namespace Sicou.Infrastructure.Data.Migrations
                     b.ToTable("units", (string)null);
                 });
 
+            modelBuilder.Entity("Sicou.Domain.Entities.UserAreaAccess", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AreaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CanHandleWorkflowRequests")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManage")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageGuide")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanManageWorkflows")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanPublishInformatives")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("CanView")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("UnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("UnitId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "CompanyId", "UnitId", "AreaId")
+                        .IsUnique();
+
+                    b.ToTable("user_area_accesses", (string)null);
+                });
+
             modelBuilder.Entity("Sicou.Infrastructure.Identity.ApplicationRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -547,6 +610,32 @@ namespace Sicou.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("Sicou.Domain.Entities.UserAreaAccess", b =>
+                {
+                    b.HasOne("Sicou.Domain.Entities.Area", "Area")
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Sicou.Domain.Entities.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Sicou.Domain.Entities.Unit", "Unit")
+                        .WithMany()
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Area");
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Unit");
                 });
 
             modelBuilder.Entity("Sicou.Domain.Entities.Area", b =>
