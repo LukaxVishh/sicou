@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: sicou-postgres-compose
+    environment:
+      POSTGRES_DB: sicou-dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: rootroot
+    ports:
+      - "5433:5432"
+    volumes:
+      - sicou_postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sicou-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=sicou-dev;Username=postgres;Password=rootroot
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  sicou_postgres_data:
