@@ -23,6 +23,7 @@ public class CompanyRepository : ICompanyRepository
     public async Task<IReadOnlyList<Company>> GetAllAsync()
     {
         return await _context.Companies
+            .Where(x => x.IsActive)
             .OrderBy(x => x.Name)
             .ToListAsync();
     }

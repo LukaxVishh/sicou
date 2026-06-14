@@ -25,7 +25,7 @@ public class UnitRepository : IUnitRepository
     {
         return await _context.Units
             .Include(x => x.Company)
-            .Where(x => x.CompanyId == companyId)
+            .Where(x => x.CompanyId == companyId && x.IsActive)
             .OrderBy(x => x.Name)
             .ToListAsync();
     }

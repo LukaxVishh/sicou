@@ -213,6 +213,7 @@ public class AreaService : IAreaService
             CreatedAt = area.CreatedAt,
             UpdatedAt = area.UpdatedAt,
             Modules = area.AreaModules
+                .Where(x => x.IsActive && x.Enabled)
                 .OrderBy(x => x.Module.Name)
                 .Select(x => new AreaModuleResponse
                 {

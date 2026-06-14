@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Sicou.IntegrationTests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0259023a6cf78d4289df1e4285f4d2f40b34b22d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+afb9e5168184fd7085e72000b149ca93bef64919")]
 [assembly: System.Reflection.AssemblyProductAttribute("Sicou.IntegrationTests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Sicou.IntegrationTests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

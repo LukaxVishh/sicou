@@ -1,4 +1,5 @@
 using System.Text;
+using Sicou.Api.Middlewares;
 using Sicou.Domain.Constants;
 using Microsoft.OpenApi.Models;
 using Sicou.Infrastructure.Seed;
@@ -6,6 +7,7 @@ using System.Text.Json.Serialization;
 using Microsoft.IdentityModel.Tokens;
 using Sicou.Infrastructure.Extensions;
 using Sicou.Infrastructure.Authorization;
+using Sicou.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +19,7 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddCorsConfiguration(builder.Configuration);
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -115,6 +118,8 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 await IdentitySeeder.SeedRolesAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
@@ -123,11 +128,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 
+app.UseHttpsRedirection();
+app.UseCorsConfiguration();
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

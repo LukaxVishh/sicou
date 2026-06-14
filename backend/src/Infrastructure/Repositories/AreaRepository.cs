@@ -37,7 +37,7 @@ public class AreaRepository : IAreaRepository
             .Include(x => x.Company)
             .Include(x => x.AreaModules)
                 .ThenInclude(x => x.Module)
-            .Where(x => x.CompanyId == companyId)
+            .Where(x => x.CompanyId == companyId && x.IsActive)
             .OrderBy(x => x.Name)
             .ToListAsync();
     }
