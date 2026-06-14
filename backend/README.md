@@ -1,100 +1,86 @@
 # Sicou Backend
 
-Backend do **Sicou**, um sistema voltado para organização, governança e centralização de processos entre uma sede administrativa e suas unidades.
+Backend do **Sicou**, uma plataforma modular para organização, governança e centralização de processos entre uma sede administrativa e suas unidades.
 
-O objetivo do sistema é permitir que empresas com estrutura de **sede e unidades** possam configurar suas áreas internas, habilitar módulos por área, gerenciar usuários, delegar permissões granulares e, nas próximas etapas, disponibilizar informativos, orientações e fluxos de trabalho para as unidades.
+O objetivo do sistema é permitir que uma empresa configure sua estrutura corporativa, cadastre unidades, organize áreas da sede, habilite módulos por área, gerencie usuários, delegue permissões granulares e, nas próximas fases, publique informativos, orientações e fluxos de trabalho para as unidades.
 
 ---
 
-## Contexto Rápido Para Continuação em Novo Chat
+## Contexto rápido para continuar o desenvolvimento
 
-Este projeto está sendo desenvolvido com a stack:
+Este README foi atualizado após a implementação da base administrativa consumida pelo frontend. O backend atual já suporta autenticação, cadastros centrais, gestão de usuários e controle granular por área.
+
+Stack principal:
 
 ```txt
-Backend: .NET 8 + ASP.NET Core Web API
-Banco: PostgreSQL
-ORM: Entity Framework Core
-Autenticação: ASP.NET Core Identity + JWT
-Autorização: Roles + Policies granulares
-Arquitetura: camadas Api, Application, Domain e Infrastructure
-Padrões: Repository Pattern, Service Layer, DTOs para Requests/Responses
-Frontend futuro: React + Tailwind
+.NET 8
+ASP.NET Core Web API
+Entity Framework Core
+PostgreSQL
+ASP.NET Core Identity
+JWT Bearer
+Swagger / OpenAPI
+Arquitetura em camadas
+Repository Pattern
+Service Layer
+DTOs de Request/Response
+Authorization Policies
 ```
 
-### Estado atual do backend
+Estado atual:
 
 ```txt
-Etapa 1 a 9  — Base central do sistema: concluída
-Etapa 10     — Governança granular de acessos: concluída
-Etapa 11     — CRUD administrativo de usuários: concluída
-Etapa 12     — Policies de autorização granular: concluída
-Próxima etapa recomendada: Etapa 13 — Módulo de Informativos
+Base de autenticação e autorização: concluída
+CRUD de empresas: concluído
+CRUD de unidades: concluído
+CRUD de áreas com módulos: concluído
+CRUD administrativo de usuários: concluído
+CRUD de acessos granulares por área: concluído no backend
+Policies granulares por área: concluídas
+Frontend administrativo consumindo empresas, unidades, áreas e usuários: em andamento/concluído nessas features
+Próxima etapa recomendada: tela de controle de acessos granulares no frontend e refinamento de autorização por escopo no backend
 ```
 
-### O que já funciona
+Resumo do que já funciona:
 
 ```txt
-Autenticação com Identity e JWT
-Swagger com Bearer Token
-Roles iniciais com seed
-Usuário admin promovido para SUPER_ADMIN
+Autenticação com login, registro e usuário atual
+JWT com roles no token
+Swagger com autenticação Bearer
+Seed das roles do sistema
+Seed dos módulos centrais
+Promoção manual de SUPER_ADMIN em desenvolvimento
 CRUD de Company
 CRUD de Unit
-CRUD de Area com módulos habilitados
-CRUD de UserAreaAccess
-CRUD administrativo de Users
+CRUD de Area
+Atualização de módulos habilitados por Area
+CRUD administrativo de usuários
 Atualização de roles de usuários
-Policies granulares por AreaId
-Endpoint de teste de policies por área
-Soft delete em entidades principais
-```
-
-### Última etapa validada
-
-A última etapa implementada e validada foi a **Etapa 12 — Policies de autorização granular**.
-
-Foram criados:
-
-```txt
-SystemPolicies
-ICurrentUserService
-CurrentUserService
-IPermissionService
-PermissionService
-AreaPermissionRequirement
-AreaPermissionHandler
-AreaPolicyTestController
-```
-
-Foram testadas com `SUPER_ADMIN` e retornaram `200 OK`:
-
-```http
-GET /api/area-policy-test/{areaId}/can-view
-GET /api/area-policy-test/{areaId}/can-manage
-GET /api/area-policy-test/{areaId}/can-publish-informative
-GET /api/area-policy-test/{areaId}/can-manage-guide
-GET /api/area-policy-test/{areaId}/can-manage-workflow
-GET /api/area-policy-test/{areaId}/can-handle-workflow
+Soft delete em empresas, unidades, áreas, usuários e acessos
+CRUD de UserAreaAccess
+Policies granulares baseadas no parâmetro areaId da rota
+Middleware global de tratamento de exceções
+CORS configurado para o frontend local
 ```
 
 ---
 
-## Visão Geral do Produto
+## Visão geral do produto
 
-O Sicou foi pensado como uma plataforma modular de governança operacional.
+O Sicou foi pensado como uma plataforma de governança operacional para empresas com estrutura de sede e unidades.
 
-A estrutura principal do sistema segue o conceito:
+Estrutura conceitual:
 
 ```txt
 Empresa
 ├── Unidades
-└── Áreas da Sede
+└── Áreas da sede
     ├── Informativos
     ├── Orientador
     └── Workflows
 ```
 
-Cada empresa pode possuir várias unidades e várias áreas da sede. Cada área da sede pode ter módulos diferentes habilitados.
+Cada empresa pode possuir várias unidades e várias áreas da sede. Cada área pode habilitar um ou mais módulos.
 
 Exemplo:
 
@@ -112,68 +98,43 @@ Exemplo:
 └── Workflows
 ```
 
-A ideia central é que a sede consiga organizar a comunicação, orientação e execução de processos junto às unidades.
+O papel do backend nesta etapa é fornecer a base organizacional e de segurança para que os módulos futuros possam ser criados respeitando empresa, unidade, área e permissões do usuário autenticado.
 
 ---
 
-## Stack Utilizada
-
-- C#
-- .NET 8
-- ASP.NET Core Web API
-- Entity Framework Core
-- ASP.NET Core Identity
-- JWT Bearer Authentication
-- PostgreSQL
-- Swagger / OpenAPI
-- xUnit para testes
-- Arquitetura em camadas
-- Repository Pattern
-- Service Layer
-- Authorization Policies
-- React + Tailwind planejados para o frontend
-
----
-
-## Estrutura Atual da Solução
+## Estrutura atual da solução
 
 ```txt
 backend/
 ├── Sicou.sln
+├── Dockerfile
 ├── README.md
 ├── src/
 │   ├── Api/
 │   │   ├── Controllers/
 │   │   │   ├── AdminSetupController.cs
-│   │   │   ├── AreasController.cs
 │   │   │   ├── AreaPolicyTestController.cs
+│   │   │   ├── AreasController.cs
 │   │   │   ├── AuthController.cs
 │   │   │   ├── CompaniesController.cs
 │   │   │   ├── SecurityTestController.cs
 │   │   │   ├── UnitsController.cs
 │   │   │   ├── UserAreaAccessesController.cs
 │   │   │   └── UsersController.cs
+│   │   ├── Middlewares/
+│   │   │   └── ExceptionHandlingMiddleware.cs
+│   │   ├── Responses/
+│   │   │   └── ApiErrorResponse.cs
 │   │   ├── Program.cs
 │   │   ├── appsettings.json
+│   │   ├── appsettings.Development.json
 │   │   └── Sicou.Api.csproj
 │   │
 │   ├── Application/
 │   │   ├── Interfaces/
 │   │   │   ├── Auth/
-│   │   │   │   ├── ICurrentUserService.cs
-│   │   │   │   └── IJwtTokenService.cs
 │   │   │   ├── Repositories/
-│   │   │   │   ├── IAreaRepository.cs
-│   │   │   │   ├── ICompanyRepository.cs
-│   │   │   │   ├── IUnitRepository.cs
-│   │   │   │   └── IUserAreaAccessRepository.cs
 │   │   │   └── Services/
-│   │   │       ├── IAreaService.cs
-│   │   │       ├── ICompanyService.cs
-│   │   │       ├── IPermissionService.cs
-│   │   │       ├── IUnitService.cs
-│   │   │       ├── IUserAreaAccessService.cs
-│   │   │       └── IUserService.cs
 │   │   ├── Requests/
 │   │   │   ├── Areas/
 │   │   │   ├── Auth/
@@ -211,6 +172,8 @@ backend/
 │       ├── Authorization/
 │       │   ├── AreaPermissionHandler.cs
 │       │   └── AreaPermissionRequirement.cs
+│       ├── Configurations/
+│       │   └── CorsConfiguration.cs
 │       ├── Data/
 │       │   ├── ApplicationDbContext.cs
 │       │   └── Migrations/
@@ -220,258 +183,257 @@ backend/
 │       │   ├── ApplicationRole.cs
 │       │   └── ApplicationUser.cs
 │       ├── Repositories/
-│       │   ├── AreaRepository.cs
-│       │   ├── CompanyRepository.cs
-│       │   ├── UnitRepository.cs
-│       │   └── UserAreaAccessRepository.cs
 │       ├── Seed/
 │       │   └── IdentitySeeder.cs
 │       ├── Services/
-│       │   ├── AreaService.cs
-│       │   ├── AuthService.cs
-│       │   ├── CompanyService.cs
-│       │   ├── CurrentUserService.cs
-│       │   ├── JwtTokenService.cs
-│       │   ├── PermissionService.cs
-│       │   ├── UnitService.cs
-│       │   ├── UserAreaAccessService.cs
-│       │   └── UserService.cs
 │       └── Sicou.Infrastructure.csproj
 │
 └── tests/
-    ├── Sicou.UnitTests/
-    └── Sicou.IntegrationTests/
+    ├── Sicou.IntegrationTests/
+    └── Sicou.UnitTests/
 ```
 
 ---
 
-## Arquitetura
+## Arquitetura aplicada
 
-O backend segue uma arquitetura em camadas com separação clara de responsabilidades.
+A estrutura segue separação por camadas:
 
-```txt
-Api
-↓
-Application
-↓
-Infrastructure
-↓
-Domain
-```
+### `Api`
 
-A dependência conceitual é:
+Responsável pela entrada HTTP da aplicação.
+
+Contém:
 
 ```txt
-Api chama Application por interfaces e usa Infrastructure para registrar implementações.
-Application define contratos, DTOs e abstrações.
-Infrastructure implementa acesso a dados, Identity, JWT e services concretos.
-Domain contém as entidades, enums, constantes e regras estruturais.
+Controllers
+Middlewares
+Program.cs
+Configuração de Swagger
+Configuração de autenticação JWT
+Registro das policies de autorização
 ```
 
-### Api
+Os controllers devem ser mantidos finos. Eles recebem requests, chamam services e retornam responses HTTP.
 
-Camada de entrada da aplicação.
+### `Application`
 
-Responsável por:
+Camada de contratos e DTOs.
 
-- Controllers
-- Rotas HTTP
-- Swagger
-- Configuração da aplicação
-- Autenticação JWT
-- Autorização por roles e policies
-- Receber requests e retornar responses
+Contém:
 
-A camada `Api` não deve conter regra de negócio pesada. Ela deve delegar para services.
+```txt
+Interfaces de services
+Interfaces de repositories
+Interfaces de autenticação/contexto atual
+Requests
+Responses
+```
 
-### Application
+Essa camada não deve depender de EF Core, Identity ou ASP.NET diretamente.
 
-Camada de contratos e modelos de aplicação.
+### `Domain`
 
-Responsável por:
+Camada de domínio do sistema.
 
-- Interfaces de serviços
-- Interfaces de repositories
-- Requests
-- Responses
-- DTOs de entrada e saída
-- Contratos que a `Infrastructure` implementa
+Contém:
 
-Essa camada não acessa diretamente o banco de dados.
+```txt
+Entidades centrais
+Enums
+Constantes de roles
+Constantes de policies
+BaseEntity
+```
 
-### Domain
-
-Camada de domínio.
-
-Responsável por:
-
-- Entidades principais
-- Enums
-- Constantes
-- BaseEntity
-- Regras estruturais do domínio
-
-Essa camada não depende de nenhuma outra camada interna.
-
-### Infrastructure
+### `Infrastructure`
 
 Camada de implementação técnica.
 
-Responsável por:
-
-- Entity Framework Core
-- ApplicationDbContext
-- ASP.NET Core Identity
-- Repositories concretos
-- Services concretos
-- Seed de roles
-- Geração de JWT
-- Verificação de permissões
-- Authorization handlers
-- Integração com PostgreSQL
-
----
-
-## Projetos da Solution
+Contém:
 
 ```txt
-Sicou.Api
-Sicou.Application
-Sicou.Domain
-Sicou.Infrastructure
-Sicou.UnitTests
-Sicou.IntegrationTests
+DbContext
+Migrations
+Identity
+Repositories
+Services
+Authorization Handlers
+Seed de roles
+Configurações de CORS
+Injeção de dependência
 ```
 
 ---
 
-## Dependências Entre Projetos
-
-```txt
-Sicou.Api
-├── Sicou.Application
-└── Sicou.Infrastructure
-
-Sicou.Application
-└── Sicou.Domain
-
-Sicou.Infrastructure
-├── Sicou.Application
-└── Sicou.Domain
-
-Sicou.Domain
-└── sem dependências internas
-```
-
----
-
-## Padrões Aplicados
+## Padrões utilizados
 
 ### Repository Pattern
 
-O acesso ao banco de dados fica isolado em repositories.
+Acesso ao banco fica centralizado nos repositories.
 
-Exemplo:
+Exemplos:
 
 ```txt
-ICompanyRepository       -> CompanyRepository
-IUnitRepository          -> UnitRepository
-IAreaRepository          -> AreaRepository
-IUserAreaAccessRepository -> UserAreaAccessRepository
+CompanyRepository
+UnitRepository
+AreaRepository
+UserAreaAccessRepository
 ```
 
-Objetivo:
+Contratos correspondentes ficam em:
 
 ```txt
-Separar consulta/persistência de dados das regras de negócio.
-Facilitar testes.
-Evitar DbContext espalhado pelos controllers.
+src/Application/Interfaces/Repositories
 ```
 
 ### Service Layer
 
-As regras de negócio ficam nos services.
+Regras de negócio ficam nos services.
 
-Exemplo:
-
-```txt
-ICompanyService        -> CompanyService
-IUnitService           -> UnitService
-IAreaService           -> AreaService
-IUserAreaAccessService -> UserAreaAccessService
-IUserService           -> UserService
-IPermissionService     -> PermissionService
-```
-
-Objetivo:
+Exemplos:
 
 ```txt
-Concentrar validações e orquestrações.
-Manter controllers simples.
-Evitar regra de negócio na camada Api.
+CompanyService
+UnitService
+AreaService
+UserService
+UserAreaAccessService
+PermissionService
+AuthService
+JwtTokenService
 ```
 
-### DTOs de Request e Response
+Contratos correspondentes ficam em:
 
-A API não recebe nem retorna diretamente as entidades do domínio.
+```txt
+src/Application/Interfaces/Services
+src/Application/Interfaces/Auth
+```
 
-São usadas classes em:
+### DTOs de Request/Response
+
+A API não expõe diretamente as entidades do EF Core. Os payloads são representados por classes em:
 
 ```txt
 src/Application/Requests
 src/Application/Responses
 ```
 
-Objetivo:
+### Soft delete
+
+As entidades principais herdam de `BaseEntity` e possuem:
 
 ```txt
-Controlar o contrato da API.
-Evitar exposição desnecessária de entidades.
-Facilitar evolução dos endpoints.
+Id
+CreatedAt
+UpdatedAt
+IsActive
 ```
 
-### Soft Delete
-
-Entidades principais usam remoção lógica:
-
-```txt
-IsActive = false
-UpdatedAt = DateTime.UtcNow
-```
-
-Usado atualmente em:
-
-```txt
-Company
-Unit
-Area
-UserAreaAccess
-ApplicationUser
-```
+Deletes administrativos atualmente marcam registros como inativos em vez de remover fisicamente.
 
 ---
 
-## Banco de Dados
+## Como rodar localmente
 
-Banco utilizado:
+### Pré-requisitos
 
 ```txt
+.NET SDK 8
 PostgreSQL
+EF Core CLI opcional
 ```
 
-Banco local usado durante o desenvolvimento:
+Instalação da CLI do EF, caso necessário:
 
-```txt
-sicou_db
+```bash
+dotnet tool install --global dotnet-ef
 ```
 
-Exemplo de connection string:
+### Banco de dados
+
+Configuração atual em `src/Api/appsettings.json`:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=sicou_db;Username=postgres;Password=sua_senha"
+    "DefaultConnection": "Host=localhost;Port=5432;Database=sicou-dev;Username=postgres;Password=rootroot"
   }
+}
+```
+
+Ajuste usuário, senha, host e banco conforme seu ambiente local.
+
+### Aplicar migrations
+
+A partir da raiz do backend:
+
+```bash
+dotnet ef database update --project src/Infrastructure --startup-project src/Api
+```
+
+### Rodar API
+
+```bash
+dotnet run --project src/Api
+```
+
+URLs locais configuradas no `launchSettings.json`:
+
+```txt
+HTTP:  http://localhost:5175
+HTTPS: https://localhost:7299
+Swagger: http://localhost:5175/swagger
+```
+
+### CORS
+
+O frontend local permitido por padrão é:
+
+```txt
+http://localhost:5173
+```
+
+Isso está configurado em:
+
+```txt
+src/Infrastructure/Configurations/CorsConfiguration.cs
+```
+
+---
+
+## Seed inicial
+
+### Roles
+
+Ao iniciar a aplicação, `IdentitySeeder.SeedRolesAsync(app.Services)` cria as roles do sistema:
+
+```txt
+SUPER_ADMIN
+COMPANY_ADMIN
+AREA_ADMIN
+HEADQUARTER_USER
+UNIT_USER
+```
+
+### Módulos
+
+O `ApplicationDbContext` faz seed dos módulos centrais:
+
+```txt
+Informatives = 1
+Guide        = 2
+Workflows   = 3
+```
+
+Payloads JSON usam enum como string porque o `Program.cs` registra `JsonStringEnumConverter`.
+
+Exemplo:
+
+```json
+{
+  "moduleCodes": ["Informatives", "Guide", "Workflows"]
 }
 ```
 
@@ -479,23 +441,246 @@ Exemplo de connection string:
 
 ## Autenticação
 
-O projeto utiliza:
+A autenticação usa ASP.NET Core Identity com JWT Bearer.
 
-- ASP.NET Core Identity
-- JWT Bearer Token
-- Roles do Identity
-- Claims no token
-- Swagger com Bearer Token
+Endpoints:
+
+```txt
+POST /api/Auth/register
+POST /api/Auth/login
+GET  /api/Auth/me
+```
+
+### Login
+
+Request:
+
+```json
+{
+  "email": "admin@sicou.com",
+  "password": "Admin123"
+}
+```
+
+Response:
+
+```json
+{
+  "accessToken": "jwt-token",
+  "expiresAt": "2026-06-14T12:00:00Z",
+  "user": {
+    "id": "guid",
+    "fullName": "Administrador",
+    "email": "admin@sicou.com",
+    "isActive": true,
+    "companyId": null,
+    "unitId": null,
+    "roles": ["SUPER_ADMIN"]
+  }
+}
+```
+
+O JWT contém claims de:
+
+```txt
+sub
+email
+ClaimTypes.NameIdentifier
+ClaimTypes.Name
+ClaimTypes.Email
+ClaimTypes.Role
+```
+
+### Promoção de usuário para SUPER_ADMIN
+
+Controller temporário de setup:
+
+```txt
+POST /api/admin-setup/promote-super-admin?email=admin@sicou.com
+```
+
+Atenção: esse endpoint está aberto e deve ser removido, protegido ou condicionado ao ambiente de desenvolvimento antes de qualquer ambiente público.
+
+---
+
+## Autorização
+
+### Roles do sistema
+
+```txt
+SUPER_ADMIN
+COMPANY_ADMIN
+AREA_ADMIN
+HEADQUARTER_USER
+UNIT_USER
+```
+
+Uso atual:
+
+```txt
+CompaniesController: SUPER_ADMIN
+UnitsController: SUPER_ADMIN
+AreasController: SUPER_ADMIN
+UsersController: SUPER_ADMIN, COMPANY_ADMIN
+UserAreaAccessesController: SUPER_ADMIN, COMPANY_ADMIN
+SecurityTestController: testes
+```
+
+### Policies granulares
+
+Constantes em `SystemPolicies`:
+
+```txt
+CanManageCompany
+CanViewArea
+CanManageArea
+CanPublishInformative
+CanManageGuide
+CanManageWorkflow
+CanHandleWorkflow
+```
+
+Atualmente registradas no `Program.cs`:
+
+```txt
+CanViewArea
+CanManageArea
+CanPublishInformative
+CanManageGuide
+CanManageWorkflow
+CanHandleWorkflow
+```
+
+`CanManageCompany` existe como constante e existe regra em `PermissionService.CanManageCompanyAsync`, mas ainda não foi registrada nem aplicada nos controllers. Este é um ponto importante para a próxima etapa de refinamento de segurança.
+
+### Como as policies de área funcionam
+
+As policies usam `AreaPermissionHandler` e dependem de uma rota com parâmetro:
+
+```txt
+{areaId}
+```
+
+Exemplo de rota protegida:
+
+```csharp
+[HttpGet("api/areas/{areaId:guid}/algum-recurso")]
+[Authorize(Policy = SystemPolicies.CanViewArea)]
+public IActionResult Get(Guid areaId)
+{
+    return Ok();
+}
+```
+
+Se o parâmetro não se chamar exatamente `areaId`, o handler não consegue resolver a área.
+
+### Comportamento de permissão
+
+`SUPER_ADMIN`:
+
+```txt
+Tem acesso total às permissões granulares por área.
+```
+
+`COMPANY_ADMIN`:
+
+```txt
+Tem permissão de área se o usuário estiver vinculado à mesma empresa da área.
+```
+
+Demais usuários:
+
+```txt
+Precisam de registro ativo em user_area_accesses para a área específica.
+```
+
+---
+
+## Entidades principais
+
+### Company
+
+Representa uma empresa cliente ou organização principal.
+
+Campos principais:
+
+```txt
+Id
+Name
+Document
+IsActive
+CreatedAt
+UpdatedAt
+Units
+Areas
+```
+
+### Unit
+
+Representa uma unidade/filial vinculada a uma empresa.
+
+Campos principais:
+
+```txt
+Id
+CompanyId
+Name
+Code
+City
+State
+IsActive
+CreatedAt
+UpdatedAt
+```
+
+### Area
+
+Representa uma área da sede dentro de uma empresa.
+
+Campos principais:
+
+```txt
+Id
+CompanyId
+Name
+Slug
+Description
+IsActive
+CreatedAt
+UpdatedAt
+AreaModules
+```
+
+### Module
+
+Representa um módulo funcional habilitável por área.
+
+Módulos atuais:
+
+```txt
+Informatives
+Guide
+Workflows
+```
+
+### AreaModule
+
+Relaciona uma área a um módulo habilitado.
+
+Campos principais:
+
+```txt
+AreaId
+ModuleId
+Enabled
+IsActive
+```
 
 ### ApplicationUser
 
-Classe:
+Usuário Identity customizado.
 
-```txt
-src/Infrastructure/Identity/ApplicationUser.cs
-```
-
-Campos customizados:
+Campos adicionais:
 
 ```txt
 FullName
@@ -506,23 +691,11 @@ CompanyId
 UnitId
 ```
 
-Observações:
-
-```txt
-CompanyId pode ser nulo para SUPER_ADMIN.
-UnitId pode ser nulo para usuários da sede.
-Usuários de unidade normalmente possuem CompanyId e UnitId.
-```
-
 ### ApplicationRole
 
-Classe:
+Role Identity customizada.
 
-```txt
-src/Infrastructure/Identity/ApplicationRole.cs
-```
-
-Campos customizados:
+Campos adicionais:
 
 ```txt
 Description
@@ -530,1126 +703,448 @@ IsSystemRole
 CreatedAt
 ```
 
----
-
-## Roles Iniciais
-
-Arquivo:
-
-```txt
-src/Domain/Constants/SystemRoles.cs
-```
-
-Roles:
-
-```txt
-SUPER_ADMIN
-COMPANY_ADMIN
-AREA_ADMIN
-HEADQUARTER_USER
-UNIT_USER
-```
-
-Descrição:
-
-```txt
-SUPER_ADMIN
-Administrador geral do sistema. Tem acesso global.
-
-COMPANY_ADMIN
-Administrador de uma empresa. Deve ficar restrito à própria empresa.
-
-AREA_ADMIN
-Administrador de uma área da sede. Deve depender de UserAreaAccess.
-
-HEADQUARTER_USER
-Usuário operacional da sede. Pode ter acessos por área.
-
-UNIT_USER
-Usuário operacional de uma unidade. Pode interagir com áreas da sede conforme permissões.
-```
-
----
-
-## Policies de Autorização
-
-Arquivo:
-
-```txt
-src/Domain/Constants/SystemPolicies.cs
-```
-
-Policies criadas:
-
-```txt
-CanManageCompany
-CanManageArea
-CanViewArea
-CanPublishInformative
-CanManageGuide
-CanManageWorkflow
-CanHandleWorkflow
-```
-
-Atualmente estão registradas e validadas as policies por `areaId`:
-
-```txt
-CanViewArea
-CanManageArea
-CanPublishInformative
-CanManageGuide
-CanManageWorkflow
-CanHandleWorkflow
-```
-
-A policy `CanManageCompany` foi definida como constante, mas ainda não foi implementada com handler próprio. Ela deve ser implementada em uma próxima etapa, pois depende de `companyId`, enquanto as policies já implementadas dependem de `areaId`.
-
-### Como as policies por área funcionam
-
-O handler lê o parâmetro da rota:
-
-```txt
-areaId
-```
-
-Por isso, rotas protegidas por essas policies devem usar esse nome explicitamente:
-
-```http
-GET /api/areas/{areaId}/alguma-coisa
-POST /api/areas/{areaId}/informatives
-POST /api/areas/{areaId}/guide-items
-POST /api/areas/{areaId}/workflows
-```
-
-Exemplo de uso futuro:
-
-```csharp
-[Authorize(Policy = SystemPolicies.CanPublishInformative)]
-[HttpPost("/api/areas/{areaId:guid}/informatives")]
-public async Task<IActionResult> Create(Guid areaId, CreateInformativeRequest request)
-{
-    ...
-}
-```
-
-### Authorization Handler
-
-Arquivos:
-
-```txt
-src/Infrastructure/Authorization/AreaPermissionRequirement.cs
-src/Infrastructure/Authorization/AreaPermissionHandler.cs
-```
-
-O `AreaPermissionHandler`:
-
-```txt
-1. Lê o UserId das claims.
-2. Lê o areaId da rota.
-3. Chama IPermissionService.
-4. Marca a requirement como concluída se o usuário tiver permissão.
-```
-
-### PermissionService
-
-Arquivo:
-
-```txt
-src/Infrastructure/Services/PermissionService.cs
-```
-
-Regras atuais:
-
-```txt
-SUPER_ADMIN:
-Acesso total.
-
-COMPANY_ADMIN:
-Pode gerenciar/ver áreas da própria empresa.
-
-Demais usuários:
-Dependem dos registros ativos em user_area_accesses.
-```
-
----
-
-## JWT
-
-Configuração no `appsettings.json`:
-
-```json
-{
-  "Jwt": {
-    "Issuer": "Sicou",
-    "Audience": "Sicou",
-    "Key": "SICOU_SUPER_SECRET_KEY_CHANGE_THIS_VALUE_IN_PRODUCTION_2026",
-    "ExpirationInMinutes": 120
-  }
-}
-```
-
-Serviço:
-
-```txt
-src/Infrastructure/Services/JwtTokenService.cs
-```
-
-Interface:
-
-```txt
-src/Application/Interfaces/Auth/IJwtTokenService.cs
-```
-
----
-
-## Swagger com Bearer Token
-
-Após fazer login, copiar o token retornado e clicar em:
-
-```txt
-Authorize
-```
-
-Informar:
-
-```txt
-Bearer SEU_TOKEN_AQUI
-```
-
-Depois disso, endpoints protegidos podem ser testados diretamente pelo Swagger.
-
----
-
-## Entidades do Domínio
-
-### BaseEntity
-
-Arquivo:
-
-```txt
-src/Domain/Common/BaseEntity.cs
-```
-
-Campos:
-
-```txt
-Id
-CreatedAt
-UpdatedAt
-IsActive
-```
-
-### Company
-
-Arquivo:
-
-```txt
-src/Domain/Entities/Company.cs
-```
-
-Representa uma empresa no sistema.
-
-Campos principais:
-
-```txt
-Name
-Document
-Units
-Areas
-```
-
-Tabela:
-
-```txt
-companies
-```
-
-### Unit
-
-Arquivo:
-
-```txt
-src/Domain/Entities/Unit.cs
-```
-
-Representa uma unidade vinculada a uma empresa.
-
-Campos principais:
-
-```txt
-CompanyId
-Company
-Name
-Code
-City
-State
-```
-
-Tabela:
-
-```txt
-units
-```
-
-### Area
-
-Arquivo:
-
-```txt
-src/Domain/Entities/Area.cs
-```
-
-Representa uma área da sede.
-
-Campos principais:
-
-```txt
-CompanyId
-Company
-Name
-Slug
-Description
-AreaModules
-```
-
-Tabela:
-
-```txt
-areas
-```
-
-### Module
-
-Arquivo:
-
-```txt
-src/Domain/Entities/Module.cs
-```
-
-Representa um módulo disponível no sistema.
-
-Campos principais:
-
-```txt
-Code
-Name
-Description
-AreaModules
-```
-
-Tabela:
-
-```txt
-modules
-```
-
-Observação: em alguns pontos do código, a entidade pode ser referenciada como:
-
-```csharp
-Sicou.Domain.Entities.Module
-```
-
-para evitar conflito com tipos internos do .NET.
-
-### AreaModule
-
-Arquivo:
-
-```txt
-src/Domain/Entities/AreaModule.cs
-```
-
-Representa o vínculo entre uma área e os módulos habilitados nela.
-
-Campos principais:
-
-```txt
-AreaId
-Area
-ModuleId
-Module
-Enabled
-```
-
-Tabela:
-
-```txt
-area_modules
-```
-
 ### UserAreaAccess
 
-Arquivo:
-
-```txt
-src/Domain/Entities/UserAreaAccess.cs
-```
-
-Representa o acesso granular de um usuário a uma área da sede dentro de uma empresa e, opcionalmente, de uma unidade.
+Permissões granulares de um usuário dentro de uma área.
 
 Campos principais:
 
 ```txt
 UserId
 CompanyId
-Company
 UnitId
-Unit
 AreaId
-Area
 CanView
 CanManage
 CanPublishInformatives
 CanManageGuide
 CanManageWorkflows
 CanHandleWorkflowRequests
+IsActive
 CreatedAt
 UpdatedAt
-IsActive
-```
-
-Tabela:
-
-```txt
-user_area_accesses
-```
-
-### Como interpretar UserAreaAccess
-
-A entidade representa **um acesso específico por área**.
-
-Exemplo:
-
-```txt
-Usuário João
-Empresa: Empresa Sede Teste
-Unidade: Unidade Campinas
-Área: Jurídico
-```
-
-Isso gera um registro em `user_area_accesses`.
-
-Se o mesmo usuário tiver acesso a três áreas, ele terá três registros.
-
-```txt
-João + Campinas + Jurídico
-João + Campinas + Financeiro
-João + Campinas + RH
-```
-
-Não foi usada uma lista de `AreaIds` dentro do usuário porque isso dificultaria:
-
-```txt
-Consultas por área
-Índices únicos
-Auditoria
-Alteração de permissões por área
-Remoção de acesso específico
-Policies de autorização
-```
-
-### UnitId em UserAreaAccess
-
-O campo `UnitId` é nullable de propósito.
-
-```txt
-Usuário da sede:
-UnitId = null
-AreaId = área da sede
-
-Usuário de unidade:
-UnitId = unidade do usuário
-AreaId = área da sede com a qual ele pode interagir
-```
-
-O `AreaId` não significa que a unidade possui aquela área. Ele significa que o usuário pode interagir com aquela área da sede.
-
----
-
-## Enum de Módulos
-
-Arquivo:
-
-```txt
-src/Domain/Enums/ModuleCode.cs
-```
-
-Valores:
-
-```txt
-Informatives = 1
-Guide = 2
-Workflows = 3
-```
-
-Significados:
-
-```txt
-Informatives
-Módulo de informativos, comunicados, arquivos e novidades.
-
-Guide
-Módulo orientador com botões, links, arquivos e orientações rápidas.
-
-Workflows
-Módulo de fluxos de trabalho e solicitações entre unidades e áreas da sede.
 ```
 
 ---
 
-## Conversão de Enums no JSON
+## Endpoints atuais
 
-A API foi configurada para aceitar enums como string.
+### Auth
 
-Exemplo aceito:
-
-```json
-{
-  "moduleCodes": [
-    "Informatives",
-    "Guide",
-    "Workflows"
-  ]
-}
-```
-
-Configuração no `Program.cs`:
-
-```csharp
-builder.Services
-    .AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    });
-```
+| Método | Rota | Auth | Descrição |
+|---|---|---|---|
+| POST | `/api/Auth/register` | Anônimo | Cria usuário via fluxo público/dev |
+| POST | `/api/Auth/login` | Anônimo | Autentica e retorna JWT |
+| GET | `/api/Auth/me` | JWT | Retorna usuário autenticado |
 
 ---
 
-## Tabelas Criadas no Banco
+### Companies
 
-Principais tabelas atuais:
-
-```txt
-users
-roles
-user_roles
-user_claims
-user_logins
-role_claims
-user_tokens
-companies
-units
-areas
-modules
-area_modules
-user_area_accesses
-__EFMigrationsHistory
-```
-
----
-
-## Migrations Criadas
-
-### InitialIdentitySetup
-
-Criou as tabelas do Identity:
-
-```txt
-users
-roles
-user_roles
-user_claims
-user_logins
-role_claims
-user_tokens
-```
-
-### AddCoreDomainEntities
-
-Criou as tabelas do domínio central:
-
-```txt
-companies
-units
-areas
-modules
-area_modules
-```
-
-Também inseriu os módulos iniciais:
-
-```txt
-Informativos
-Orientador
-Workflows
-```
-
-### AddUserAreaAccesses
-
-Criou a tabela:
-
-```txt
-user_area_accesses
-```
-
-Com relacionamentos para:
-
-```txt
-companies
-units
-areas
-```
-
-Também criou índices para:
-
-```txt
-AreaId
-CompanyId
-UnitId
-UserId
-UserId + CompanyId + UnitId + AreaId
-```
-
----
-
-## Índices Importantes
-
-```txt
-IX_modules_Code
-IX_areas_CompanyId_Slug
-IX_units_CompanyId_Code
-IX_area_modules_AreaId_ModuleId
-IX_user_area_accesses_UserId_CompanyId_UnitId_AreaId
-```
-
-Esses índices impedem, por exemplo:
-
-- duas áreas com o mesmo slug dentro da mesma empresa;
-- dois módulos iguais na mesma área;
-- dois códigos iguais de unidade dentro da mesma empresa;
-- códigos duplicados de módulos;
-- acesso granular duplicado para o mesmo usuário, empresa, unidade e área.
-
----
-
-## Endpoints de Autenticação
-
-Controller:
-
-```txt
-src/Api/Controllers/AuthController.cs
-```
-
-### Registrar usuário
-
-```http
-POST /api/Auth/register
-```
-
-Exemplo:
-
-```json
-{
-  "fullName": "Administrador Sicou",
-  "email": "admin@sicou.com",
-  "password": "Admin123",
-  "companyId": null,
-  "unitId": null
-}
-```
-
-### Login
-
-```http
-POST /api/Auth/login
-```
-
-Exemplo:
-
-```json
-{
-  "email": "admin@sicou.com",
-  "password": "Admin123"
-}
-```
-
-Resposta esperada:
-
-```json
-{
-  "accessToken": "...",
-  "expiresAt": "...",
-  "user": {
-    "id": "...",
-    "fullName": "Administrador Sicou",
-    "email": "admin@sicou.com",
-    "isActive": true,
-    "companyId": null,
-    "unitId": null,
-    "roles": [
-      "SUPER_ADMIN"
-    ]
-  }
-}
-```
-
-### Usuário atual
-
-```http
-GET /api/Auth/me
-```
-
-Requer autenticação.
-
----
-
-## Endpoint Temporário de Setup
-
-Controller:
-
-```txt
-src/Api/Controllers/AdminSetupController.cs
-```
-
-Endpoint:
-
-```http
-POST /api/admin-setup/promote-super-admin?email=admin@sicou.com
-```
-
-Esse endpoint foi criado para promover o usuário inicial para `SUPER_ADMIN`.
-
-> Importante: esse endpoint é temporário e deve ser removido ou protegido antes de qualquer ambiente produtivo.
-
----
-
-## Endpoints de Teste de Segurança
-
-Controller:
-
-```txt
-src/Api/Controllers/SecurityTestController.cs
-```
-
-### Teste autenticado
-
-```http
-GET /api/security-test/authenticated
-```
-
-Requer qualquer usuário autenticado.
-
-### Teste SUPER_ADMIN
-
-```http
-GET /api/security-test/super-admin
-```
-
-Requer role:
+Protegido por:
 
 ```txt
 SUPER_ADMIN
 ```
 
----
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/api/companies` | Cria empresa |
+| GET | `/api/companies` | Lista empresas |
+| GET | `/api/companies/{id}` | Busca empresa por ID |
+| PUT | `/api/companies/{id}` | Atualiza empresa |
+| DELETE | `/api/companies/{id}` | Inativa empresa |
 
-## CRUD de Companies
-
-Controller:
-
-```txt
-src/Api/Controllers/CompaniesController.cs
-```
-
-Proteção atual:
-
-```csharp
-[Authorize(Roles = SystemRoles.SuperAdmin)]
-```
-
-Endpoints:
-
-```http
-POST   /api/companies
-GET    /api/companies
-GET    /api/companies/{id}
-PUT    /api/companies/{id}
-DELETE /api/companies/{id}
-```
-
-### Criar empresa
-
-```http
-POST /api/companies
-```
-
-Exemplo:
+Create:
 
 ```json
 {
-  "name": "Empresa Sede Teste",
-  "document": "12345678000199"
+  "name": "Empresa Exemplo",
+  "document": "00.000.000/0001-00"
 }
 ```
 
-### Camadas criadas para Company
+Update:
+
+```json
+{
+  "name": "Empresa Exemplo Atualizada",
+  "document": "00.000.000/0001-00",
+  "isActive": true
+}
+```
+
+Response:
+
+```json
+{
+  "id": "guid",
+  "name": "Empresa Exemplo",
+  "document": "00.000.000/0001-00",
+  "isActive": true,
+  "createdAt": "2026-06-14T12:00:00Z",
+  "updatedAt": null
+}
+```
+
+Regras principais:
 
 ```txt
-CreateCompanyRequest
-UpdateCompanyRequest
-CompanyResponse
-ICompanyRepository
-CompanyRepository
-ICompanyService
-CompanyService
-CompaniesController
+Nome obrigatório
+Nome único
+Delete é soft delete
 ```
 
 ---
 
-## CRUD de Units
+### Units
 
-Controller:
+Protegido por:
 
 ```txt
-src/Api/Controllers/UnitsController.cs
+SUPER_ADMIN
 ```
 
-Proteção atual:
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/api/companies/{companyId}/units` | Cria unidade em uma empresa |
+| GET | `/api/companies/{companyId}/units` | Lista unidades da empresa |
+| GET | `/api/units/{id}` | Busca unidade por ID |
+| PUT | `/api/units/{id}` | Atualiza unidade |
+| DELETE | `/api/units/{id}` | Inativa unidade |
 
-```csharp
-[Authorize(Roles = SystemRoles.SuperAdmin)]
-```
-
-Endpoints:
-
-```http
-POST   /api/companies/{companyId}/units
-GET    /api/companies/{companyId}/units
-GET    /api/units/{id}
-PUT    /api/units/{id}
-DELETE /api/units/{id}
-```
-
-### Criar unidade
-
-```http
-POST /api/companies/{companyId}/units
-```
-
-Exemplo:
+Create:
 
 ```json
 {
-  "name": "Unidade Campinas",
-  "code": "CAMPINAS",
-  "city": "Campinas",
+  "name": "Unidade Centro",
+  "code": "CENTRO",
+  "city": "São Paulo",
   "state": "SP"
 }
 ```
 
-### Camadas criadas para Unit
+Update:
+
+```json
+{
+  "name": "Unidade Centro",
+  "code": "CENTRO",
+  "city": "São Paulo",
+  "state": "SP",
+  "isActive": true
+}
+```
+
+Response:
+
+```json
+{
+  "id": "guid",
+  "companyId": "guid",
+  "companyName": "Empresa Exemplo",
+  "name": "Unidade Centro",
+  "code": "CENTRO",
+  "city": "São Paulo",
+  "state": "SP",
+  "isActive": true,
+  "createdAt": "2026-06-14T12:00:00Z",
+  "updatedAt": null
+}
+```
+
+Regras principais:
 
 ```txt
-CreateUnitRequest
-UpdateUnitRequest
-UnitResponse
-IUnitRepository
-UnitRepository
-IUnitService
-UnitService
-UnitsController
+Empresa precisa existir
+Empresa precisa estar ativa para criar unidade
+Nome obrigatório
+Nome único por empresa
+Código único por empresa quando informado
+State é normalizado para uppercase
+Delete é soft delete
 ```
 
 ---
 
-## CRUD de Areas
+### Areas
 
-Controller:
+Protegido por:
 
 ```txt
-src/Api/Controllers/AreasController.cs
+SUPER_ADMIN
 ```
 
-Proteção atual:
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/api/companies/{companyId}/areas` | Cria área em uma empresa |
+| GET | `/api/companies/{companyId}/areas` | Lista áreas da empresa |
+| GET | `/api/areas/{id}` | Busca área por ID |
+| PUT | `/api/areas/{id}` | Atualiza dados da área |
+| PUT | `/api/areas/{id}/modules` | Atualiza módulos habilitados da área |
+| DELETE | `/api/areas/{id}` | Inativa área e módulos vinculados |
 
-```csharp
-[Authorize(Roles = SystemRoles.SuperAdmin)]
-```
-
-Endpoints:
-
-```http
-POST   /api/companies/{companyId}/areas
-GET    /api/companies/{companyId}/areas
-GET    /api/areas/{id}
-PUT    /api/areas/{id}
-DELETE /api/areas/{id}
-PUT    /api/areas/{id}/modules
-```
-
-### Criar área
-
-```http
-POST /api/companies/{companyId}/areas
-```
-
-Exemplo:
+Create:
 
 ```json
 {
   "name": "Jurídico",
-  "description": "Área responsável por demandas jurídicas.",
-  "moduleCodes": [
-    "Informatives",
-    "Guide",
-    "Workflows"
-  ]
+  "description": "Área jurídica da sede",
+  "moduleCodes": ["Informatives", "Guide", "Workflows"]
 }
 ```
 
-### Atualizar módulos de uma área
-
-```http
-PUT /api/areas/{id}/modules
-```
-
-Exemplo:
+Update:
 
 ```json
 {
-  "moduleCodes": [
-    "Informatives",
-    "Guide"
+  "name": "Jurídico",
+  "description": "Área jurídica da sede",
+  "isActive": true
+}
+```
+
+Update modules:
+
+```json
+{
+  "moduleCodes": ["Informatives", "Guide"]
+}
+```
+
+Response:
+
+```json
+{
+  "id": "guid",
+  "companyId": "guid",
+  "companyName": "Empresa Exemplo",
+  "name": "Jurídico",
+  "slug": "juridico",
+  "description": "Área jurídica da sede",
+  "isActive": true,
+  "createdAt": "2026-06-14T12:00:00Z",
+  "updatedAt": null,
+  "modules": [
+    {
+      "moduleId": "guid",
+      "code": "Informatives",
+      "name": "Informativos",
+      "enabled": true
+    }
   ]
 }
 ```
 
-### Camadas criadas para Area
+Regras principais:
 
 ```txt
-CreateAreaRequest
-UpdateAreaRequest
-UpdateAreaModulesRequest
-AreaResponse
-AreaModuleResponse
-IAreaRepository
-AreaRepository
-IAreaService
-AreaService
-AreasController
+Empresa precisa existir
+Empresa precisa estar ativa para criar área
+Nome obrigatório
+Slug gerado automaticamente a partir do nome
+Slug único por empresa
+Módulos informados precisam existir no seed
+Delete é soft delete da área e desabilita/inativa AreaModules
+```
+
+Observação técnica já corrigida:
+
+```txt
+O update de módulos remove os vínculos antigos e adiciona novos com AddRange no repository.
+Isso evita DbUpdateConcurrencyException causada por EF tentando atualizar novos AreaModules como se já existissem.
 ```
 
 ---
 
-## CRUD de UserAreaAccess
+### Users
 
-Controller:
+Protegido por:
 
 ```txt
-src/Api/Controllers/UserAreaAccessesController.cs
+SUPER_ADMIN, COMPANY_ADMIN
 ```
 
-Proteção atual:
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/api/users` | Cria usuário administrativo |
+| GET | `/api/users` | Lista usuários |
+| GET | `/api/users/{id}` | Busca usuário por ID |
+| PUT | `/api/users/{id}` | Atualiza dados, vínculo e status |
+| PUT | `/api/users/{id}/roles` | Atualiza roles do usuário |
+| DELETE | `/api/users/{id}` | Inativa usuário |
 
-```csharp
-[Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.CompanyAdmin}")]
-```
-
-Endpoints:
-
-```http
-POST   /api/user-area-accesses
-GET    /api/user-area-accesses/{id}
-GET    /api/user-area-accesses/by-user/{userId}
-GET    /api/user-area-accesses/by-company/{companyId}
-PUT    /api/user-area-accesses/{id}
-DELETE /api/user-area-accesses/{id}
-```
-
-### Criar acesso granular
-
-```http
-POST /api/user-area-accesses
-```
-
-Exemplo com usuário da sede:
+Create:
 
 ```json
 {
-  "userId": "fbe6359e-994c-49b9-b554-53ecb0ecbe00",
-  "companyId": "666436f4-6b89-4209-a21b-84d5a58159aa",
+  "fullName": "João Silva",
+  "email": "joao@sicou.com",
+  "password": "Admin123",
+  "companyId": "guid-ou-null",
+  "unitId": "guid-ou-null",
+  "roles": ["COMPANY_ADMIN"]
+}
+```
+
+Update atual:
+
+```json
+{
+  "fullName": "João Silva",
+  "companyId": "guid-ou-null",
+  "unitId": "guid-ou-null",
+  "isActive": true
+}
+```
+
+Update roles:
+
+```json
+{
+  "roles": ["COMPANY_ADMIN", "AREA_ADMIN"]
+}
+```
+
+Response:
+
+```json
+{
+  "id": "guid",
+  "fullName": "João Silva",
+  "email": "joao@sicou.com",
+  "isActive": true,
+  "companyId": "guid-ou-null",
+  "unitId": "guid-ou-null",
+  "roles": ["COMPANY_ADMIN"],
+  "createdAt": "2026-06-14T12:00:00Z",
+  "updatedAt": null
+}
+```
+
+Regras principais:
+
+```txt
+E-mail único na criação
+CompanyId opcional, mas se informado precisa existir
+UnitId opcional, mas se informado precisa existir
+Se UnitId e CompanyId forem informados, unidade precisa pertencer à empresa
+Roles precisam existir no Identity
+Delete é soft delete usando IsActive = false
+Login bloqueia usuário inativo
+```
+
+Atenção importante:
+
+```txt
+UpdateUserRequest atualmente não possui campo Email.
+O frontend pode enviar email no PUT /api/users/{id}, mas o backend ignora esse campo porque ele não está no DTO.
+Se a edição de e-mail for desejada, adicionar Email em UpdateUserRequest e ajustar UserService.UpdateAsync para atualizar Email e UserName via UserManager.
+```
+
+---
+
+### UserAreaAccesses
+
+Protegido por:
+
+```txt
+SUPER_ADMIN, COMPANY_ADMIN
+```
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/api/user-area-accesses` | Cria vínculo/permissões de usuário em área |
+| GET | `/api/user-area-accesses/{id}` | Busca acesso por ID |
+| GET | `/api/user-area-accesses/by-user/{userId}` | Lista acessos de um usuário |
+| GET | `/api/user-area-accesses/by-company/{companyId}` | Lista acessos de uma empresa |
+| PUT | `/api/user-area-accesses/{id}` | Atualiza permissões |
+| DELETE | `/api/user-area-accesses/{id}` | Inativa acesso |
+
+Create:
+
+```json
+{
+  "userId": "guid-do-usuario",
+  "companyId": "guid-da-empresa",
   "unitId": null,
-  "areaId": "27288367-9ac1-42c8-b3ca-6b60a807af76",
+  "areaId": "guid-da-area",
   "canView": true,
   "canManage": false,
   "canPublishInformatives": true,
   "canManageGuide": false,
   "canManageWorkflows": false,
-  "canHandleWorkflowRequests": true
+  "canHandleWorkflowRequests": false
 }
 ```
 
-Exemplo com usuário de unidade:
+Update:
 
 ```json
 {
-  "userId": "id-do-usuario",
-  "companyId": "id-da-empresa",
-  "unitId": "id-da-unidade",
-  "areaId": "id-da-area-da-sede",
   "canView": true,
-  "canManage": false,
-  "canPublishInformatives": false,
-  "canManageGuide": false,
+  "canManage": true,
+  "canPublishInformatives": true,
+  "canManageGuide": true,
   "canManageWorkflows": false,
-  "canHandleWorkflowRequests": true
+  "canHandleWorkflowRequests": false
 }
 ```
 
-### Camadas criadas para UserAreaAccess
+Response:
 
-```txt
-CreateUserAreaAccessRequest
-UpdateUserAreaAccessRequest
-UserAreaAccessResponse
-IUserAreaAccessRepository
-UserAreaAccessRepository
-IUserAreaAccessService
-UserAreaAccessService
-UserAreaAccessesController
+```json
+{
+  "id": "guid",
+  "userId": "guid-do-usuario",
+  "companyId": "guid-da-empresa",
+  "companyName": "Empresa Exemplo",
+  "unitId": null,
+  "unitName": null,
+  "areaId": "guid-da-area",
+  "areaName": "Jurídico",
+  "canView": true,
+  "canManage": true,
+  "canPublishInformatives": true,
+  "canManageGuide": true,
+  "canManageWorkflows": false,
+  "canHandleWorkflowRequests": false,
+  "isActive": true,
+  "createdAt": "2026-06-14T12:00:00Z",
+  "updatedAt": null
+}
 ```
 
-### Testes realizados
-
-Foram validados:
+Regras principais:
 
 ```txt
-POST: 201 Created
-GET por ID: 200 OK
-GET por usuário: 200 OK
-GET por empresa: 200 OK
-PUT: 200 OK
-DELETE: 204 No Content
-GET após delete: 404 Not Found
+UserId obrigatório
+Usuário precisa existir e estar ativo
+Empresa precisa existir e estar ativa
+Área precisa existir e estar ativa
+Área precisa pertencer à empresa informada
+Unidade é opcional
+Se unidade for informada, precisa estar ativa e pertencer à empresa
+Não permite duplicidade ativa para UserId + CompanyId + UnitId + AreaId
+Se existir registro inativo com a mesma chave, ele é reativado e atualizado
+Delete é soft delete
 ```
 
 ---
 
-## CRUD Administrativo de Users
+### Testes e setup temporário
 
-Controller:
-
-```txt
-src/Api/Controllers/UsersController.cs
-```
-
-Proteção atual:
-
-```csharp
-[Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.CompanyAdmin}")]
-```
-
-Endpoints:
-
-```http
-POST   /api/users
-GET    /api/users
-GET    /api/users/{id}
-PUT    /api/users/{id}
-DELETE /api/users/{id}
-PUT    /api/users/{id}/roles
-```
-
-### Criar usuário administrativo
-
-```http
-POST /api/users
-```
-
-Exemplo:
-
-```json
-{
-  "fullName": "Usuário Unidade Campinas",
-  "email": "usuario.campinas@sicou.com",
-  "password": "Admin123",
-  "companyId": "id-da-empresa",
-  "unitId": "id-da-unidade",
-  "roles": [
-    "UNIT_USER"
-  ]
-}
-```
-
-### Atualizar usuário
-
-```http
-PUT /api/users/{id}
-```
-
-Exemplo:
-
-```json
-{
-  "fullName": "Usuário Atualizado",
-  "companyId": "id-da-empresa",
-  "unitId": "id-da-unidade",
-  "isActive": true
-}
-```
-
-### Atualizar roles
-
-```http
-PUT /api/users/{id}/roles
-```
-
-Exemplo:
-
-```json
-{
-  "roles": [
-    "AREA_ADMIN",
-    "HEADQUARTER_USER"
-  ]
-}
-```
-
-### Camadas criadas para Users
+Endpoints úteis em desenvolvimento:
 
 ```txt
-CreateUserRequest
-UpdateUserRequest
-UpdateUserRolesRequest
-UserResponse
-IUserService
-UserService
-UsersController
+POST /api/admin-setup/promote-super-admin?email={email}
+GET  /api/security-test/authenticated
+GET  /api/security-test/super-admin
 ```
 
-### Observação técnica importante
-
-No projeto atual, `ApplicationUser.Id` é `Guid`. No `UserResponse`, o `Id` é retornado como `string`. Por isso, no mapper do `UserService`, foi necessário usar:
-
-```csharp
-Id = user.Id.ToString()
-```
-
----
-
-## Endpoints de Teste de Policies por Área
-
-Controller:
+Endpoints de teste de policies por área:
 
 ```txt
-src/Api/Controllers/AreaPolicyTestController.cs
-```
-
-Endpoints:
-
-```http
 GET /api/area-policy-test/{areaId}/can-view
 GET /api/area-policy-test/{areaId}/can-manage
 GET /api/area-policy-test/{areaId}/can-publish-informative
@@ -1658,610 +1153,288 @@ GET /api/area-policy-test/{areaId}/can-manage-workflow
 GET /api/area-policy-test/{areaId}/can-handle-workflow
 ```
 
-Esse controller foi criado apenas para validar a estrutura de policies antes dos módulos reais.
+Esses controllers são úteis durante o desenvolvimento, mas devem ser removidos ou protegidos antes de produção.
 
-Recomendação:
+---
+
+## Integração atual com o frontend
+
+O frontend React + Tailwind já consome os endpoints centrais deste backend.
+
+Features já integradas no frontend:
 
 ```txt
-Manter temporariamente enquanto os módulos Informativos, Orientador e Workflows ainda não existem.
-Remover quando as policies estiverem aplicadas em endpoints reais.
+Auth com JWT
+GET /api/Auth/me
+Companies CRUD
+Units CRUD
+Areas CRUD com módulos
+Users CRUD administrativo
+```
+
+Próxima integração frontend/backend:
+
+```txt
+Controle de acessos granulares por área usando /api/user-area-accesses
+```
+
+A tela recomendada deve permitir:
+
+```txt
+Selecionar empresa
+Selecionar usuário
+Selecionar área
+Selecionar unidade opcional
+Marcar permissões:
+  - Visualizar
+  - Gerenciar área
+  - Publicar informativos
+  - Gerenciar orientador
+  - Gerenciar workflows
+  - Tratar solicitações de workflow
+Criar vínculo
+Editar vínculo
+Inativar vínculo
+Listar acessos por empresa
+Listar acessos por usuário
 ```
 
 ---
 
-## Fluxo Atual de Cadastro e Configuração
+## Próximos passos recomendados
 
-O fluxo atual já suportado é:
+### 1. Implementar tela de acessos granulares no frontend
 
-```txt
-1. Criar usuário admin
-2. Promover usuário para SUPER_ADMIN
-3. Fazer login
-4. Usar Swagger com Bearer Token
-5. Criar empresa
-6. Criar unidades da empresa
-7. Criar áreas da sede
-8. Definir módulos ativos da área
-9. Criar usuários administrativos
-10. Atribuir roles aos usuários
-11. Criar acessos granulares por usuário, empresa, unidade e área
-12. Validar policies por área
-```
-
----
-
-## Comandos Úteis
-
-### Restaurar pacotes
-
-```powershell
-dotnet restore
-```
-
-### Compilar solução
-
-```powershell
-dotnet build
-```
-
-### Rodar API
-
-```powershell
-dotnet run --project src/Api/Sicou.Api.csproj
-```
-
-### Criar migration
-
-```powershell
-dotnet ef migrations add NomeDaMigration --project src/Infrastructure/Sicou.Infrastructure.csproj --startup-project src/Api/Sicou.Api.csproj --context ApplicationDbContext --output-dir Data/Migrations
-```
-
-### Aplicar migrations no banco
-
-```powershell
-dotnet ef database update --project src/Infrastructure/Sicou.Infrastructure.csproj --startup-project src/Api/Sicou.Api.csproj --context ApplicationDbContext
-```
-
-### Ver versão do EF Tool
-
-```powershell
-dotnet ef --version
-```
-
-Versão usada:
+Usar endpoints:
 
 ```txt
-8.0.0
+GET  /api/user-area-accesses/by-company/{companyId}
+GET  /api/user-area-accesses/by-user/{userId}
+POST /api/user-area-accesses
+PUT  /api/user-area-accesses/{id}
+DELETE /api/user-area-accesses/{id}
 ```
 
----
+Essa etapa fecha a governança administrativa antes dos módulos de negócio.
 
-## Como Rodar o Projeto Localmente
+### 2. Refinar autorização por escopo no backend
 
-### 1. Entrar na pasta do backend
+Atualmente alguns controllers aceitam `COMPANY_ADMIN`, mas ainda não restringem tudo ao `CompanyId` do usuário autenticado.
 
-```powershell
-cd C:\Users\kinha\sicou\backend
-```
-
-### 2. Conferir PostgreSQL
-
-Garantir que o PostgreSQL esteja rodando localmente.
-
-### 3. Criar banco
-
-```sql
-CREATE DATABASE sicou_db;
-```
-
-### 4. Configurar connection string
-
-Editar:
+Melhorias recomendadas:
 
 ```txt
-src/Api/appsettings.json
+Registrar e aplicar CanManageCompany
+Usar ICurrentUserService nos services/controllers administrativos
+Garantir que COMPANY_ADMIN só veja/gerencie dados da própria empresa
+Evitar que COMPANY_ADMIN crie/edite usuários fora da empresa dele
+Evitar que COMPANY_ADMIN gerencie acessos de outra empresa
 ```
 
-Exemplo:
+### 3. Ajustar edição de e-mail de usuário
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=sicou_db;Username=postgres;Password=sua_senha"
-  }
-}
-```
-
-### 5. Restaurar pacotes
-
-```powershell
-dotnet restore
-```
-
-### 6. Aplicar migrations
-
-```powershell
-dotnet ef database update --project src/Infrastructure/Sicou.Infrastructure.csproj --startup-project src/Api/Sicou.Api.csproj --context ApplicationDbContext
-```
-
-### 7. Rodar API
-
-```powershell
-dotnet run --project src/Api/Sicou.Api.csproj
-```
-
-### 8. Acessar Swagger
-
-Exemplo:
+Ponto atual:
 
 ```txt
-http://localhost:5175/swagger
+UpdateUserRequest não possui Email.
+UserService.UpdateAsync não altera Email/UserName.
 ```
 
----
-
-## Decisões Técnicas Atuais
-
-### Soft delete
-
-`DELETE` não remove fisicamente os registros principais.
-
-Em vez disso:
+Se o produto permitir edição de e-mail, implementar:
 
 ```txt
-IsActive = false
-UpdatedAt = DateTime.UtcNow
+Adicionar Email em UpdateUserRequest
+Validar e-mail único
+Atualizar user.Email
+Atualizar user.UserName
+Atualizar NormalizedEmail/NormalizedUserName via UserManager quando necessário
+Executar UserManager.UpdateAsync
 ```
 
-### Slug de Area
+### 4. Padronizar erros de service
 
-O slug da área é gerado automaticamente a partir do nome.
+Alguns services usam `Exception` genérica, principalmente em `UserService`.
 
-Exemplo:
+Recomendado:
 
 ```txt
-Jurídico -> juridico
+Trocar Exception por InvalidOperationException, KeyNotFoundException ou exceções de domínio próprias
+Garantir respostas 400/404 em vez de 500 para erros de regra de negócio
+Padronizar shape de erro em todos os controllers
+Reduzir try/catch repetitivo nos controllers usando o middleware global
 ```
 
-Esse slug é único por empresa.
+### 5. Remover ou proteger endpoints temporários
 
-### Módulos por área
-
-Os módulos não ficam diretamente na tabela `areas`.
-
-Eles são vinculados pela tabela:
+Antes de produção:
 
 ```txt
-area_modules
+Remover ou proteger AdminSetupController
+Remover ou proteger SecurityTestController
+Remover ou proteger AreaPolicyTestController
 ```
 
-Isso permite que cada área tenha apenas os módulos que fizerem sentido.
+### 6. Criar módulos de negócio
 
-### Permissões por área
+Após finalizar acessos granulares, iniciar os módulos por área.
 
-A governança granular foi modelada com a tabela:
+Ordem recomendada:
 
 ```txt
-user_area_accesses
+Módulo Informativos
+Módulo Orientador
+Módulo Workflows
 ```
 
-Cada registro representa:
-
-```txt
-Usuário + Empresa + Unidade opcional + Área + Permissões
-```
-
-### Policies por areaId
-
-As policies por área dependem de rotas que contenham:
-
-```txt
-{areaId}
-```
-
-Se a rota usar apenas `{id}`, o handler não conseguirá identificar a área.
-
----
-
-## Estado Atual Validado
-
-Foram testados com sucesso:
-
-```txt
-Register
-Login
-Me
-Swagger com Bearer Token
-Endpoint protegido por autenticação
-Endpoint protegido por role SUPER_ADMIN
-CRUD completo de Company
-CRUD completo de Unit
-Criação e listagem de Area com módulos
-Atualização de módulos de Area
-CRUD completo de UserAreaAccess
-Soft delete de UserAreaAccess
-CRUD administrativo de Users
-Atualização de roles de Users
-Policies por AreaId com SUPER_ADMIN
-```
-
----
-
-## Próximos Passos Recomendados no Backend
-
-### Etapa 13 — Módulo de Informativos
+#### Módulo Informativos
 
 Objetivo:
 
 ```txt
-Permitir que áreas da sede publiquem informativos para usuários da sede e/ou unidades.
+Permitir que áreas publiquem comunicados, novidades, arquivos e informações para unidades.
 ```
 
-Entidades sugeridas:
+Policy sugerida:
+
+```txt
+CanPublishInformative para criar/editar/publicar
+CanViewArea para visualizar
+```
+
+Entidades futuras possíveis:
 
 ```txt
 Informative
 InformativeAttachment
+InformativeTargetUnit
+InformativeReadReceipt
 ```
 
-Campos sugeridos para `Informative`:
-
-```txt
-Id
-CompanyId
-AreaId
-Title
-Summary
-Content
-Status
-PublishedAt
-CreatedByUserId
-UpdatedByUserId
-CreatedAt
-UpdatedAt
-IsActive
-```
-
-Status sugeridos:
-
-```txt
-Draft
-Published
-Archived
-```
-
-Campos sugeridos para `InformativeAttachment`:
-
-```txt
-Id
-InformativeId
-FileName
-OriginalFileName
-ContentType
-FilePath
-FileSize
-CreatedAt
-UpdatedAt
-IsActive
-```
-
-Funcionalidades:
-
-```txt
-Criar informativo como rascunho
-Editar informativo
-Publicar informativo
-Arquivar informativo
-Listar informativos por área
-Buscar informativo por ID
-Anexar arquivos futuramente
-Aplicar policy CanPublishInformative para publicação
-Aplicar policy CanViewArea para leitura por área
-```
-
-Endpoints sugeridos:
-
-```http
-POST   /api/areas/{areaId}/informatives
-GET    /api/areas/{areaId}/informatives
-GET    /api/informatives/{id}
-PUT    /api/informatives/{id}
-DELETE /api/informatives/{id}
-POST   /api/informatives/{id}/publish
-POST   /api/informatives/{id}/archive
-```
-
-Sugestão de implementação incremental:
-
-```txt
-13.1 Criar enum InformativeStatus
-13.2 Criar entidade Informative
-13.3 Mapear no ApplicationDbContext
-13.4 Criar migration
-13.5 Criar requests/responses
-13.6 Criar repository
-13.7 Criar service
-13.8 Registrar dependências
-13.9 Criar controller
-13.10 Aplicar policies
-13.11 Testar no Swagger
-```
-
-### Etapa 14 — Módulo Orientador
+#### Módulo Orientador
 
 Objetivo:
 
 ```txt
-Permitir que áreas configurem botões/itens de orientação para unidades e usuários.
+Permitir que áreas criem botões, links, arquivos e orientações rápidas.
 ```
 
-Entidade sugerida:
+Policy sugerida:
+
+```txt
+CanManageGuide para criar/editar
+CanViewArea para visualizar
+```
+
+Entidades futuras possíveis:
 
 ```txt
 GuideItem
+GuideCategory
+GuideAttachment
 ```
 
-Possíveis tipos:
-
-```txt
-Link
-File
-Text
-Workflow
-```
-
-Campos sugeridos:
-
-```txt
-Id
-CompanyId
-AreaId
-Title
-Description
-Type
-Url
-Content
-FilePath
-WorkflowDefinitionId
-DisplayOrder
-CreatedByUserId
-UpdatedByUserId
-CreatedAt
-UpdatedAt
-IsActive
-```
-
-Funcionalidades:
-
-```txt
-Criar item orientador
-Editar item orientador
-Listar itens por área
-Ordenar itens
-Ativar/inativar itens
-Vincular link, texto, arquivo ou workflow
-Aplicar policy CanManageGuide
-```
-
-Endpoints sugeridos:
-
-```http
-POST   /api/areas/{areaId}/guide-items
-GET    /api/areas/{areaId}/guide-items
-GET    /api/guide-items/{id}
-PUT    /api/guide-items/{id}
-DELETE /api/guide-items/{id}
-PUT    /api/areas/{areaId}/guide-items/order
-```
-
-### Etapa 15 — Módulo de Workflows
+#### Módulo Workflows
 
 Objetivo:
 
 ```txt
-Permitir que a sede configure fluxos de trabalho e que unidades abram solicitações para as áreas.
+Permitir criação e execução de fluxos de atendimento/processos entre unidades e sede.
 ```
 
-Entidades sugeridas:
+Policies sugeridas:
+
+```txt
+CanManageWorkflow para desenhar/configurar fluxos
+CanHandleWorkflow para tratar solicitações
+CanViewArea para acompanhar
+```
+
+Entidades futuras possíveis:
 
 ```txt
 WorkflowDefinition
-WorkflowFieldDefinition
-WorkflowStepDefinition
-WorkflowInstance
-WorkflowInstanceValue
-WorkflowInstanceHistory
+WorkflowStep
+WorkflowRequest
+WorkflowRequestHistory
 WorkflowAttachment
 ```
 
-Funcionalidades iniciais:
+### 7. Testes
+
+Os projetos de teste existem, mas ainda estão com arquivos iniciais.
+
+Recomendado criar testes para:
 
 ```txt
-Criar definição de workflow
-Configurar campos dinâmicos
-Ativar/inativar workflow
-Unidade abrir solicitação
-Área receber solicitação
-Atualizar status
-Registrar histórico
-Anexar arquivos futuramente
-```
-
-Estados sugeridos:
-
-```txt
-Draft
-Active
-Inactive
-Open
-InProgress
-WaitingAdjustment
-Completed
-Canceled
-Rejected
-```
-
-Policies esperadas:
-
-```txt
-CanManageWorkflow
-CanHandleWorkflow
-CanViewArea
-```
-
-### Etapa 16 — Upload de Arquivos
-
-Objetivo:
-
-```txt
-Criar serviço de storage para anexos de informativos, orientador e workflows.
-```
-
-Implementação inicial sugerida:
-
-```txt
-Storage local em wwwroot/uploads
-```
-
-Evoluções futuras:
-
-```txt
-S3
-Azure Blob Storage
-Google Cloud Storage
-MinIO
-```
-
-Abstração sugerida:
-
-```txt
-IFileStorageService
-LocalFileStorageService
-```
-
-### Etapa 17 — Melhorias Técnicas
-
-Sugestões:
-
-```txt
-Criar UnitOfWork
-Criar filtros globais para IsActive
-Criar middleware global de tratamento de exceções
-Criar padronização de respostas da API
-Adicionar FluentValidation nos requests
-Adicionar logs estruturados
-Adicionar paginação
-Adicionar auditoria
-Adicionar testes unitários
-Adicionar testes de integração
-Adicionar Docker Compose para PostgreSQL
-```
-
-### Etapa 18 — Segurança e Produção
-
-Antes de produção, revisar:
-
-```txt
-Remover ou proteger AdminSetupController
-Remover AreaPolicyTestController
-Trocar Jwt:Key por secret seguro
-Mover secrets para variáveis de ambiente
-Adicionar HTTPS obrigatório
-Adicionar CORS configurado para o frontend
-Adicionar política de senha definitiva
-Adicionar refresh token
-Adicionar controle de expiração e revogação de tokens
-Adicionar auditoria de login
-Adicionar bloqueio e desbloqueio de usuários
-Restringir COMPANY_ADMIN à própria empresa em todos os endpoints
-Adicionar validações de escopo por companyId
+CompanyService
+UnitService
+AreaService
+UserService
+UserAreaAccessService
+PermissionService
+AuthService
+Controllers principais
+Policies por areaId
 ```
 
 ---
 
-## Observações de Segurança
+## Checklist técnico atual
 
-Pontos importantes ainda pendentes:
+Concluído:
 
 ```txt
-AdminSetupController é temporário.
-AreaPolicyTestController é temporário.
-JWT Key atual é apenas para desenvolvimento.
-Ainda não existe refresh token.
-Ainda não existe middleware global de exceptions.
-Ainda não existe política final de CORS para o frontend.
-Ainda não existe auditoria completa.
-COMPANY_ADMIN ainda precisa de restrição forte por empresa nos controllers administrativos.
+Solução .NET 8 em camadas
+Identity configurado
+JWT configurado
+Swagger com Bearer configurado
+PostgreSQL com EF Core
+Migrations criadas
+Roles seedadas
+Módulos seedados
+CORS para frontend local
+Middleware global de exceção
+CRUD Companies
+CRUD Units
+CRUD Areas
+CRUD Users
+CRUD UserAreaAccesses
+Policies de área
+Frontend consumindo CRUDs centrais
+```
+
+Pendente/atenção:
+
+```txt
+Aplicar escopo real de COMPANY_ADMIN nos dados da empresa
+Registrar/aplicar CanManageCompany
+Decidir se edição de e-mail de usuário será permitida e ajustar backend
+Proteger/remover controllers temporários
+Padronizar exceptions de UserService
+Criar testes reais
+Implementar módulos Informativos, Orientador e Workflows
 ```
 
 ---
 
-## Status Atual
+## Guia para retomar em novo chat
+
+Para continuar deste ponto em outro chat, informe este resumo:
 
 ```txt
-Backend central inicial:
-OK
-
-Autenticação:
-OK
-
-Autorização por roles:
-OK
-
-Policies granulares por área:
-OK
-
-Domínio central:
-OK
-
-CRUD Company:
-OK
-
-CRUD Unit:
-OK
-
-CRUD Area com módulos:
-OK
-
-Governança granular UserAreaAccess:
-OK
-
-CRUD administrativo de Users:
-OK
-
-Próximo foco:
-Etapa 13 — Módulo de Informativos
+Estou desenvolvendo o Sicou.
+Backend: C# .NET 8, ASP.NET Core Web API, EF Core, PostgreSQL, Identity e JWT.
+Arquitetura: Api, Application, Domain, Infrastructure, MVC/controllers, Repository Pattern e Service Layer.
+Já existem CRUDs completos no backend para Companies, Units, Areas, Users e UserAreaAccesses.
+Áreas possuem módulos seedados: Informatives, Guide e Workflows.
+Já existem roles: SUPER_ADMIN, COMPANY_ADMIN, AREA_ADMIN, HEADQUARTER_USER e UNIT_USER.
+Já existem policies granulares por areaId: CanViewArea, CanManageArea, CanPublishInformative, CanManageGuide, CanManageWorkflow e CanHandleWorkflow.
+O frontend React + Tailwind já consome Auth, Companies, Units, Areas e Users.
+Próximo passo recomendado: implementar a tela de controle de acessos granulares no frontend usando /api/user-area-accesses e depois refinar o backend para aplicar escopo real de COMPANY_ADMIN.
 ```
 
 ---
 
-## Resumo Conceitual do Sicou
+## Observação sobre validação deste README
 
-O Sicou será uma plataforma para permitir que a sede de uma empresa organize e governe a comunicação, orientação e execução de processos junto às suas unidades.
-
-A base atual já permite configurar:
-
-```txt
-Empresas
-Unidades
-Áreas da sede
-Módulos habilitados por área
-Usuários autenticados
-Roles administrativas
-Permissões granulares por área
-Policies de autorização por área
-```
-
-A partir dessa fundação, os próximos módulos poderão ser construídos de forma incremental:
-
-```txt
-Informativos
-Orientador
-Workflows
-Arquivos
-Notificações
-Dashboards
-Auditoria
-Frontend React/Tailwind
-```
-
+Este README foi reescrito com base na estrutura e no código atual do `backend.zip`. Neste ambiente de análise não foi possível executar `dotnet build` porque o SDK do .NET não está instalado, então a validação foi feita por inspeção do código e da estrutura do projeto.

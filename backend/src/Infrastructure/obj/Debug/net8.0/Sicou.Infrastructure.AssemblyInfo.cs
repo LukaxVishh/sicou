@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Sicou.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+afb9e5168184fd7085e72000b149ca93bef64919")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bac4053672deebf5717b98e4cba952360788c01a")]
 [assembly: System.Reflection.AssemblyProductAttribute("Sicou.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Sicou.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

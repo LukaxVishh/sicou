@@ -3,10 +3,10 @@ import {
   Building2,
   Calendar,
   FileText,
-  Layers3,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { CompanyAreasSection } from '../../areas';
 import { CompanyUnitsSection } from '../../units/components';
 import { getCompanyById } from '../api';
 import type { Company } from '../types';
@@ -27,37 +27,67 @@ export function CompanyDetailsPage() {
   const navigate = useNavigate();
 
   const [company, setCompany] = useState<Company | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(Boolean(companyId));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadCompany() {
-      if (!companyId) {
-        setErrorMessage('Empresa não informada.');
-        setIsLoading(false);
-        return;
-      }
+    if (!companyId) {
+      return;
+    }
 
-      try {
-        setErrorMessage(null);
-        setIsLoading(true);
+    let isMounted = true;
 
-        const data = await getCompanyById(companyId);
+    getCompanyById(companyId)
+      .then((data) => {
+        if (!isMounted) {
+          return;
+        }
 
         setCompany(data);
-      } catch (error) {
+        setErrorMessage(null);
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
         const message = error instanceof Error
           ? error.message
           : 'Não foi possível carregar os dados da empresa.';
 
         setErrorMessage(message);
-      } finally {
-        setIsLoading(false);
-      }
-    }
+      })
+      .finally(() => {
+        if (!isMounted) {
+          return;
+        }
 
-    loadCompany();
+        setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [companyId]);
+
+  if (!companyId) {
+    return (
+      <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+        <p className="text-sm font-medium text-red-600">
+          Empresa não informada.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => navigate('/app/companies')}
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar para empresas
+        </button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -67,7 +97,7 @@ export function CompanyDetailsPage() {
     );
   }
 
-  if (errorMessage || !company || !companyId) {
+  if (errorMessage || !company) {
     return (
       <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
         <p className="text-sm font-medium text-red-600">
@@ -197,29 +227,8 @@ export function CompanyDetailsPage() {
       </div>
 
       <div className="mt-6 grid gap-4">
-        <CompanyUnitsSection companyId={companyId} />
-
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-slate-100 p-2">
-              <Layers3 className="h-5 w-5 text-slate-700" />
-            </div>
-
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Áreas da sede
-              </h2>
-
-              <p className="text-sm text-slate-500">
-                Depois vamos listar áreas e seus módulos habilitados.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-            CRUD de áreas será implementado após unidades.
-          </div>
-        </div>
+        <CompanyUnitsSection companyId={company.id} />
+        <CompanyAreasSection companyId={company.id} />
       </div>
     </div>
   );

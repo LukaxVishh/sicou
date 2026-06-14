@@ -22,6 +22,11 @@ public class AreaRepository : IAreaRepository
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
+    public void AddAreaModules(IEnumerable<AreaModule> areaModules)
+    {
+        _context.AreaModules.AddRange(areaModules);
+    }
+
     public async Task<Area?> GetByIdWithModulesAsync(Guid id)
     {
         return await _context.Areas

@@ -1,6 +1,6 @@
 import { Building2, Edit, Eye, Plus, RefreshCcw, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ActionsDropdown } from '../../../shared/components';
 import {
   CreateCompanyModal,
   DeleteCompanyModal,
@@ -26,19 +26,17 @@ export function CompaniesPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  async function loadCompanies(options?: { silent?: boolean }) {
+  const loadCompanies = useCallback(async (options?: { silent?: boolean }) => {
     try {
-      setErrorMessage(null);
-
       if (options?.silent) {
+        setErrorMessage(null);
         setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
       }
 
       const data = await getCompanies();
 
       setCompanies(data);
+      setErrorMessage(null);
     } catch (error) {
       const message = error instanceof Error
         ? error.message
@@ -49,7 +47,7 @@ export function CompaniesPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }
+  }, []);
 
   function handleOpenEditModal(company: Company) {
     setSelectedCompany(company);
@@ -72,7 +70,40 @@ export function CompaniesPage() {
   }
 
   useEffect(() => {
-    loadCompanies();
+    let isMounted = true;
+
+    getCompanies()
+      .then((data) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setCompanies(data);
+        setErrorMessage(null);
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
+        const message = error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar as empresas.';
+
+        setErrorMessage(message);
+      })
+      .finally(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setIsLoading(false);
+        setIsRefreshing(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -93,7 +124,7 @@ export function CompaniesPage() {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => loadCompanies({ silent: true })}
+            onClick={() => void loadCompanies({ silent: true })}
             disabled={isRefreshing || isLoading}
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70"
           >
@@ -212,32 +243,27 @@ export function CompaniesPage() {
                     </td>
 
                     <td className="whitespace-nowrap px-6 py-4">
-                      <div className="flex justify-end gap-3">
-                        <Link
-                          to={`/app/companies/${company.id}`}
-                          className="inline-flex items-center gap-1 text-sm font-semibold text-slate-700 hover:text-slate-950"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Abrir
-                        </Link>
-
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(company)}
-                          className="inline-flex items-center gap-1 text-sm font-semibold text-slate-700 hover:text-slate-950"
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDeleteModal(company)}
-                          className="inline-flex items-center gap-1 text-sm font-semibold text-rose-600 hover:text-rose-500"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Inativar
-                        </button>
+                      <div className="flex justify-end">
+                        <ActionsDropdown
+                          items={[
+                            {
+                              label: 'Abrir',
+                              to: `/app/companies/${company.id}`,
+                              icon: <Eye className="h-4 w-4" />,
+                            },
+                            {
+                              label: 'Editar',
+                              onClick: () => handleOpenEditModal(company),
+                              icon: <Edit className="h-4 w-4" />,
+                            },
+                            {
+                              label: 'Inativar',
+                              onClick: () => handleOpenDeleteModal(company),
+                              icon: <Trash2 className="h-4 w-4" />,
+                              variant: 'danger',
+                            },
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -251,21 +277,21 @@ export function CompaniesPage() {
       <CreateCompanyModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreated={() => loadCompanies({ silent: true })}
+        onCreated={() => void loadCompanies({ silent: true })}
       />
 
       <EditCompanyModal
         company={selectedCompany}
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
-        onUpdated={() => loadCompanies({ silent: true })}
+        onUpdated={() => void loadCompanies({ silent: true })}
       />
 
       <DeleteCompanyModal
         company={selectedCompany}
         isOpen={isDeleteModalOpen}
         onClose={handleCloseDeleteModal}
-        onDeleted={() => loadCompanies({ silent: true })}
+        onDeleted={() => void loadCompanies({ silent: true })}
       />
     </div>
   );

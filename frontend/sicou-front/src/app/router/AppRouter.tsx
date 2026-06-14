@@ -7,6 +7,7 @@ import {
   CompaniesPage,
   CompanyDetailsPage,
 } from '../../features/companies/pages';
+import { UsersPage } from '../../features/users';
 
 
 export function AppRouter() {
@@ -50,12 +51,7 @@ export function AppRouter() {
 
             <Route
               path="users"
-              element={(
-                <ComingSoonPage
-                  title="Usuários"
-                  description="Nesta área vamos construir o gerenciamento administrativo de usuários."
-                />
-              )}
+              element={<UsersPage />}
             />
 
             <Route

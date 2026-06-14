@@ -20,6 +20,7 @@ public interface IAreaRepository
     void Update(Area area);
 
     void RemoveAreaModules(IEnumerable<AreaModule> areaModules);
+    void AddAreaModules(IEnumerable<AreaModule> areaModules);
 
     Task SaveChangesAsync();
 }

@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { updateCompany } from '../api';
 import type { Company } from '../types';
 
@@ -10,43 +10,31 @@ type EditCompanyModalProps = {
   onUpdated: () => Promise<void> | void;
 };
 
-export function EditCompanyModal({
+type EditCompanyFormProps = {
+  company: Company;
+  onClose: () => void;
+  onUpdated: () => Promise<void> | void;
+};
+
+function EditCompanyForm({
   company,
-  isOpen,
   onClose,
   onUpdated,
-}: EditCompanyModalProps) {
-  const [name, setName] = useState('');
-  const [document, setDocument] = useState('');
-  const [isActive, setIsActive] = useState(true);
+}: EditCompanyFormProps) {
+  const [name, setName] = useState(company.name);
+  const [document, setDocument] = useState(company.document ?? '');
+  const [isActive, setIsActive] = useState(company.isActive);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!company || !isOpen) {
-      return;
-    }
-
-    setName(company.name);
-    setDocument(company.document ?? '');
-    setIsActive(company.isActive);
-    setErrorMessage(null);
-  }, [company, isOpen]);
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!company) {
-      return;
-    }
-
-    const companyToUpdate = company;
 
     setErrorMessage(null);
     setIsSubmitting(true);
 
     try {
-      await updateCompany(companyToUpdate.id, {
+      await updateCompany(company.id, {
         name: name.trim(),
         document: document.trim() || null,
         isActive,
@@ -64,10 +52,6 @@ export function EditCompanyModal({
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  if (!isOpen || !company) {
-    return null;
   }
 
   return (
@@ -180,5 +164,25 @@ export function EditCompanyModal({
         </form>
       </div>
     </div>
+  );
+}
+
+export function EditCompanyModal({
+  company,
+  isOpen,
+  onClose,
+  onUpdated,
+}: EditCompanyModalProps) {
+  if (!isOpen || !company) {
+    return null;
+  }
+
+  return (
+    <EditCompanyForm
+      key={company.id}
+      company={company}
+      onClose={onClose}
+      onUpdated={onUpdated}
+    />
   );
 }

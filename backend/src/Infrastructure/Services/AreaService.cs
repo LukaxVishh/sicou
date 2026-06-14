@@ -147,18 +147,25 @@ public class AreaService : IAreaService
         if (area is null)
             throw new KeyNotFoundException("Área não encontrada.");
 
-        var modules = await _areaRepository.GetModulesByCodesAsync(request.ModuleCodes);
+        var requestedModuleCodes = request.ModuleCodes
+            .Distinct()
+            .ToList();
 
-        if (request.ModuleCodes.Any() && modules.Count != request.ModuleCodes.Distinct().Count())
+        var modules = await _areaRepository.GetModulesByCodesAsync(requestedModuleCodes);
+
+        if (requestedModuleCodes.Any() && modules.Count != requestedModuleCodes.Count)
             throw new InvalidOperationException("Um ou mais módulos informados são inválidos.");
 
-        _areaRepository.RemoveAreaModules(area.AreaModules);
+        var existingAreaModules = area.AreaModules.ToList();
 
-        area.AreaModules.Clear();
-
-        foreach (var module in modules)
+        if (existingAreaModules.Count > 0)
         {
-            area.AreaModules.Add(new AreaModule
+            _areaRepository.RemoveAreaModules(existingAreaModules);
+            area.AreaModules.Clear();
+        }
+
+        var newAreaModules = modules
+            .Select(module => new AreaModule
             {
                 Id = Guid.NewGuid(),
                 AreaId = area.Id,
@@ -167,17 +174,26 @@ public class AreaService : IAreaService
                 Enabled = true,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
-            });
+            })
+            .ToList();
+
+        if (newAreaModules.Count > 0)
+        {
+            _areaRepository.AddAreaModules(newAreaModules);
+
+            foreach (var areaModule in newAreaModules)
+            {
+                area.AreaModules.Add(areaModule);
+            }
         }
 
         area.UpdatedAt = DateTime.UtcNow;
 
-        _areaRepository.Update(area);
         await _areaRepository.SaveChangesAsync();
 
         return MapToResponse(area);
     }
-
+    
     public async Task DeleteAsync(Guid id)
     {
         var area = await _areaRepository.GetByIdWithModulesAsync(id);
