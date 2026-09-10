@@ -87,7 +87,7 @@ export function AdminLayout() {
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-6">
+        <div className="flex h-16 items-center justify-between px-6">
           <div>
             <p className="text-lg font-bold text-slate-900">Sicou</p>
             <p className="text-xs text-slate-500">Governança operacional</p>

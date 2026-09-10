@@ -223,7 +223,7 @@ export function CompanyAreasSection({ companyId }: CompanyAreasSectionProps) {
                         </p>
 
                         <p className="text-xs text-slate-500">
-                          {area.description || area.id}
+                          {area.description || 'Sem descrição'}
                         </p>
                       </div>
                     </td>

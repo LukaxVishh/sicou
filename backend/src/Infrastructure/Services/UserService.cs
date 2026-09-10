@@ -212,6 +212,12 @@ public class UserService : IUserService
     private async Task<UserResponse> MapToResponseAsync(ApplicationUser user)
     {
         var roles = await _userManager.GetRolesAsync(user);
+        var company = user.CompanyId.HasValue
+            ? await _companyRepository.GetByIdAsync(user.CompanyId.Value)
+            : null;
+        var unit = user.UnitId.HasValue
+            ? await _unitRepository.GetByIdAsync(user.UnitId.Value)
+            : null;
 
         return new UserResponse
         {
@@ -221,6 +227,8 @@ public class UserService : IUserService
             IsActive = user.IsActive,
             CompanyId = user.CompanyId,
             UnitId = user.UnitId,
+            CompanyName = company?.Name,
+            UnitName = unit?.Name,
             Roles = roles.ToList(),
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt

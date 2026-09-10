@@ -216,9 +216,6 @@ export function CompaniesPage() {
                           {company.name}
                         </p>
 
-                        <p className="text-xs text-slate-500">
-                          {company.id}
-                        </p>
                       </div>
                     </td>
 
