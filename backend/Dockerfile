@@ -15,7 +15,7 @@ COPY . .
 
 RUN dotnet publish src/Api/Sicou.Api.csproj -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
 COPY --from=build /app/publish .
@@ -23,5 +23,6 @@ COPY --from=build /app/publish .
 EXPOSE 8080
 
 ENV ASPNETCORE_URLS=http://+:8080
+ENV DOTNET_EnableDiagnostics=0
 
 ENTRYPOINT ["dotnet", "Sicou.Api.dll"]

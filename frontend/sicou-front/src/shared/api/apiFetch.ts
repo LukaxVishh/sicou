@@ -19,8 +19,10 @@ function getStoredToken() {
 function buildHeaders(options?: ApiFetchOptions): HeadersInit {
   const token = getStoredToken();
 
+  const isFormData = options?.body instanceof FormData;
+
   return {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options?.auth !== false && token
       ? { Authorization: `Bearer ${token}` }
       : {}),
