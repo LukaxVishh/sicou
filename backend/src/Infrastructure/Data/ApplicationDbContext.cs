@@ -23,6 +23,8 @@ public class ApplicationDbContext
 
     public DbSet<UserAreaAccess> UserAreaAccesses => Set<UserAreaAccess>();
 
+    public DbSet<Post> Posts => Set<Post>();
+
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
@@ -306,6 +308,24 @@ public class ApplicationDbContext
             entity.HasIndex(x => x.CompanyId);
             entity.HasIndex(x => x.UnitId);
             entity.HasIndex(x => x.AreaId);
+        });
+
+        builder.Entity<Post>(entity =>
+        {
+            entity.ToTable("posts");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.CompanyId);
+            entity.Property(x => x.AuthorId).HasMaxLength(450).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Content).HasMaxLength(5000).IsRequired();
+            entity.Property(x => x.ImageUrl).HasMaxLength(500);
+            entity.Property(x => x.IsPinned).IsRequired();
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.Company).WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.CompanyId, x.IsActive, x.IsPinned, x.CreatedAt });
+            entity.HasIndex(x => x.AuthorId);
         });
     }
 

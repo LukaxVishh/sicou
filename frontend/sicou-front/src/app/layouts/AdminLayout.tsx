@@ -1,6 +1,7 @@
 import {
   Building2,
   LayoutDashboard,
+  Newspaper,
   LogOut,
   Menu,
   ShieldCheck,
@@ -18,6 +19,18 @@ const navigationItems = [
     label: 'Dashboard',
     path: '/app/dashboard',
     icon: LayoutDashboard,
+    roles: [
+      SystemRoles.SuperAdmin,
+      SystemRoles.CompanyAdmin,
+      SystemRoles.AreaAdmin,
+      SystemRoles.HeadquarterUser,
+      SystemRoles.UnitUser,
+    ],
+  },
+  {
+    label: 'Feed',
+    path: '/app/feed',
+    icon: Newspaper,
     roles: [
       SystemRoles.SuperAdmin,
       SystemRoles.CompanyAdmin,

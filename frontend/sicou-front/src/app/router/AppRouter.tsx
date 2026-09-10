@@ -8,6 +8,7 @@ import {
   CompanyDetailsPage,
 } from '../../features/companies/pages';
 import { UsersPage } from '../../features/users';
+import { FeedPage } from '../../features/posts';
 
 
 export function AppRouter() {
@@ -37,6 +38,11 @@ export function AppRouter() {
             <Route
               path="dashboard"
               element={<DashboardPage />}
+            />
+
+            <Route
+              path="feed"
+              element={<FeedPage />}
             />
 
             <Route

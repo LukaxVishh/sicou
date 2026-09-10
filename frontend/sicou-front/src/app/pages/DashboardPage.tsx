@@ -1,5 +1,6 @@
 import { Building2, ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '../../features/auth/providers';
+import { FeedSummary } from '../../features/posts';
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -70,6 +71,8 @@ export function DashboardPage() {
           </p>
         </div>
       </div>
+
+      <FeedSummary />
 
       {user && (
         <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

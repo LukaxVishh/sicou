@@ -11,6 +11,8 @@ using Microsoft.Extensions.Configuration;
 using Sicou.Application.Interfaces.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Sicou.Application.Interfaces.Repositories;
+using Sicou.Application.Interfaces.Storage;
+using Sicou.Infrastructure.Storage;
 
 
 namespace Sicou.Infrastructure.Extensions;
@@ -53,6 +55,7 @@ public static class DependencyInjection
         services.AddScoped<IAreaRepository, AreaRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<IUserAreaAccessRepository, UserAreaAccessRepository>();
+        services.AddScoped<IPostRepository, PostRepository>();
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
@@ -63,6 +66,8 @@ public static class DependencyInjection
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IUserAreaAccessService, UserAreaAccessService>();
+        services.AddScoped<IPostService, PostService>();
+        services.AddScoped<IPostMediaStorage, LocalPostMediaStorage>();
 
         services.AddScoped<IAuthorizationHandler, AreaPermissionHandler>();
 

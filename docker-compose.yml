@@ -1,7 +1,10 @@
+name: sicou
+
 services:
-  postgres:
+  db:
     image: postgres:16
-    container_name: sicou-postgres-compose
+    container_name: Sicou-DB
+    restart: unless-stopped
     environment:
       POSTGRES_DB: sicou-dev
       POSTGRES_USER: postgres
@@ -10,20 +13,48 @@ services:
       - "5433:5432"
     volumes:
       - sicou_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sicou-dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  api:
+  back:
+    image: localhost/sicou-back:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: sicou-api
+    container_name: Sicou-Back
+    restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=sicou-dev;Username=postgres;Password=rootroot
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=sicou-dev;Username=postgres;Password=rootroot
+      Cors__AllowedOrigins__0: http://localhost:3000
     ports:
       - "8080:8080"
+    volumes:
+      - sicou_post_media:/app/uploads
     depends_on:
-      - postgres
+      db:
+        condition: service_healthy
+
+  front:
+    image: localhost/sicou-front:latest
+    build:
+      context: ./frontend/sicou-front
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080
+    container_name: Sicou-Front
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - back
 
 volumes:
   sicou_postgres_data:
+    name: Sicou-DB-Data
+  sicou_post_media:
+    name: Sicou-Post-Media
