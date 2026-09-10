@@ -247,11 +247,11 @@ export function UsersPage() {
                     </td>
 
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-700">
-                      {user.companyId || 'Não vinculada'}
+                      {user.companyName || 'Não vinculada'}
                     </td>
 
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-700">
-                      {user.unitId || 'Não vinculada'}
+                      {user.unitName || 'Não vinculada'}
                     </td>
 
                     <td className="px-6 py-4">

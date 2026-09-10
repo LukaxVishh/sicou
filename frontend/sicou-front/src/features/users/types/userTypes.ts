@@ -12,6 +12,8 @@ export type User = {
   isActive: boolean;
   companyId: string | null;
   unitId: string | null;
+  companyName?: string | null;
+  unitName?: string | null;
   roles: UserRole[];
   createdAt: string;
   updatedAt: string | null;

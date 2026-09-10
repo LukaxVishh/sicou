@@ -14,6 +14,10 @@ public class UserResponse
 
     public Guid? UnitId { get; set; }
 
+    public string? CompanyName { get; set; }
+
+    public string? UnitName { get; set; }
+
     public List<string> Roles { get; set; } = [];
 
     public DateTime CreatedAt { get; set; }

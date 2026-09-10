@@ -225,9 +225,6 @@ export function CompanyUnitsSection({ companyId }: CompanyUnitsSectionProps) {
                         {unit.name}
                       </p>
 
-                      <p className="text-xs text-slate-500">
-                        {unit.id}
-                      </p>
                     </div>
                   </td>
 
