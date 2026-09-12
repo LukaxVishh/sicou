@@ -1,0 +1,85 @@
+# ==========================================
+# .NET / C# (Backend)
+# ==========================================
+**/bin/
+**/obj/
+**/out/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.userprefs
+.vs/
+.idea/
+.vscode/
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Local database & uploaded media
+backend/src/Api/uploads/
+**/uploads/**
+!**/uploads/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment & local settings
+appsettings.Production.json
+appsettings.*.local.json
+*.local.json
+
+# ==========================================
+# Node / React / Vite (Frontend)
+# ==========================================
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Test coverage
+**/coverage/
+*.lcov
+.nyc_output
+
+# Vite / Frontend cache
+.vite/
+*.tsbuildinfo
+
+# Env files (keep template / dev if needed, ignore sensitive/local)
+.env.local
+.env.*.local
+*.env.local
+
+# ==========================================
+# OS & Miscellaneous
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
