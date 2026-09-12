@@ -2,13 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sicou.Application.Interfaces.Services;
 using Sicou.Application.Requests.Companies;
-using Sicou.Domain.Constants;
 
 namespace Sicou.Api.Controllers;
 
 [ApiController]
 [Route("api/companies")]
-[Authorize(Roles = SystemRoles.SuperAdmin)]
+[Authorize]
 public class CompaniesController : ControllerBase
 {
     private readonly ICompanyService _companyService;
@@ -26,20 +25,28 @@ public class CompaniesController : ControllerBase
             var response = await _companyService.CreateAsync(request);
             return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(new { message = ex.Message });
         }
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var response = await _companyService.GetAllAsync();
-        return Ok(response);
+        try
+        {
+            var response = await _companyService.GetAllAsync();
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
     }
 
     [HttpGet("{id:guid}")]
@@ -50,12 +57,13 @@ public class CompaniesController : ControllerBase
             var response = await _companyService.GetByIdAsync(id);
             return Ok(response);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(new { message = ex.Message });
         }
     }
 
@@ -69,19 +77,17 @@ public class CompaniesController : ControllerBase
             var response = await _companyService.UpdateAsync(id, request);
             return Ok(response);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(new { message = ex.Message });
         }
     }
 
@@ -93,12 +99,13 @@ public class CompaniesController : ControllerBase
             await _companyService.DeleteAsync(id);
             return NoContent();
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(new { message = ex.Message });
         }
     }
 }

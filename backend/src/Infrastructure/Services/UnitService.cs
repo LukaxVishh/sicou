@@ -1,8 +1,12 @@
+using Microsoft.AspNetCore.Identity;
+using Sicou.Application.Interfaces.Auth;
 using Sicou.Application.Interfaces.Repositories;
 using Sicou.Application.Interfaces.Services;
 using Sicou.Application.Requests.Units;
 using Sicou.Application.Responses.Units;
+using Sicou.Domain.Constants;
 using Sicou.Domain.Entities;
+using Sicou.Infrastructure.Identity;
 
 namespace Sicou.Infrastructure.Services;
 
@@ -10,17 +14,25 @@ public class UnitService : IUnitService
 {
     private readonly IUnitRepository _unitRepository;
     private readonly ICompanyRepository _companyRepository;
+    private readonly ICurrentUserService _currentUserService;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public UnitService(
         IUnitRepository unitRepository,
-        ICompanyRepository companyRepository)
+        ICompanyRepository companyRepository,
+        ICurrentUserService currentUserService,
+        UserManager<ApplicationUser> userManager)
     {
         _unitRepository = unitRepository;
         _companyRepository = companyRepository;
+        _currentUserService = currentUserService;
+        _userManager = userManager;
     }
 
     public async Task<UnitResponse> CreateAsync(Guid companyId, CreateUnitRequest request)
     {
+        await ValidateCompanyAccessAsync(companyId, writeOperation: true);
+
         var company = await _companyRepository.GetByIdAsync(companyId);
 
         if (company is null)
@@ -73,6 +85,8 @@ public class UnitService : IUnitService
 
     public async Task<IReadOnlyList<UnitResponse>> GetByCompanyIdAsync(Guid companyId)
     {
+        await ValidateCompanyAccessAsync(companyId, writeOperation: false);
+
         var company = await _companyRepository.GetByIdAsync(companyId);
 
         if (company is null)
@@ -92,6 +106,8 @@ public class UnitService : IUnitService
         if (unit is null)
             throw new KeyNotFoundException("Unidade não encontrada.");
 
+        await ValidateCompanyAccessAsync(unit.CompanyId, writeOperation: false);
+
         return MapToResponse(unit);
     }
 
@@ -101,6 +117,8 @@ public class UnitService : IUnitService
 
         if (unit is null)
             throw new KeyNotFoundException("Unidade não encontrada.");
+
+        await ValidateCompanyAccessAsync(unit.CompanyId, writeOperation: true);
 
         var name = request.Name.Trim();
 
@@ -144,11 +162,38 @@ public class UnitService : IUnitService
         if (unit is null)
             throw new KeyNotFoundException("Unidade não encontrada.");
 
+        await ValidateCompanyAccessAsync(unit.CompanyId, writeOperation: true);
+
         unit.IsActive = false;
         unit.UpdatedAt = DateTime.UtcNow;
 
         _unitRepository.Update(unit);
         await _unitRepository.SaveChangesAsync();
+    }
+
+    private async Task<ApplicationUser> GetActiveCurrentUserAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_currentUserService.UserId))
+            throw new UnauthorizedAccessException("Usuário não autenticado.");
+
+        var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
+        if (user is null || !user.IsActive)
+            throw new UnauthorizedAccessException("Usuário atual não encontrado ou inativo.");
+
+        return user;
+    }
+
+    private async Task ValidateCompanyAccessAsync(Guid companyId, bool writeOperation = false)
+    {
+        var user = await GetActiveCurrentUserAsync();
+        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+            return;
+
+        if (!user.CompanyId.HasValue || user.CompanyId.Value != companyId)
+            throw new UnauthorizedAccessException("Você não tem permissão para acessar unidades de outra empresa.");
+
+        if (writeOperation && !await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin))
+            throw new UnauthorizedAccessException("Apenas administradores podem cadastrar ou alterar unidades.");
     }
 
     private static UnitResponse MapToResponse(Unit unit)

@@ -4,6 +4,8 @@ public class UpdateUserRequest
 {
     public string FullName { get; set; } = string.Empty;
 
+    public string Email { get; set; } = string.Empty;
+
     public Guid? CompanyId { get; set; }
 
     public Guid? UnitId { get; set; }

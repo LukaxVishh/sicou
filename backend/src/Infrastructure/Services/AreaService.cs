@@ -1,10 +1,14 @@
 using System.Globalization;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
+using Sicou.Application.Interfaces.Auth;
 using Sicou.Application.Interfaces.Repositories;
 using Sicou.Application.Interfaces.Services;
 using Sicou.Application.Requests.Areas;
 using Sicou.Application.Responses.Areas;
+using Sicou.Domain.Constants;
 using Sicou.Domain.Entities;
+using Sicou.Infrastructure.Identity;
 
 namespace Sicou.Infrastructure.Services;
 
@@ -12,17 +16,25 @@ public class AreaService : IAreaService
 {
     private readonly IAreaRepository _areaRepository;
     private readonly ICompanyRepository _companyRepository;
+    private readonly ICurrentUserService _currentUserService;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public AreaService(
         IAreaRepository areaRepository,
-        ICompanyRepository companyRepository)
+        ICompanyRepository companyRepository,
+        ICurrentUserService currentUserService,
+        UserManager<ApplicationUser> userManager)
     {
         _areaRepository = areaRepository;
         _companyRepository = companyRepository;
+        _currentUserService = currentUserService;
+        _userManager = userManager;
     }
 
     public async Task<AreaResponse> CreateAsync(Guid companyId, CreateAreaRequest request)
     {
+        await ValidateCompanyAccessAsync(companyId, writeOperation: true);
+
         var company = await _companyRepository.GetByIdAsync(companyId);
 
         if (company is null)
@@ -85,6 +97,8 @@ public class AreaService : IAreaService
 
     public async Task<IReadOnlyList<AreaResponse>> GetByCompanyIdAsync(Guid companyId)
     {
+        await ValidateCompanyAccessAsync(companyId, writeOperation: false);
+
         var company = await _companyRepository.GetByIdAsync(companyId);
 
         if (company is null)
@@ -104,6 +118,8 @@ public class AreaService : IAreaService
         if (area is null)
             throw new KeyNotFoundException("Área não encontrada.");
 
+        await ValidateCompanyAccessAsync(area.CompanyId, writeOperation: false);
+
         return MapToResponse(area);
     }
 
@@ -113,6 +129,8 @@ public class AreaService : IAreaService
 
         if (area is null)
             throw new KeyNotFoundException("Área não encontrada.");
+
+        await ValidateCompanyAccessAsync(area.CompanyId, writeOperation: true);
 
         var name = request.Name.Trim();
 
@@ -146,6 +164,8 @@ public class AreaService : IAreaService
 
         if (area is null)
             throw new KeyNotFoundException("Área não encontrada.");
+
+        await ValidateCompanyAccessAsync(area.CompanyId, writeOperation: true);
 
         var requestedModuleCodes = request.ModuleCodes
             .Distinct()
@@ -201,6 +221,8 @@ public class AreaService : IAreaService
         if (area is null)
             throw new KeyNotFoundException("Área não encontrada.");
 
+        await ValidateCompanyAccessAsync(area.CompanyId, writeOperation: true);
+
         area.IsActive = false;
         area.UpdatedAt = DateTime.UtcNow;
 
@@ -213,6 +235,31 @@ public class AreaService : IAreaService
 
         _areaRepository.Update(area);
         await _areaRepository.SaveChangesAsync();
+    }
+
+    private async Task<ApplicationUser> GetActiveCurrentUserAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_currentUserService.UserId))
+            throw new UnauthorizedAccessException("Usuário não autenticado.");
+
+        var user = await _userManager.FindByIdAsync(_currentUserService.UserId);
+        if (user is null || !user.IsActive)
+            throw new UnauthorizedAccessException("Usuário atual não encontrado ou inativo.");
+
+        return user;
+    }
+
+    private async Task ValidateCompanyAccessAsync(Guid companyId, bool writeOperation = false)
+    {
+        var user = await GetActiveCurrentUserAsync();
+        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+            return;
+
+        if (!user.CompanyId.HasValue || user.CompanyId.Value != companyId)
+            throw new UnauthorizedAccessException("Você não tem permissão para acessar áreas de outra empresa.");
+
+        if (writeOperation && !await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin))
+            throw new UnauthorizedAccessException("Apenas administradores podem cadastrar ou alterar áreas.");
     }
 
     private static AreaResponse MapToResponse(Area area)

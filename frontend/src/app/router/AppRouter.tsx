@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { AdminLayout } from '../layouts';
-import { ComingSoonPage, DashboardPage } from '../pages';
+import { DashboardPage } from '../pages';
 import { LoginPage } from '../../features/auth/pages';
 import { ProtectedRoute } from './ProtectedRoute';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../../features/companies/pages';
 import { UsersPage } from '../../features/users';
 import { FeedPage } from '../../features/posts';
+import { AccessControlPage } from '../../features/access-control';
 
 
 export function AppRouter() {
@@ -62,12 +63,7 @@ export function AppRouter() {
 
             <Route
               path="access-control"
-              element={(
-                <ComingSoonPage
-                  title="Permissões"
-                  description="Nesta área vamos construir a gestão de acessos granulares por empresa, unidade e área."
-                />
-              )}
+              element={<AccessControlPage />}
             />
           </Route>
         </Route>

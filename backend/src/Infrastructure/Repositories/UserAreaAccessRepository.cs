@@ -34,8 +34,7 @@ public class UserAreaAccessRepository : IUserAreaAccessRepository
                 x.UserId == userId &&
                 x.CompanyId == companyId &&
                 x.UnitId == unitId &&
-                x.AreaId == areaId &&
-                x.IsActive);
+                x.AreaId == areaId);
     }
 
     public async Task<List<UserAreaAccess>> GetByUserIdAsync(string userId)

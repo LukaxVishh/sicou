@@ -20,7 +20,14 @@ public class PostsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPage([FromQuery] Guid? companyId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        return Ok(await _postService.GetPageAsync(companyId, page, pageSize));
+        try
+        {
+            return Ok(await _postService.GetPageAsync(companyId, page, pageSize));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
     }
 
     [HttpPost]
@@ -31,6 +38,10 @@ public class PostsController : ControllerBase
         {
             var response = await _postService.CreateAsync(request, ToImageUpload(image));
             return CreatedAtAction(nameof(GetPage), null, response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {
@@ -45,6 +56,10 @@ public class PostsController : ControllerBase
         try
         {
             return Ok(await _postService.UpdateAsync(id, request, ToImageUpload(image)));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {
@@ -64,6 +79,10 @@ public class PostsController : ControllerBase
             await _postService.DeleteAsync(id);
             return NoContent();
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
@@ -76,6 +95,10 @@ public class PostsController : ControllerBase
         try
         {
             return Ok(await _postService.SetPinnedAsync(id, request.IsPinned));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {

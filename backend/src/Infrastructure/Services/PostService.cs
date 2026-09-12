@@ -20,14 +20,22 @@ public class PostService : IPostService
     private readonly ICurrentUserService _currentUser;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICompanyRepository _companyRepository;
+    private readonly IUserAreaAccessRepository _userAreaAccessRepository;
 
-    public PostService(IPostRepository postRepository, IPostMediaStorage mediaStorage, ICurrentUserService currentUser, UserManager<ApplicationUser> userManager, ICompanyRepository companyRepository)
+    public PostService(
+        IPostRepository postRepository,
+        IPostMediaStorage mediaStorage,
+        ICurrentUserService currentUser,
+        UserManager<ApplicationUser> userManager,
+        ICompanyRepository companyRepository,
+        IUserAreaAccessRepository userAreaAccessRepository)
     {
         _postRepository = postRepository;
         _mediaStorage = mediaStorage;
         _currentUser = currentUser;
         _userManager = userManager;
         _companyRepository = companyRepository;
+        _userAreaAccessRepository = userAreaAccessRepository;
     }
 
     public async Task<PagedPostsResponse> GetPageAsync(Guid? companyId, int page, int pageSize)
@@ -49,6 +57,10 @@ public class PostService : IPostService
     {
         var user = await GetActiveCurrentUserAsync();
         var companyId = await ResolveCompanyForCreationAsync(user, request.CompanyId, request.PublishToAllCompanies);
+        
+        if (!await CanCreatePostAsync(user, companyId))
+            throw new UnauthorizedAccessException("Você não possui permissão para publicar comunicados nesta empresa.");
+
         var (title, content) = NormalizeContent(request.Title, request.Content);
         var imageUrl = image is null ? null : await _mediaStorage.SaveAsync(image);
         var post = new Post { CompanyId = companyId, AuthorId = user.Id.ToString(), Title = title, Content = content, ImageUrl = imageUrl, IsPinned = false, IsActive = true, CreatedAt = DateTime.UtcNow };
@@ -177,6 +189,32 @@ public class PostService : IPostService
         return post.CompanyId.HasValue
             && await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin)
             && user.CompanyId == post.CompanyId;
+    }
+
+    private async Task<bool> CanCreatePostAsync(ApplicationUser user, Guid? companyId)
+    {
+        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+            return true;
+
+        if (!user.CompanyId.HasValue)
+            return false;
+
+        if (companyId.HasValue && companyId.Value != user.CompanyId.Value)
+            return false;
+
+        if (await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin))
+            return true;
+
+        // Se tiver papel apenas de UnitUser e nenhum acesso específico de publicação:
+        if (await _userManager.IsInRoleAsync(user, SystemRoles.UnitUser))
+        {
+            var unitAccesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
+            return unitAccesses.Any(a => a.IsActive && a.CompanyId == user.CompanyId.Value && (a.CanPublishInformatives || a.CanManage));
+        }
+
+        // Para usuários da sede / administradores de área:
+        var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
+        return accesses.Any(a => a.IsActive && a.CompanyId == user.CompanyId.Value && (a.CanPublishInformatives || a.CanManage));
     }
 
     private static (string Title, string Content) NormalizeContent(string title, string content)

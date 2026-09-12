@@ -2,12 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sicou.Application.Interfaces.Services;
 using Sicou.Application.Requests.Areas;
-using Sicou.Domain.Constants;
 
 namespace Sicou.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = SystemRoles.SuperAdmin)]
+[Authorize]
 public class AreasController : ControllerBase
 {
     private readonly IAreaService _areaService;
@@ -27,6 +26,10 @@ public class AreasController : ControllerBase
             var response = await _areaService.CreateAsync(companyId, request);
             return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
@@ -45,6 +48,10 @@ public class AreasController : ControllerBase
             var response = await _areaService.GetByCompanyIdAsync(companyId);
             return Ok(response);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
@@ -58,6 +65,10 @@ public class AreasController : ControllerBase
         {
             var response = await _areaService.GetByIdAsync(id);
             return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {
@@ -74,6 +85,10 @@ public class AreasController : ControllerBase
         {
             var response = await _areaService.UpdateAsync(id, request);
             return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {
@@ -95,6 +110,10 @@ public class AreasController : ControllerBase
             var response = await _areaService.UpdateModulesAsync(id, request);
             return Ok(response);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
@@ -112,6 +131,10 @@ public class AreasController : ControllerBase
         {
             await _areaService.DeleteAsync(id);
             return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {

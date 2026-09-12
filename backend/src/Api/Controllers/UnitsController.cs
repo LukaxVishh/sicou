@@ -2,12 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sicou.Application.Interfaces.Services;
 using Sicou.Application.Requests.Units;
-using Sicou.Domain.Constants;
 
 namespace Sicou.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = SystemRoles.SuperAdmin)]
+[Authorize]
 public class UnitsController : ControllerBase
 {
     private readonly IUnitService _unitService;
@@ -27,19 +26,17 @@ public class UnitsController : ControllerBase
             var response = await _unitService.CreateAsync(companyId, request);
             return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(new { message = ex.Message });
         }
     }
 
@@ -51,12 +48,13 @@ public class UnitsController : ControllerBase
             var response = await _unitService.GetByCompanyIdAsync(companyId);
             return Ok(response);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(new { message = ex.Message });
         }
     }
 
@@ -68,12 +66,13 @@ public class UnitsController : ControllerBase
             var response = await _unitService.GetByIdAsync(id);
             return Ok(response);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(new { message = ex.Message });
         }
     }
 
@@ -87,19 +86,17 @@ public class UnitsController : ControllerBase
             var response = await _unitService.UpdateAsync(id, request);
             return Ok(response);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(new { message = ex.Message });
         }
     }
 
@@ -111,12 +108,13 @@ public class UnitsController : ControllerBase
             await _unitService.DeleteAsync(id);
             return NoContent();
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(new { message = ex.Message });
         }
     }
 }

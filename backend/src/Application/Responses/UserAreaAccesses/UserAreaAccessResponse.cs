@@ -5,6 +5,8 @@ public class UserAreaAccessResponse
     public Guid Id { get; set; }
 
     public string UserId { get; set; } = string.Empty;
+    public string? UserName { get; set; }
+    public string? UserEmail { get; set; }
 
     public Guid CompanyId { get; set; }
     public string CompanyName { get; set; } = string.Empty;
