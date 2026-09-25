@@ -10,6 +10,7 @@ import {
 import { UsersPage } from '../../features/users';
 import { FeedPage } from '../../features/posts';
 import { AccessControlPage } from '../../features/access-control';
+import { WorkflowsPage } from '../../features/workflows';
 
 
 export function AppRouter() {
@@ -64,6 +65,11 @@ export function AppRouter() {
             <Route
               path="access-control"
               element={<AccessControlPage />}
+            />
+
+            <Route
+              path="workflows"
+              element={<WorkflowsPage />}
             />
           </Route>
         </Route>

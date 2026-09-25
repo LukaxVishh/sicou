@@ -25,6 +25,24 @@ public class ApplicationDbContext
 
     public DbSet<Post> Posts => Set<Post>();
 
+    public DbSet<FieldDefinition> FieldDefinitions => Set<FieldDefinition>();
+
+    public DbSet<ProcessNode> ProcessNodes => Set<ProcessNode>();
+
+    public DbSet<ProcessType> ProcessTypes => Set<ProcessType>();
+
+    public DbSet<ProcessTypeNode> ProcessTypeNodes => Set<ProcessTypeNode>();
+
+    public DbSet<ProcessTypeField> ProcessTypeFields => Set<ProcessTypeField>();
+
+    public DbSet<ProcessTransition> ProcessTransitions => Set<ProcessTransition>();
+
+    public DbSet<ProcessInstance> ProcessInstances => Set<ProcessInstance>();
+
+    public DbSet<ProcessFieldValue> ProcessFieldValues => Set<ProcessFieldValue>();
+
+    public DbSet<ProcessHistory> ProcessHistories => Set<ProcessHistory>();
+
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
@@ -326,6 +344,150 @@ public class ApplicationDbContext
             entity.HasOne(x => x.Company).WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(x => new { x.CompanyId, x.IsActive, x.IsPinned, x.CreatedAt });
             entity.HasIndex(x => x.AuthorId);
+        });
+
+        builder.Entity<FieldDefinition>(entity =>
+        {
+            entity.ToTable("field_definitions");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Code).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.Property(x => x.Placeholder).HasMaxLength(200);
+            entity.Property(x => x.Type).HasConversion<int>().IsRequired();
+            entity.Property(x => x.GlobalOptionsJson).HasColumnType("text");
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.Area).WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.AreaId, x.Code }).IsUnique();
+        });
+
+        builder.Entity<ProcessNode>(entity =>
+        {
+            entity.ToTable("process_nodes");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Code).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.Property(x => x.NodeType).HasConversion<int>().IsRequired();
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.Area).WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.AreaId, x.Code }).IsUnique();
+        });
+
+        builder.Entity<ProcessType>(entity =>
+        {
+            entity.ToTable("process_types");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.FamilyId).IsRequired();
+            entity.Property(x => x.VersionNumber).IsRequired();
+            entity.Property(x => x.Code).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(1000);
+            entity.Property(x => x.TargetAudience).HasConversion<int>().IsRequired();
+            entity.Property(x => x.Status).HasConversion<int>().IsRequired();
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.Area).WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.StartNode).WithMany().HasForeignKey(x => x.StartNodeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.AreaId, x.FamilyId, x.VersionNumber }).IsUnique();
+        });
+
+        builder.Entity<ProcessTypeNode>(entity =>
+        {
+            entity.ToTable("process_type_nodes");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Instructions).HasMaxLength(1000);
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.ProcessType).WithMany(x => x.Nodes).HasForeignKey(x => x.ProcessTypeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.ProcessNode).WithMany().HasForeignKey(x => x.ProcessNodeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.ProcessTypeId, x.ProcessNodeId }).IsUnique();
+        });
+
+        builder.Entity<ProcessTypeField>(entity =>
+        {
+            entity.ToTable("process_type_fields");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.CustomLabel).HasMaxLength(200);
+            entity.Property(x => x.HelpText).HasMaxLength(500);
+            entity.Property(x => x.ConditionsJson).HasColumnType("text");
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.ProcessType).WithMany(x => x.Fields).HasForeignKey(x => x.ProcessTypeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.ProcessNode).WithMany().HasForeignKey(x => x.ProcessNodeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.FieldDefinition).WithMany().HasForeignKey(x => x.FieldDefinitionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.ProcessTypeId, x.FieldDefinitionId, x.ProcessNodeId });
+        });
+
+        builder.Entity<ProcessTransition>(entity =>
+        {
+            entity.ToTable("process_transitions");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.ProcessType).WithMany(x => x.Transitions).HasForeignKey(x => x.ProcessTypeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.FromNode).WithMany().HasForeignKey(x => x.FromNodeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ToNode).WithMany().HasForeignKey(x => x.ToNodeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.ProcessTypeId, x.FromNodeId, x.ToNodeId }).IsUnique();
+        });
+
+        builder.Entity<ProcessInstance>(entity =>
+        {
+            entity.ToTable("process_instances");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ProcessNumber).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(200);
+            entity.Property(x => x.Status).HasConversion<int>().IsRequired();
+            entity.Property(x => x.CreatedByUserId).HasMaxLength(450).IsRequired();
+            entity.Property(x => x.CreatedByUserName).HasMaxLength(200);
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.Company).WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Area).WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ProcessType).WithMany().HasForeignKey(x => x.ProcessTypeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CurrentNode).WithMany().HasForeignKey(x => x.CurrentNodeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.OriginUnit).WithMany().HasForeignKey(x => x.OriginUnitId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.CompanyId, x.ProcessNumber }).IsUnique();
+            entity.HasIndex(x => new { x.AreaId, x.Status, x.CreatedAt });
+        });
+
+        builder.Entity<ProcessFieldValue>(entity =>
+        {
+            entity.ToTable("process_field_values");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Value).HasColumnType("text");
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.ProcessInstance).WithMany(x => x.FieldValues).HasForeignKey(x => x.ProcessInstanceId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.FieldDefinition).WithMany().HasForeignKey(x => x.FieldDefinitionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.ProcessInstanceId, x.FieldDefinitionId }).IsUnique();
+        });
+
+        builder.Entity<ProcessHistory>(entity =>
+        {
+            entity.ToTable("process_histories");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Action).HasConversion<int>().IsRequired();
+            entity.Property(x => x.UserId).HasMaxLength(450).IsRequired();
+            entity.Property(x => x.UserFullName).HasMaxLength(200);
+            entity.Property(x => x.Observations).HasMaxLength(2000);
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.ProcessInstance).WithMany(x => x.History).HasForeignKey(x => x.ProcessInstanceId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.FromNode).WithMany().HasForeignKey(x => x.FromNodeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ToNode).WithMany().HasForeignKey(x => x.ToNodeId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.ProcessInstanceId, x.CreatedAt });
         });
     }
 

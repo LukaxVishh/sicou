@@ -6,6 +6,7 @@ import {
   Menu,
   ShieldCheck,
   Users,
+  Workflow,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -31,6 +32,18 @@ const navigationItems = [
     label: 'Feed',
     path: '/app/feed',
     icon: Newspaper,
+    roles: [
+      SystemRoles.SuperAdmin,
+      SystemRoles.CompanyAdmin,
+      SystemRoles.AreaAdmin,
+      SystemRoles.HeadquarterUser,
+      SystemRoles.UnitUser,
+    ],
+  },
+  {
+    label: 'Workflows',
+    path: '/app/workflows',
+    icon: Workflow,
     roles: [
       SystemRoles.SuperAdmin,
       SystemRoles.CompanyAdmin,

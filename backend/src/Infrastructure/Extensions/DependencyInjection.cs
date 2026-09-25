@@ -56,6 +56,10 @@ public static class DependencyInjection
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<IUserAreaAccessRepository, UserAreaAccessRepository>();
         services.AddScoped<IPostRepository, PostRepository>();
+        services.AddScoped<IFieldDefinitionRepository, FieldDefinitionRepository>();
+        services.AddScoped<IProcessNodeRepository, ProcessNodeRepository>();
+        services.AddScoped<IProcessTypeRepository, ProcessTypeRepository>();
+        services.AddScoped<IProcessInstanceRepository, ProcessInstanceRepository>();
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
@@ -68,6 +72,10 @@ public static class DependencyInjection
         services.AddScoped<IUserAreaAccessService, UserAreaAccessService>();
         services.AddScoped<IPostService, PostService>();
         services.AddScoped<IPostMediaStorage, LocalPostMediaStorage>();
+        services.AddScoped<IFieldDefinitionService, FieldDefinitionService>();
+        services.AddScoped<IProcessNodeService, ProcessNodeService>();
+        services.AddScoped<IProcessTypeService, ProcessTypeService>();
+        services.AddScoped<IProcessInstanceService, ProcessInstanceService>();
 
         services.AddScoped<IAuthorizationHandler, AreaPermissionHandler>();
 
