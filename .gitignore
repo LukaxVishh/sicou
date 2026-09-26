@@ -83,3 +83,8 @@ lerna-debug.log*
 ehthumbs.db
 Thumbs.db
 [Dd]esktop.ini
+
+# Local validation tools and caches
+.tools/
+.cache/
+**/__pycache__/

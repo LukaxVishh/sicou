@@ -1438,3 +1438,8 @@ Próximo passo recomendado: implementar a tela de controle de acessos granulares
 ## Observação sobre validação deste README
 
 Este README foi reescrito com base na estrutura e no código atual do `backend.zip`. Neste ambiente de análise não foi possível executar `dotnet build` porque o SDK do .NET não está instalado, então a validação foi feita por inspeção do código e da estrutura do projeto.
+
+
+### Orientador implementado
+
+Consulte [ORIENTADOR.md](ORIENTADOR.md) para uso, endpoints, migração e execução da bateria Python.

@@ -1149,3 +1149,8 @@ Módulos da área
 ```
 
 A próxima etapa deve focar em transformar essa base estrutural em governança real, iniciando pela tela de **controle de acessos granulares por área**.
+
+
+### Orientador implementado
+
+O módulo está disponível em /app/guide e na aba de guias da empresa. Inclui categorias, orientações, rascunhos, publicação, busca, links e anexos autenticados. Consulte [a documentação do módulo](../backend/ORIENTADOR.md).

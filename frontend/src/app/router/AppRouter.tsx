@@ -10,6 +10,7 @@ import {
 import { UsersPage } from '../../features/users';
 import { FeedPage } from '../../features/posts';
 import { AccessControlPage } from '../../features/access-control';
+import { GuidePage } from '../../features/guide/GuidePage';
 import { WorkflowsPage } from '../../features/workflows';
 
 
@@ -71,6 +72,7 @@ export function AppRouter() {
               path="workflows"
               element={<WorkflowsPage />}
             />
+            <Route path="guide" element={<GuidePage />} />
           </Route>
         </Route>
 

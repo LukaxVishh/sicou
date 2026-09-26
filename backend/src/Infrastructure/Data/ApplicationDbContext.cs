@@ -55,6 +55,7 @@ public class ApplicationDbContext
         ConfigureIdentityTables(builder);
         ConfigureDomainTables(builder);
         SeedModules(builder);
+        GuideModelConfiguration.Configure(builder);
     }
 
     private static void ConfigureIdentityTables(ModelBuilder builder)

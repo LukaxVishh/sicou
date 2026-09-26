@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Building2,
   LayoutDashboard,
   Newspaper,
@@ -16,6 +17,7 @@ import { cn } from '../../shared/utils';
 import { useAuth } from '../../features/auth/providers';
 
 const navigationItems = [
+  { label: 'Orientador', path: '/app/guide', icon: BookOpen, roles: Object.values(SystemRoles) },
   {
     label: 'Dashboard',
     path: '/app/dashboard',

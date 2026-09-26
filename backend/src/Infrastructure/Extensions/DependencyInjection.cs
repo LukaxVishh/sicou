@@ -71,6 +71,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IUserAreaAccessService, UserAreaAccessService>();
         services.AddScoped<IPostService, PostService>();
+        services.AddScoped<IGuideService, GuideService>();
         services.AddScoped<IPostMediaStorage, LocalPostMediaStorage>();
         services.AddScoped<IFieldDefinitionService, FieldDefinitionService>();
         services.AddScoped<IProcessNodeService, ProcessNodeService>();
