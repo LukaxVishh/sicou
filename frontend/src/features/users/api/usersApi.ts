@@ -12,6 +12,12 @@ export async function getUsers() {
   });
 }
 
+export async function getUserById(userId: string) {
+  return apiFetch<User>(`/api/users/${userId}`, {
+    method: 'GET',
+  });
+}
+
 export async function createUser(request: CreateUserRequest) {
   return apiFetch<User>('/api/users', {
     method: 'POST',

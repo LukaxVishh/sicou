@@ -7,15 +7,17 @@ function formBody(data: PostFormData) {
   body.append('title', data.title);
   body.append('content', data.content);
   if (data.companyId) body.append('companyId', data.companyId);
+  if (data.areaId) body.append('areaId', data.areaId);
   if (data.publishToAllCompanies) body.append('publishToAllCompanies', 'true');
   if (data.image) body.append('image', data.image);
   if (data.removeImage) body.append('removeImage', 'true');
   return body;
 }
 
-export function getPosts(options: { companyId?: string; page?: number; pageSize?: number } = {}) {
+export function getPosts(options: { companyId?: string; areaId?: string; page?: number; pageSize?: number } = {}) {
   const params = new URLSearchParams();
   if (options.companyId) params.set('companyId', options.companyId);
+  if (options.areaId) params.set('areaId', options.areaId);
   params.set('page', String(options.page ?? 1));
   params.set('pageSize', String(options.pageSize ?? 10));
   return apiFetch<PagedPosts>(`/api/posts?${params.toString()}`, { method: 'GET' });

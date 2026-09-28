@@ -12,7 +12,30 @@ public class CreateProcessInstanceRequest
 
     public Guid? OriginUnitId { get; set; }
 
+    public bool IsDraft { get; set; } = true;
+
     public Dictionary<Guid, string?> InitialFieldValues { get; set; } = new();
+}
+
+public class UpdateProcessDraftRequest
+{
+    [MaxLength(200)]
+    public string? Title { get; set; }
+
+    public Guid? OriginUnitId { get; set; }
+
+    public Dictionary<Guid, string?> FieldValues { get; set; } = new();
+}
+
+public class ProtocolProcessRequest
+{
+    [MaxLength(200)]
+    public string? Title { get; set; }
+
+    public Dictionary<Guid, string?> FieldValues { get; set; } = new();
+
+    [MaxLength(2000)]
+    public string? Observations { get; set; }
 }
 
 public class AdvanceProcessRequest

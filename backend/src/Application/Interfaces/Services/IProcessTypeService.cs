@@ -11,6 +11,8 @@ public interface IProcessTypeService
     Task<ProcessTypeResponse> CreateAsync(Guid areaId, CreateProcessTypeRequest request);
     Task<ProcessTypeResponse> UpdateAsync(Guid id, UpdateProcessTypeRequest request);
     Task<ProcessTypeResponse> CloneToNewVersionAsync(Guid id);
+    Task<ProcessTypeResponse> CreateNewVersionFromScratchAsync(Guid id);
     Task<ProcessTypeResponse> HomologateAsync(Guid id);
+    Task<ProcessTypeResponse> InactivateAsync(Guid id);
     Task DeleteAsync(Guid id);
 }

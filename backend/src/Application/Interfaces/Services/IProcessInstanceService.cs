@@ -10,6 +10,8 @@ public interface IProcessInstanceService
     Task<IReadOnlyList<ProcessInstanceSummaryResponse>> GetMyProcessesAsync();
     Task<ProcessInstanceResponse> GetByIdAsync(Guid id);
     Task<ProcessInstanceResponse> CreateAsync(CreateProcessInstanceRequest request);
+    Task<ProcessInstanceResponse> UpdateDraftAsync(Guid id, UpdateProcessDraftRequest request);
+    Task<ProcessInstanceResponse> ProtocolAsync(Guid id, ProtocolProcessRequest request);
     Task<ProcessInstanceResponse> AdvanceAsync(Guid id, AdvanceProcessRequest request);
     Task<ProcessInstanceResponse> ReturnAsync(Guid id, ReturnProcessRequest request);
     Task<ProcessInstanceResponse> RestartAsync(Guid id, RestartProcessRequest request);

@@ -7,6 +7,9 @@ public class Post : BaseEntity
     public Guid? CompanyId { get; set; }
     public Company? Company { get; set; }
 
+    public Guid? AreaId { get; set; }
+    public Area? Area { get; set; }
+
     public string AuthorId { get; set; } = string.Empty;
 
     public string Title { get; set; } = string.Empty;

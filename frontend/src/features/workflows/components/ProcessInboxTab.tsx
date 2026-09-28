@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Inbox, ArrowUpRight, Building, User } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { Plus, Search, Filter, Inbox, ArrowUpRight, Building, User, Edit3 } from 'lucide-react';
 import type { ProcessInstanceSummary } from '../types';
 import { ProcessStatus } from '../types';
 import { ProcessDetailsDrawer } from './ProcessDetailsDrawer';
@@ -18,6 +19,7 @@ export const ProcessInboxTab: React.FC<ProcessInboxTabProps> = ({
   onOpenNewProcess,
   canHandle,
 }) => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
@@ -32,6 +34,7 @@ export const ProcessInboxTab: React.FC<ProcessInboxTabProps> = ({
     if (!matchesSearch) return false;
 
     if (statusFilter === 'all') return true;
+    if (statusFilter === 'draft') return p.status === ProcessStatus.Draft;
     if (statusFilter === 'review') return p.status === ProcessStatus.InReview;
     if (statusFilter === 'returned') return p.status === ProcessStatus.Returned;
     if (statusFilter === 'finished') return p.status === ProcessStatus.Finished;
@@ -82,6 +85,7 @@ export const ProcessInboxTab: React.FC<ProcessInboxTabProps> = ({
             className="px-3 py-2 border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-500"
           >
             <option value="all">Todos os Status</option>
+            <option value="draft">Rascunhos em Confecção</option>
             <option value="review">Em Análise / Tramitação</option>
             <option value="returned">Devolvidos com Pendência</option>
             <option value="finished">Concluídos</option>
@@ -112,6 +116,7 @@ export const ProcessInboxTab: React.FC<ProcessInboxTabProps> = ({
                 </tr>
               ) : (
                 filteredProcesses.map((p) => {
+                  const isDraft = p.status === ProcessStatus.Draft;
                   const isFinished = p.status === ProcessStatus.Finished;
                   const isReturned = p.status === ProcessStatus.Returned;
                   return (
@@ -119,7 +124,7 @@ export const ProcessInboxTab: React.FC<ProcessInboxTabProps> = ({
                       {/* Nº do Processo */}
                       <td className="py-3 px-4">
                         <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded border border-indigo-100 text-xs">
-                          {p.processNumber}
+                          {p.processNumber.startsWith('#') ? p.processNumber : `Processo #${p.processNumber}`}
                         </span>
                       </td>
 
@@ -138,13 +143,17 @@ export const ProcessInboxTab: React.FC<ProcessInboxTabProps> = ({
                       {/* Local Atual (Instância / Nodo) */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                          <span className={`w-2 h-2 rounded-full ${isDraft ? 'bg-amber-500' : 'bg-indigo-500'}`} />
                           <span className="font-semibold text-slate-800 text-xs">
                             {p.currentNodeName}
                           </span>
                         </div>
                         <div className="mt-0.5">
-                          {isFinished ? (
+                          {isDraft ? (
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              Rascunho
+                            </span>
+                          ) : isFinished ? (
                             <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
                               Concluído
                             </span>
@@ -179,13 +188,23 @@ export const ProcessInboxTab: React.FC<ProcessInboxTabProps> = ({
 
                       {/* Ações Rápidas */}
                       <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => setSelectedProcessId(p.id)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-lg transition-colors border border-indigo-200"
-                        >
-                          {canHandle ? 'Tramitar' : 'Ver Detalhes'}
-                          <ArrowUpRight className="w-3.5 h-3.5" />
-                        </button>
+                        {isDraft ? (
+                          <button
+                            onClick={() => navigate(`/app/workflows/processes/${p.id}/confection`)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded-lg transition-colors border border-amber-200 shadow-sm"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Continuar Preenchimento
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setSelectedProcessId(p.id)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-lg transition-colors border border-indigo-200"
+                          >
+                            {canHandle ? 'Tramitar' : 'Ver Detalhes'}
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

@@ -59,12 +59,30 @@ public class ProcessTypeService : IProcessTypeService
 
         var roles = await _userManager.GetRolesAsync(user);
         var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
 
         if (!user.CompanyId.HasValue && !isSuperAdmin)
             throw new InvalidOperationException("Usuário não está vinculado a uma empresa.");
 
         ProcessAudience? audience = isSuperAdmin ? null : (user.UnitId.HasValue ? ProcessAudience.UnitsOnly : ProcessAudience.HeadquartersOnly);
-        var available = await _processTypeRepository.GetAvailableForAudienceAsync(user.CompanyId, audience);
+
+        bool includeAllDrafts = isSuperAdmin || isCompanyAdmin;
+        List<Guid>? draftAreaIds = null;
+
+        if (!includeAllDrafts)
+        {
+            var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
+            draftAreaIds = accesses
+                .Where(a => a.IsActive && (a.CanManage || a.CanManageWorkflows))
+                .Select(a => a.AreaId)
+                .ToList();
+        }
+
+        var available = await _processTypeRepository.GetAvailableForAudienceAsync(
+            user.CompanyId,
+            audience,
+            includeAllDrafts,
+            draftAreaIds);
 
         return available.Select(MapToSummaryResponse).ToList();
     }
@@ -180,11 +198,13 @@ public class ProcessTypeService : IProcessTypeService
         if (original.Status != ProcessTypeStatus.Homologated)
             throw new InvalidOperationException("Apenas árvores homologadas podem ser clonadas para uma nova versão.");
 
+        var maxVersion = await _processTypeRepository.GetMaxVersionNumberByFamilyIdAsync(original.FamilyId);
+
         var newVersion = new ProcessType
         {
             AreaId = original.AreaId,
             FamilyId = original.FamilyId,
-            VersionNumber = original.VersionNumber + 1,
+            VersionNumber = maxVersion + 1,
             Code = original.Code,
             Name = original.Name,
             Description = original.Description,
@@ -215,6 +235,38 @@ public class ProcessTypeService : IProcessTypeService
                 AllowReturn = t.AllowReturn,
                 AllowRestart = t.AllowRestart
             }).ToList()
+        };
+
+        await _processTypeRepository.AddAsync(newVersion);
+        await _processTypeRepository.SaveChangesAsync();
+
+        var created = await _processTypeRepository.GetCompleteTreeAsync(newVersion.Id);
+        return MapToCompleteResponse(created!);
+    }
+
+    public async Task<ProcessTypeResponse> CreateNewVersionFromScratchAsync(Guid id)
+    {
+        var original = await _processTypeRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"Tipo de processo com ID '{id}' não encontrado.");
+
+        await ValidateAreaAccessAsync(original.AreaId, requireManage: true);
+
+        if (original.Status != ProcessTypeStatus.Homologated)
+            throw new InvalidOperationException("Apenas árvores homologadas podem originar uma nova versão do zero.");
+
+        var maxVersion = await _processTypeRepository.GetMaxVersionNumberByFamilyIdAsync(original.FamilyId);
+
+        var newVersion = new ProcessType
+        {
+            AreaId = original.AreaId,
+            FamilyId = original.FamilyId,
+            VersionNumber = maxVersion + 1,
+            Code = original.Code,
+            Name = original.Name,
+            Description = original.Description,
+            TargetAudience = original.TargetAudience,
+            Status = ProcessTypeStatus.Draft,
+            StartNodeId = original.StartNodeId
         };
 
         await _processTypeRepository.AddAsync(newVersion);
@@ -261,6 +313,23 @@ public class ProcessTypeService : IProcessTypeService
 
         var homologated = await _processTypeRepository.GetCompleteTreeAsync(id);
         return MapToCompleteResponse(homologated!);
+    }
+
+    public async Task<ProcessTypeResponse> InactivateAsync(Guid id)
+    {
+        var processType = await _processTypeRepository.GetCompleteTreeAsync(id)
+            ?? throw new KeyNotFoundException($"Tipo de processo com ID '{id}' não encontrado.");
+
+        await ValidateAreaAccessAsync(processType.AreaId, requireManage: true);
+
+        processType.Status = ProcessTypeStatus.Archived;
+        processType.UpdatedAt = DateTime.UtcNow;
+        _processTypeRepository.Update(processType);
+
+        await _processTypeRepository.SaveChangesAsync();
+
+        var inact = await _processTypeRepository.GetCompleteTreeAsync(id);
+        return MapToCompleteResponse(inact!);
     }
 
     public async Task DeleteAsync(Guid id)

@@ -152,10 +152,14 @@ public class UserAreaAccessService : IUserAreaAccessService
     {
         var currentUser = await GetActiveCurrentUserAsync();
         var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isCompanyAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.CompanyAdmin);
 
         var targetUser = await _userManager.FindByIdAsync(userId);
         if (targetUser is null)
             return new List<UserAreaAccessResponse>();
+
+        if (!isSuperAdmin && !isCompanyAdmin && currentUser.Id != targetUser.Id)
+            throw new UnauthorizedAccessException("Você não tem permissão para visualizar os acessos deste usuário.");
 
         if (!isSuperAdmin && targetUser.CompanyId != currentUser.CompanyId)
             throw new UnauthorizedAccessException("Você não tem permissão para visualizar os acessos deste usuário.");

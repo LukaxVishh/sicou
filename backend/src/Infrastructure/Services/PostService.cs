@@ -20,6 +20,7 @@ public class PostService : IPostService
     private readonly ICurrentUserService _currentUser;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICompanyRepository _companyRepository;
+    private readonly IAreaRepository _areaRepository;
     private readonly IUserAreaAccessRepository _userAreaAccessRepository;
 
     public PostService(
@@ -28,6 +29,7 @@ public class PostService : IPostService
         ICurrentUserService currentUser,
         UserManager<ApplicationUser> userManager,
         ICompanyRepository companyRepository,
+        IAreaRepository areaRepository,
         IUserAreaAccessRepository userAreaAccessRepository)
     {
         _postRepository = postRepository;
@@ -35,17 +37,18 @@ public class PostService : IPostService
         _currentUser = currentUser;
         _userManager = userManager;
         _companyRepository = companyRepository;
+        _areaRepository = areaRepository;
         _userAreaAccessRepository = userAreaAccessRepository;
     }
 
-    public async Task<PagedPostsResponse> GetPageAsync(Guid? companyId, int page, int pageSize)
+    public async Task<PagedPostsResponse> GetPageAsync(Guid? companyId, Guid? areaId, int page, int pageSize)
     {
         var user = await GetActiveCurrentUserAsync();
         var targetCompanyId = await ResolveCompanyForListingAsync(user, companyId);
         var normalizedPage = Math.Max(page, 1);
         var normalizedPageSize = Math.Clamp(pageSize, 1, 50);
-        var posts = await _postRepository.GetPageAsync(targetCompanyId, normalizedPage, normalizedPageSize);
-        var totalCount = await _postRepository.CountAsync(targetCompanyId);
+        var posts = await _postRepository.GetPageAsync(targetCompanyId, areaId, normalizedPage, normalizedPageSize);
+        var totalCount = await _postRepository.CountAsync(targetCompanyId, areaId);
         var responses = new List<PostResponse>();
         foreach (var post in posts)
             responses.Add(await MapToResponseAsync(post));
@@ -57,17 +60,49 @@ public class PostService : IPostService
     {
         var user = await GetActiveCurrentUserAsync();
         var companyId = await ResolveCompanyForCreationAsync(user, request.CompanyId, request.PublishToAllCompanies);
-        
-        if (!await CanCreatePostAsync(user, companyId))
-            throw new UnauthorizedAccessException("Você não possui permissão para publicar comunicados nesta empresa.");
+
+        Area? targetArea = null;
+        if (request.AreaId.HasValue)
+        {
+            targetArea = await _areaRepository.GetByIdAsync(request.AreaId.Value);
+            if (targetArea is null || !targetArea.IsActive)
+                throw new KeyNotFoundException("Área da sede não encontrada ou inativa.");
+
+            if (companyId.HasValue && targetArea.CompanyId != companyId.Value)
+                throw new InvalidOperationException("A área selecionada não pertence à empresa informada.");
+
+            if (!await CanPublishInAreaAsync(user, companyId, request.AreaId.Value))
+                throw new UnauthorizedAccessException("Você não possui permissão para publicar informativos nesta área da sede.");
+        }
+        else
+        {
+            if (!await CanPublishGeneralPostAsync(user, companyId))
+                throw new UnauthorizedAccessException("Apenas administradores podem publicar comunicados institucionais gerais sem área vinculada.");
+        }
 
         var (title, content) = NormalizeContent(request.Title, request.Content);
         var imageUrl = image is null ? null : await _mediaStorage.SaveAsync(image);
-        var post = new Post { CompanyId = companyId, AuthorId = user.Id.ToString(), Title = title, Content = content, ImageUrl = imageUrl, IsPinned = false, IsActive = true, CreatedAt = DateTime.UtcNow };
+        var post = new Post
+        {
+            CompanyId = companyId,
+            AreaId = request.AreaId,
+            AuthorId = user.Id.ToString(),
+            Title = title,
+            Content = content,
+            ImageUrl = imageUrl,
+            IsPinned = false,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+
         await _postRepository.AddAsync(post);
         await _postRepository.SaveChangesAsync();
+
         if (companyId.HasValue)
             post.Company = await GetActiveCompanyAsync(companyId.Value);
+        if (request.AreaId.HasValue)
+            post.Area = targetArea;
+
         return await MapToResponseAsync(post, user);
     }
 
@@ -177,44 +212,52 @@ public class PostService : IPostService
         return company;
     }
 
+    private async Task<bool> CanPublishInAreaAsync(ApplicationUser user, Guid? companyId, Guid areaId)
+    {
+        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+            return true;
+
+        if (await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin))
+            return !companyId.HasValue || user.CompanyId == companyId;
+
+        var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
+        return accesses.Any(a => a.IsActive && a.AreaId == areaId && (a.CanPublishInformatives || a.CanManage));
+    }
+
+    private async Task<bool> CanPublishGeneralPostAsync(ApplicationUser user, Guid? companyId)
+    {
+        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+            return true;
+
+        if (await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin))
+            return !companyId.HasValue || user.CompanyId == companyId;
+
+        return false;
+    }
+
     private async Task<bool> CanManagePostAsync(ApplicationUser user, Post post)
     {
-        return user.Id.ToString() == post.AuthorId || await CanModeratePostAsync(user, post);
+        if (user.Id.ToString() == post.AuthorId)
+            return true;
+
+        return await CanModeratePostAsync(user, post);
     }
 
     private async Task<bool> CanModeratePostAsync(ApplicationUser user, Post post)
     {
         if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
             return true;
-        return post.CompanyId.HasValue
-            && await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin)
-            && user.CompanyId == post.CompanyId;
-    }
 
-    private async Task<bool> CanCreatePostAsync(ApplicationUser user, Guid? companyId)
-    {
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (post.CompanyId.HasValue && await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin) && user.CompanyId == post.CompanyId)
             return true;
 
-        if (!user.CompanyId.HasValue)
-            return false;
-
-        if (companyId.HasValue && companyId.Value != user.CompanyId.Value)
-            return false;
-
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin))
-            return true;
-
-        // Se tiver papel apenas de UnitUser e nenhum acesso específico de publicação:
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.UnitUser))
+        if (post.AreaId.HasValue)
         {
-            var unitAccesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-            return unitAccesses.Any(a => a.IsActive && a.CompanyId == user.CompanyId.Value && (a.CanPublishInformatives || a.CanManage));
+            var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
+            return accesses.Any(a => a.IsActive && a.AreaId == post.AreaId.Value && a.CanManage);
         }
 
-        // Para usuários da sede / administradores de área:
-        var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-        return accesses.Any(a => a.IsActive && a.CompanyId == user.CompanyId.Value && (a.CanPublishInformatives || a.CanManage));
+        return false;
     }
 
     private static (string Title, string Content) NormalizeContent(string title, string content)
@@ -235,14 +278,32 @@ public class PostService : IPostService
     private async Task<PostResponse> MapToResponseAsync(Post post, ApplicationUser? knownAuthor = null)
     {
         var author = knownAuthor ?? await _userManager.FindByIdAsync(post.AuthorId);
+        string? authorAreaName = post.Area?.Name;
+        if (string.IsNullOrEmpty(authorAreaName) && author != null)
+        {
+            var accesses = await _userAreaAccessRepository.GetByUserIdAsync(author.Id.ToString());
+            var activeAccess = accesses.FirstOrDefault(a => a.IsActive && a.CanPublishInformatives) 
+                               ?? accesses.FirstOrDefault(a => a.IsActive);
+            authorAreaName = activeAccess?.Area?.Name;
+        }
+
         return new PostResponse
         {
-            Id = post.Id, CompanyId = post.CompanyId,
+            Id = post.Id,
+            CompanyId = post.CompanyId,
             CompanyName = post.Company?.Name ?? "Todas as empresas",
+            AreaId = post.AreaId,
+            AreaName = post.Area?.Name ?? authorAreaName,
             IsGlobal = !post.CompanyId.HasValue,
-            AuthorId = post.AuthorId, AuthorName = author?.FullName ?? "Usuário removido",
-            Title = post.Title, Content = post.Content, ImageUrl = post.ImageUrl,
-            IsPinned = post.IsPinned, CreatedAt = post.CreatedAt, UpdatedAt = post.UpdatedAt
+            AuthorId = post.AuthorId,
+            AuthorName = author?.FullName ?? "Usuário removido",
+            AuthorAreaName = authorAreaName,
+            Title = post.Title,
+            Content = post.Content,
+            ImageUrl = post.ImageUrl,
+            IsPinned = post.IsPinned,
+            CreatedAt = post.CreatedAt,
+            UpdatedAt = post.UpdatedAt
         };
     }
 }

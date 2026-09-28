@@ -8,8 +8,9 @@ public interface IProcessTypeRepository
     Task<ProcessType?> GetByIdAsync(Guid id);
     Task<ProcessType?> GetCompleteTreeAsync(Guid id);
     Task<IReadOnlyList<ProcessType>> GetByAreaIdAsync(Guid areaId);
-    Task<IReadOnlyList<ProcessType>> GetAvailableForAudienceAsync(Guid? companyId, ProcessAudience? userAudience);
+    Task<IReadOnlyList<ProcessType>> GetAvailableForAudienceAsync(Guid? companyId, ProcessAudience? userAudience, bool includeAllDrafts = false, IEnumerable<Guid>? draftAreaIds = null);
     Task<ProcessType?> GetLatestHomologatedByFamilyIdAsync(Guid familyId);
+    Task<int> GetMaxVersionNumberByFamilyIdAsync(Guid familyId);
     Task<bool> ExistsByCodeAsync(Guid areaId, string code, Guid? ignoreId = null);
     Task AddAsync(ProcessType processType);
     void Update(ProcessType processType);

@@ -97,7 +97,7 @@ export const ProcessDetailsDrawer: React.FC<ProcessDetailsDrawerProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-mono text-sm font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded border border-indigo-200">
-                {instance?.processNumber || 'Processo'}
+                {instance ? (instance.processNumber.startsWith('#') ? instance.processNumber : `Processo #${instance.processNumber}`) : 'Processo'}
               </span>
               <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-slate-200 text-slate-700">
                 {instance?.status === ProcessStatus.Finished ? 'Concluído' : instance?.status === ProcessStatus.Returned ? 'Devolvido' : 'Em Análise'}

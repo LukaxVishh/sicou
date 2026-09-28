@@ -18,11 +18,11 @@ public class PostsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetPage([FromQuery] Guid? companyId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetPage([FromQuery] Guid? companyId, [FromQuery] Guid? areaId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         try
         {
-            return Ok(await _postService.GetPageAsync(companyId, page, pageSize));
+            return Ok(await _postService.GetPageAsync(companyId, areaId, page, pageSize));
         }
         catch (UnauthorizedAccessException ex)
         {

@@ -43,7 +43,7 @@ public class ProcessInstanceRepository : IProcessInstanceRepository
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
-    public async Task<IReadOnlyList<ProcessInstance>> GetByAreaIdAsync(Guid areaId, ProcessStatus? status = null)
+    public async Task<IReadOnlyList<ProcessInstance>> GetByAreaIdAsync(Guid areaId, ProcessStatus? status = null, Guid? originUnitId = null)
     {
         var query = _context.ProcessInstances
             .Include(x => x.ProcessType)
@@ -54,12 +54,15 @@ public class ProcessInstanceRepository : IProcessInstanceRepository
         if (status.HasValue)
             query = query.Where(x => x.Status == status.Value);
 
+        if (originUnitId.HasValue)
+            query = query.Where(x => x.OriginUnitId == originUnitId.Value);
+
         return await query
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
     }
 
-    public async Task<IReadOnlyList<ProcessInstance>> GetByCompanyIdAsync(Guid companyId, ProcessStatus? status = null)
+    public async Task<IReadOnlyList<ProcessInstance>> GetByCompanyIdAsync(Guid companyId, ProcessStatus? status = null, Guid? originUnitId = null)
     {
         var query = _context.ProcessInstances
             .Include(x => x.Area)
@@ -70,6 +73,9 @@ public class ProcessInstanceRepository : IProcessInstanceRepository
 
         if (status.HasValue)
             query = query.Where(x => x.Status == status.Value);
+
+        if (originUnitId.HasValue)
+            query = query.Where(x => x.OriginUnitId == originUnitId.Value);
 
         return await query
             .OrderByDescending(x => x.CreatedAt)
@@ -90,19 +96,27 @@ public class ProcessInstanceRepository : IProcessInstanceRepository
 
     public async Task<string> GenerateProcessNumberAsync(Guid companyId, Guid areaId)
     {
-        var currentYear = DateTime.UtcNow.Year;
-        var area = await _context.Areas.FindAsync(areaId);
-        var areaPrefix = area?.Slug.ToUpperInvariant().Split('-')[0] ?? "PROC";
+        var existingNumbers = await _context.ProcessInstances
+            .Where(x => x.CompanyId == companyId)
+            .Select(x => x.ProcessNumber)
+            .ToListAsync();
 
-        if (areaPrefix.Length > 4)
-            areaPrefix = areaPrefix[..4];
+        var maxNumber = 0;
+        foreach (var numStr in existingNumbers)
+        {
+            if (int.TryParse(numStr.TrimStart('#'), out var parsed))
+            {
+                if (parsed > maxNumber)
+                {
+                    maxNumber = parsed;
+                }
+            }
+        }
 
-        var countThisYear = await _context.ProcessInstances
-            .Where(x => x.CompanyId == companyId && x.CreatedAt.Year == currentYear)
-            .CountAsync();
+        var countTotal = existingNumbers.Count;
+        var nextNumber = Math.Max(countTotal, maxNumber) + 1;
 
-        var sequential = (countThisYear + 1).ToString("D4");
-        return $"#{areaPrefix}-{currentYear}-{sequential}";
+        return nextNumber.ToString();
     }
 
     public async Task AddAsync(ProcessInstance instance)
