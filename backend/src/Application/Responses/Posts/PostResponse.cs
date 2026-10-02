@@ -8,11 +8,17 @@ public class PostResponse
 
     public string CompanyName { get; set; } = string.Empty;
 
+    public Guid? AreaId { get; set; }
+
+    public string? AreaName { get; set; }
+
     public bool IsGlobal { get; set; }
 
     public string AuthorId { get; set; } = string.Empty;
 
     public string AuthorName { get; set; } = string.Empty;
+
+    public string? AuthorAreaName { get; set; }
 
     public string Title { get; set; } = string.Empty;
 

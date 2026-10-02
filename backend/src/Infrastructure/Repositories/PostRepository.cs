@@ -18,18 +18,23 @@ public class PostRepository : IPostRepository
     {
         return await _context.Posts
             .Include(x => x.Company)
+            .Include(x => x.Area)
             .FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
     }
 
-    public async Task<IReadOnlyList<Post>> GetPageAsync(Guid? companyId, int page, int pageSize)
+    public async Task<IReadOnlyList<Post>> GetPageAsync(Guid? companyId, Guid? areaId, int page, int pageSize)
     {
         var query = _context.Posts
             .AsNoTracking()
             .Include(x => x.Company)
+            .Include(x => x.Area)
             .Where(x => x.IsActive);
 
         if (companyId.HasValue)
             query = query.Where(x => x.CompanyId == companyId.Value || x.CompanyId == null);
+
+        if (areaId.HasValue)
+            query = query.Where(x => x.AreaId == areaId.Value);
 
         return await query
             .OrderByDescending(x => x.IsPinned)
@@ -39,12 +44,15 @@ public class PostRepository : IPostRepository
             .ToListAsync();
     }
 
-    public Task<int> CountAsync(Guid? companyId)
+    public Task<int> CountAsync(Guid? companyId, Guid? areaId)
     {
         var query = _context.Posts.AsNoTracking().Where(x => x.IsActive);
 
         if (companyId.HasValue)
             query = query.Where(x => x.CompanyId == companyId.Value || x.CompanyId == null);
+
+        if (areaId.HasValue)
+            query = query.Where(x => x.AreaId == areaId.Value);
 
         return query.CountAsync();
     }

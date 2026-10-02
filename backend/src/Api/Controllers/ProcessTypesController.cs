@@ -136,12 +136,56 @@ public class ProcessTypesController : ControllerBase
         }
     }
 
+    [HttpPost("api/process-types/{id:guid}/new-version-scratch")]
+    public async Task<IActionResult> CreateNewVersionFromScratch(Guid id)
+    {
+        try
+        {
+            var response = await _processTypeService.CreateNewVersionFromScratchAsync(id);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("api/process-types/{id:guid}/homologate")]
     public async Task<IActionResult> Homologate(Guid id)
     {
         try
         {
             var response = await _processTypeService.HomologateAsync(id);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("api/process-types/{id:guid}/inactivate")]
+    public async Task<IActionResult> Inactivate(Guid id)
+    {
+        try
+        {
+            var response = await _processTypeService.InactivateAsync(id);
             return Ok(response);
         }
         catch (UnauthorizedAccessException ex)

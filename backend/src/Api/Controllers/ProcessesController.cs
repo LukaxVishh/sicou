@@ -89,6 +89,50 @@ public class ProcessesController : ControllerBase
         }
     }
 
+    [HttpPut("api/processes/{id:guid}/draft")]
+    public async Task<IActionResult> UpdateDraft(Guid id, [FromBody] UpdateProcessDraftRequest request)
+    {
+        try
+        {
+            var response = await _instanceService.UpdateDraftAsync(id, request);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("api/processes/{id:guid}/protocol")]
+    public async Task<IActionResult> Protocol(Guid id, [FromBody] ProtocolProcessRequest request)
+    {
+        try
+        {
+            var response = await _instanceService.ProtocolAsync(id, request);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("api/processes/{id:guid}/advance")]
     public async Task<IActionResult> Advance(Guid id, [FromBody] AdvanceProcessRequest request)
     {

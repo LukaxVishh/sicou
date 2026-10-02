@@ -7,8 +7,8 @@ public interface IProcessInstanceRepository
 {
     Task<ProcessInstance?> GetByIdAsync(Guid id);
     Task<ProcessInstance?> GetCompleteInstanceAsync(Guid id);
-    Task<IReadOnlyList<ProcessInstance>> GetByAreaIdAsync(Guid areaId, ProcessStatus? status = null);
-    Task<IReadOnlyList<ProcessInstance>> GetByCompanyIdAsync(Guid companyId, ProcessStatus? status = null);
+    Task<IReadOnlyList<ProcessInstance>> GetByAreaIdAsync(Guid areaId, ProcessStatus? status = null, Guid? originUnitId = null);
+    Task<IReadOnlyList<ProcessInstance>> GetByCompanyIdAsync(Guid companyId, ProcessStatus? status = null, Guid? originUnitId = null);
     Task<IReadOnlyList<ProcessInstance>> GetByUserIdAsync(string userId);
     Task<string> GenerateProcessNumberAsync(Guid companyId, Guid areaId);
     Task AddAsync(ProcessInstance instance);

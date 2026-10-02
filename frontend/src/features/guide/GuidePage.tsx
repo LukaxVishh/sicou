@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { BookOpen, RefreshCcw } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import { getGuideAreas, type GuideArea } from './api';
 import { GuideWorkspace } from './GuideWorkspace';
 
 export function GuidePage({ companyId }: { companyId?: string }) {
+  const [searchParams] = useSearchParams();
+  const contextAreaId = companyId ? null : searchParams.get('areaId');
   const [areas, setAreas] = useState<GuideArea[]>([]);
   const [selected, setSelected] = useState('');
   const [error, setError] = useState('');
@@ -13,13 +16,13 @@ export function GuidePage({ companyId }: { companyId?: string }) {
     let active = true;
     getGuideAreas().then(data => {
       if (!active) return;
-      const allowed = data.filter(a => !companyId || a.companyId === companyId);
+      const allowed = data.filter(a => (!companyId || a.companyId === companyId) && (!contextAreaId || a.id === contextAreaId));
       setAreas(allowed);
       setSelected(previous => allowed.some(a => a.id === previous) ? previous : allowed[0]?.id ?? '');
     }).catch(e => { if (active) setError(e instanceof Error ? e.message : 'Erro ao carregar áreas.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [companyId, revision]);
+  }, [companyId, contextAreaId, revision]);
   return <div className="space-y-6">
     <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6">
       <div className="flex items-center gap-3"><BookOpen className="h-8 w-8 text-amber-600" /><div>

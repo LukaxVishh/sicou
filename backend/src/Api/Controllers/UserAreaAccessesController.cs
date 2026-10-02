@@ -8,7 +8,7 @@ namespace Sicou.Api.Controllers;
 
 [ApiController]
 [Route("api/user-area-accesses")]
-[Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.CompanyAdmin}")]
+[Authorize]
 public class UserAreaAccessesController : ControllerBase
 {
     private readonly IUserAreaAccessService _service;
@@ -19,6 +19,7 @@ public class UserAreaAccessesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.CompanyAdmin}")]
     public async Task<IActionResult> Create([FromBody] CreateUserAreaAccessRequest request)
     {
         var response = await _service.CreateAsync(request);
@@ -46,6 +47,7 @@ public class UserAreaAccessesController : ControllerBase
     }
 
     [HttpGet("by-company/{companyId:guid}")]
+    [Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.CompanyAdmin}")]
     public async Task<IActionResult> GetByCompanyId(Guid companyId)
     {
         var response = await _service.GetByCompanyIdAsync(companyId);
@@ -54,6 +56,7 @@ public class UserAreaAccessesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.CompanyAdmin}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserAreaAccessRequest request)
     {
         var response = await _service.UpdateAsync(id, request);
@@ -65,6 +68,7 @@ public class UserAreaAccessesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.CompanyAdmin}")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var deleted = await _service.DeleteAsync(id);

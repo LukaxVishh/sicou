@@ -4,6 +4,8 @@ public class CreatePostRequest
 {
     public Guid? CompanyId { get; set; }
 
+    public Guid? AreaId { get; set; }
+
     public bool PublishToAllCompanies { get; set; }
 
     public string Title { get; set; } = string.Empty;

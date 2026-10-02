@@ -1,6 +1,6 @@
 # Módulo Orientador
 
-Disponível em `/app/guide`, pelo menu **Orientador**, e na aba **Orientador & Guias** da empresa.
+Disponível em `/app/guide`, pelo menu **Orientador** da área quando o módulo está habilitado, e na aba **Orientador & Guias** da empresa. Na navegação por área, `/app/guide?areaId=UUID` restringe a consulta à área selecionada e autorizada.
 
 ## Uso
 

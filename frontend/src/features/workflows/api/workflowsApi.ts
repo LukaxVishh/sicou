@@ -13,6 +13,8 @@ import type {
   ProcessInstance,
   ProcessInstanceSummary,
   CreateProcessInstancePayload,
+  UpdateProcessDraftPayload,
+  ProtocolProcessPayload,
   AdvanceProcessPayload,
   ReturnProcessPayload,
   RestartProcessPayload,
@@ -122,8 +124,16 @@ export async function cloneProcessTypeVersion(id: string): Promise<ProcessType> 
   return apiFetch<ProcessType>(`/api/process-types/${id}/clone-version`, { method: 'POST' });
 }
 
+export async function createNewVersionFromScratch(id: string): Promise<ProcessType> {
+  return apiFetch<ProcessType>(`/api/process-types/${id}/new-version-scratch`, { method: 'POST' });
+}
+
 export async function homologateProcessType(id: string): Promise<ProcessType> {
   return apiFetch<ProcessType>(`/api/process-types/${id}/homologate`, { method: 'POST' });
+}
+
+export async function inactivateProcessType(id: string): Promise<ProcessType> {
+  return apiFetch<ProcessType>(`/api/process-types/${id}/inactivate`, { method: 'POST' });
 }
 
 export async function deleteProcessType(id: string): Promise<void> {
@@ -149,6 +159,26 @@ export async function getProcessById(id: string): Promise<ProcessInstance> {
 
 export async function createProcess(payload: CreateProcessInstancePayload): Promise<ProcessInstance> {
   return apiFetch<ProcessInstance>('/api/processes', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateProcessDraft(
+  id: string,
+  payload: UpdateProcessDraftPayload
+): Promise<ProcessInstance> {
+  return apiFetch<ProcessInstance>(`/api/processes/${id}/draft`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function protocolProcess(
+  id: string,
+  payload: ProtocolProcessPayload
+): Promise<ProcessInstance> {
+  return apiFetch<ProcessInstance>(`/api/processes/${id}/protocol`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });

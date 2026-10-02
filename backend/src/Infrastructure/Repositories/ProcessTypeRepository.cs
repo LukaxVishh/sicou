@@ -53,17 +53,35 @@ public class ProcessTypeRepository : IProcessTypeRepository
             .ToListAsync();
     }
 
-    public async Task<IReadOnlyList<ProcessType>> GetAvailableForAudienceAsync(Guid? companyId, ProcessAudience? userAudience)
+    public async Task<IReadOnlyList<ProcessType>> GetAvailableForAudienceAsync(
+        Guid? companyId,
+        ProcessAudience? userAudience,
+        bool includeAllDrafts = false,
+        IEnumerable<Guid>? draftAreaIds = null)
     {
-        // Somente árvores com Status == Homologated e compatíveis com a audiência do usuário
         var query = _context.ProcessTypes
             .Include(x => x.Area)
             .Include(x => x.StartNode)
-            .Where(x => x.Status == ProcessTypeStatus.Homologated && x.IsActive);
+            .Where(x => x.IsActive);
 
         if (companyId.HasValue)
         {
             query = query.Where(x => x.Area.CompanyId == companyId.Value);
+        }
+
+        if (includeAllDrafts)
+        {
+            query = query.Where(x => x.Status == ProcessTypeStatus.Homologated || x.Status == ProcessTypeStatus.Draft);
+        }
+        else if (draftAreaIds != null && draftAreaIds.Any())
+        {
+            var draftList = draftAreaIds.ToList();
+            query = query.Where(x => x.Status == ProcessTypeStatus.Homologated ||
+                                     (x.Status == ProcessTypeStatus.Draft && draftList.Contains(x.AreaId)));
+        }
+        else
+        {
+            query = query.Where(x => x.Status == ProcessTypeStatus.Homologated);
         }
 
         if (userAudience.HasValue)
@@ -87,6 +105,16 @@ public class ProcessTypeRepository : IProcessTypeRepository
             .Where(x => x.FamilyId == familyId && x.Status == ProcessTypeStatus.Homologated)
             .OrderByDescending(x => x.VersionNumber)
             .FirstOrDefaultAsync();
+    }
+
+    public async Task<int> GetMaxVersionNumberByFamilyIdAsync(Guid familyId)
+    {
+        var maxVersion = await _context.ProcessTypes
+            .Where(x => x.FamilyId == familyId)
+            .Select(x => (int?)x.VersionNumber)
+            .MaxAsync();
+
+        return maxVersion ?? 1;
     }
 
     public async Task<bool> ExistsByCodeAsync(Guid areaId, string code, Guid? ignoreId = null)

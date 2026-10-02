@@ -6,9 +6,9 @@ public interface IPostRepository
 {
     Task<Post?> GetByIdAsync(Guid id);
 
-    Task<IReadOnlyList<Post>> GetPageAsync(Guid? companyId, int page, int pageSize);
+    Task<IReadOnlyList<Post>> GetPageAsync(Guid? companyId, Guid? areaId, int page, int pageSize);
 
-    Task<int> CountAsync(Guid? companyId);
+    Task<int> CountAsync(Guid? companyId, Guid? areaId);
 
     Task AddAsync(Post post);
 

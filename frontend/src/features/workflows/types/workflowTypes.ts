@@ -39,6 +39,42 @@ export const ProcessTypeStatus = {
 
 export type ProcessTypeStatusValue = typeof ProcessTypeStatus[keyof typeof ProcessTypeStatus];
 
+export function isDraftStatus(status: unknown): boolean {
+  return status === 1 || status === 'Draft' || status === '1' || status === ProcessTypeStatus.Draft;
+}
+
+export function isHomologatedStatus(status: unknown): boolean {
+  return status === 2 || status === 'Homologated' || status === '2' || status === ProcessTypeStatus.Homologated;
+}
+
+export function isArchivedStatus(status: unknown): boolean {
+  return status === 3 || status === 'Archived' || status === '3' || status === ProcessTypeStatus.Archived;
+}
+
+export function normalizeProcessTypeStatus(status: unknown): ProcessTypeStatusValue {
+  if (isHomologatedStatus(status)) return ProcessTypeStatus.Homologated;
+  if (isArchivedStatus(status)) return ProcessTypeStatus.Archived;
+  return ProcessTypeStatus.Draft;
+}
+
+export function isAllAudience(aud: unknown): boolean {
+  return aud === 1 || aud === 'All' || aud === '1' || aud === ProcessAudience.All;
+}
+
+export function isHeadquartersOnlyAudience(aud: unknown): boolean {
+  return aud === 2 || aud === 'HeadquartersOnly' || aud === '2' || aud === ProcessAudience.HeadquartersOnly;
+}
+
+export function isUnitsOnlyAudience(aud: unknown): boolean {
+  return aud === 3 || aud === 'UnitsOnly' || aud === '3' || aud === ProcessAudience.UnitsOnly;
+}
+
+export function normalizeProcessAudience(aud: unknown): ProcessAudienceValue {
+  if (isHeadquartersOnlyAudience(aud)) return ProcessAudience.HeadquartersOnly;
+  if (isUnitsOnlyAudience(aud)) return ProcessAudience.UnitsOnly;
+  return ProcessAudience.All;
+}
+
 export const ProcessStatus = {
   Draft: 1,
   InReview: 2,
@@ -60,10 +96,30 @@ export const ProcessActionType = {
 export type ProcessActionTypeValue = typeof ProcessActionType[keyof typeof ProcessActionType];
 
 export interface FieldConditionRule {
+  id?: string;
+  description?: string;
   sourceFieldId: string;
-  operator: 'Equals' | 'NotEquals' | 'Contains' | 'GreaterThan' | 'LessThan';
-  expectedValue: string;
-  action: 'Show' | 'Hide' | 'Enable' | 'Disable' | 'Require';
+  operator:
+    | 'Equals'
+    | 'NotEquals'
+    | 'Filled'
+    | 'Empty'
+    | 'Contains'
+    | 'GreaterThan'
+    | 'LessThan'
+    | 'GreaterOrEqual'
+    | 'LessOrEqual';
+  expectedValue?: string;
+  action:
+    | 'Show'
+    | 'Hide'
+    | 'Require'
+    | 'Optional'
+    | 'SetValue'
+    | 'ClearValue'
+    | 'Disable'
+    | 'Enable';
+  targetValue?: string;
   targetFieldIds: string[];
 }
 
@@ -300,7 +356,20 @@ export interface CreateProcessInstancePayload {
   processTypeId: string;
   title?: string;
   originUnitId?: string;
+  isDraft?: boolean;
   initialFieldValues?: Record<string, string | undefined>;
+}
+
+export interface UpdateProcessDraftPayload {
+  title?: string;
+  originUnitId?: string;
+  fieldValues?: Record<string, string | undefined>;
+}
+
+export interface ProtocolProcessPayload {
+  title?: string;
+  fieldValues?: Record<string, string | undefined>;
+  observations?: string;
 }
 
 export interface AdvanceProcessPayload {

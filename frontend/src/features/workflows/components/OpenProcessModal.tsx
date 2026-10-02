@@ -1,25 +1,31 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Send, AlertCircle, FileText } from 'lucide-react';
-import type { ProcessTypeSummary, ProcessType } from '../types';
-import { FieldType } from '../types';
+import { useNavigate } from 'react-router';
+import { X, ArrowRight, AlertCircle, FileText, Sparkles, CheckCircle2, ShieldAlert } from 'lucide-react';
+import type { ProcessTypeSummary } from '../types';
+import { isDraftStatus, isHomologatedStatus } from '../types';
 import * as workflowsApi from '../api';
-import { evaluateFieldConditions } from '../utils/evaluateFieldConditions';
+import { useAuth } from '../../auth/providers';
+import { SystemRoles } from '../../../shared/constants/roles';
 
 interface OpenProcessModalProps {
   onClose: () => void;
-  onCreated: (newProcessId: string) => void;
+  onCreated?: (newProcessId: string) => void;
 }
 
 export const OpenProcessModal: React.FC<OpenProcessModalProps> = ({
   onClose,
   onCreated,
 }) => {
-  const [availableTypes, setAvailableTypes] = useState<ProcessTypeSummary[]>([]);
-  const [selectedTypeId, setSelectedTypeId] = useState<string>('');
-  const [fullProcessType, setFullProcessType] = useState<ProcessType | null>(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const [title, setTitle] = useState('');
-  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
+
+  const [availableTypes, setAvailableTypes] = useState<ProcessTypeSummary[]>([]);
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string>('');
+  const [selectedVersionChoice, setSelectedVersionChoice] = useState<'homologated' | 'draft'>('homologated');
+  
   const [loading, setLoading] = useState(false);
   const [typesLoading, setTypesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,11 +36,14 @@ export const OpenProcessModal: React.FC<OpenProcessModalProps> = ({
       try {
         const data = await workflowsApi.getAvailableProcessTypes();
         setAvailableTypes(data);
+
+        // Agrupar por família para selecionar o primeiro por padrão
         if (data.length > 0) {
-          setSelectedTypeId(data[0].id);
+          const firstFamily = data[0].familyId || data[0].id;
+          setSelectedFamilyId(firstFamily);
         }
       } catch (err: any) {
-        setError(err?.message || 'Erro ao carregar tipos de processos disponíveis.');
+        setError(err?.message || 'Erro ao carregar árvores de processos disponíveis.');
       } finally {
         setTypesLoading(false);
       }
@@ -42,248 +51,273 @@ export const OpenProcessModal: React.FC<OpenProcessModalProps> = ({
     loadAvailable();
   }, []);
 
-  useEffect(() => {
-    async function loadTreeDetails() {
-      if (!selectedTypeId) {
-        setFullProcessType(null);
-        return;
+  // Agrupamento por Família
+  const familyGroups = useMemo(() => {
+    const map = new Map<string, {
+      familyId: string;
+      name: string;
+      code: string;
+      areaName: string;
+      homologated?: ProcessTypeSummary;
+      draft?: ProcessTypeSummary;
+      all: ProcessTypeSummary[];
+    }>();
+
+    availableTypes.forEach((t) => {
+      const famId = t.familyId || t.id;
+      if (!map.has(famId)) {
+        map.set(famId, {
+          familyId: famId,
+          name: t.name,
+          code: t.code,
+          areaName: t.areaName,
+          all: [],
+        });
       }
-      try {
-        const full = await workflowsApi.getProcessTypeById(selectedTypeId);
-        setFullProcessType(full);
-        setFormValues({});
-      } catch (err: any) {
-        setError(err?.message || 'Erro ao carregar formulário da árvore.');
-      }
-    }
-    loadTreeDetails();
-  }, [selectedTypeId]);
+      const group = map.get(famId)!;
+      group.all.push(t);
 
-  // Filtrar campos do ponto de partida / confecção
-  const startFields = useMemo(() => {
-    if (!fullProcessType) return [];
-    return fullProcessType.fields.filter(
-      (f) => !f.processNodeId || f.processNodeId === fullProcessType.startNodeId
-    );
-  }, [fullProcessType]);
-
-  // Avaliação reativa de regras condicionais
-  const evaluated = useMemo(() => {
-    if (!fullProcessType) return { hiddenFieldIds: new Set<string>(), disabledFieldIds: new Set<string>(), requiredFieldIds: new Set<string>() };
-
-    const rulesArray: any[] = [];
-    fullProcessType.fields.forEach((f) => {
-      if (f.conditionsJson) {
-        try {
-          const parsed = JSON.parse(f.conditionsJson);
-          if (Array.isArray(parsed)) rulesArray.push(...parsed);
-        } catch {}
+      if (isHomologatedStatus(t.status)) {
+        if (!group.homologated || t.versionNumber > group.homologated.versionNumber) {
+          group.homologated = t;
+        }
+      } else if (isDraftStatus(t.status)) {
+        group.draft = t;
       }
     });
 
-    return evaluateFieldConditions(JSON.stringify(rulesArray), formValues);
-  }, [fullProcessType, formValues]);
+    return Array.from(map.values());
+  }, [availableTypes]);
 
-  const handleFieldChange = (fieldId: string, val: string) => {
-    setFormValues((prev) => ({ ...prev, [fieldId]: val }));
-  };
+  // Família selecionada
+  const currentGroup = useMemo(() => {
+    return familyGroups.find((g) => g.familyId === selectedFamilyId) || familyGroups[0] || null;
+  }, [familyGroups, selectedFamilyId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTypeId) return;
+  // Se o grupo não tiver versão homologada mas tiver draft (ou vice-versa), ajusta a escolha
+  useEffect(() => {
+    if (!currentGroup) return;
+
+    const hasHomologated = !!currentGroup.homologated;
+    const hasDraft = !!currentGroup.draft;
+
+    if (!hasHomologated && hasDraft && (isSuperAdmin || isCompanyAdmin)) {
+      setSelectedVersionChoice('draft');
+    } else if (hasHomologated && !hasDraft) {
+      setSelectedVersionChoice('homologated');
+    }
+  }, [currentGroup, isSuperAdmin, isCompanyAdmin]);
+
+  // Tipo de processo exato selecionado
+  const selectedProcessType = useMemo(() => {
+    if (!currentGroup) return null;
+    if (selectedVersionChoice === 'draft' && currentGroup.draft) {
+      return currentGroup.draft;
+    }
+    return currentGroup.homologated || currentGroup.draft || currentGroup.all[0] || null;
+  }, [currentGroup, selectedVersionChoice]);
+
+  const handleStartProcess = async () => {
+    if (!selectedProcessType) return;
     setError(null);
     setLoading(true);
 
     try {
+      // Cria a instância inicial como Rascunho
       const created = await workflowsApi.createProcess({
-        processTypeId: selectedTypeId,
-        title: title.trim() || undefined,
-        initialFieldValues: formValues,
+        processTypeId: selectedProcessType.id,
+        isDraft: true,
       });
 
-      onCreated(created.id);
+      if (onCreated) {
+        onCreated(created.id);
+      }
+
+      // Redireciona para a página dedicada de confecção do processo
+      navigate(`/app/workflows/processes/${created.id}/confection`);
+      onClose();
     } catch (err: any) {
-      setError(err?.message || 'Erro ao abrir processo.');
-    } finally {
+      setError(err?.message || 'Erro ao iniciar o processo.');
       setLoading(false);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden border border-slate-100">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl flex flex-col overflow-hidden border border-slate-100">
+        {/* Cabeçalho */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
           <div>
             <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
               <FileText className="w-5 h-5 text-indigo-600" />
-              Abertura de Novo Processo
+              Abertura de Processo
             </h3>
             <p className="text-xs text-slate-500">
-              Selecione o serviço desejado e preencha as informações da etapa de confecção.
+              Selecione o fluxo desejado para iniciar a confecção da solicitação.
             </p>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        {/* Corpo do Modal */}
+        <div className="p-6 space-y-5">
           {error && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center gap-2">
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Tipo de Processo / Serviço Homologado *
-            </label>
-            {typesLoading ? (
-              <div className="text-xs text-slate-400 py-2">Carregando processos disponíveis...</div>
-            ) : availableTypes.length === 0 ? (
-              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs">
-                Nenhuma árvore de processo homologada disponível para sua unidade/área no momento.
-              </div>
-            ) : (
-              <select
-                value={selectedTypeId}
-                onChange={(e) => setSelectedTypeId(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500"
-              >
-                {availableTypes.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    [{t.areaName}] {t.name} ({t.code})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              Assunto / Título Resumido (Opcional)
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="ex: Homologação de Contrato - Fornecedor Alpha"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          {/* Campos do Ponto de Confecção */}
-          {fullProcessType && (
-            <div className="space-y-4 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
-                  Formulário do Ponto de Partida: {fullProcessType.startNodeName}
-                </span>
-                <span className="text-[11px] font-mono text-slate-400">
-                  {startFields.length} campos
-                </span>
-              </div>
-
-              {startFields.length === 0 ? (
-                <div className="p-4 bg-slate-50 text-slate-400 rounded-lg text-xs text-center border border-dashed border-slate-200">
-                  Este processo não requer campos adicionais para abertura.
-                </div>
-              ) : (
-                startFields.map((field) => {
-                  const isHidden = evaluated.hiddenFieldIds.has(field.fieldDefinitionId);
-                  const isDisabled = evaluated.disabledFieldIds.has(field.fieldDefinitionId);
-                  const isRequired = field.isRequired || evaluated.requiredFieldIds.has(field.fieldDefinitionId);
-
-                  if (isHidden) return null;
-
-                  return (
-                    <div key={field.id} className="space-y-1">
-                      <label className="block text-xs font-semibold text-slate-700">
-                        {field.customLabel || field.name}
-                        {isRequired && <span className="text-rose-500 ml-0.5">*</span>}
-                      </label>
-                      {field.helpText && (
-                        <p className="text-[11px] text-slate-500">{field.helpText}</p>
-                      )}
-
-                      {field.type === FieldType.Select ? (
-                        <select
-                          required={isRequired}
-                          disabled={isDisabled}
-                          value={formValues[field.fieldDefinitionId] || ''}
-                          onChange={(e) => handleFieldChange(field.fieldDefinitionId, e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
-                        >
-                          <option value="">Selecione...</option>
-                          {field.globalOptionsJson ? (
-                            (() => {
-                              try {
-                                const opts = JSON.parse(field.globalOptionsJson);
-                                return Array.isArray(opts)
-                                  ? opts.map((opt: string) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))
-                                  : null;
-                              } catch {
-                                return null;
-                              }
-                            })()
-                          ) : (
-                            <>
-                              <option value="Sim">Sim</option>
-                              <option value="Não">Não</option>
-                            </>
-                          )}
-                        </select>
-                      ) : field.type === FieldType.TextArea ? (
-                        <textarea
-                          rows={2}
-                          required={isRequired}
-                          disabled={isDisabled}
-                          value={formValues[field.fieldDefinitionId] || ''}
-                          onChange={(e) => handleFieldChange(field.fieldDefinitionId, e.target.value)}
-                          placeholder={field.placeholder || 'Digite...'}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
-                        />
-                      ) : (
-                        <input
-                          type={field.type === FieldType.Number || field.type === FieldType.Currency ? 'number' : 'text'}
-                          required={isRequired}
-                          disabled={isDisabled}
-                          value={formValues[field.fieldDefinitionId] || ''}
-                          onChange={(e) => handleFieldChange(field.fieldDefinitionId, e.target.value)}
-                          placeholder={field.placeholder || 'Preencha...'}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
-                        />
-                      )}
-                    </div>
-                  );
-                })
-              )}
+          {typesLoading ? (
+            <div className="py-8 text-center text-xs text-slate-400">
+              Carregando árvores de processos disponíveis...
             </div>
-          )}
+          ) : familyGroups.length === 0 ? (
+            <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs space-y-1">
+              <p className="font-bold">Nenhum processo homologado disponível</p>
+              <p className="text-amber-700">
+                Não há árvores de processos ativas disponíveis para abertura na sua unidade/área no momento.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Dropdown com Árvores da Área */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Árvore de Processo / Serviço *
+                </label>
+                <select
+                  value={selectedFamilyId}
+                  onChange={(e) => setSelectedFamilyId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-colors"
+                >
+                  {familyGroups.map((g) => (
+                    <option key={g.familyId} value={g.familyId}>
+                      [{g.areaName}] {g.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading || availableTypes.length === 0}
-              className="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm disabled:opacity-50 flex items-center gap-2"
-            >
-              <Send className="w-4 h-4" />
-              {loading ? 'Protocolando...' : 'Protocolar e Abrir Processo'}
-            </button>
-          </div>
-        </form>
+              {/* Seletor de Versão para Administradores */}
+              {(isSuperAdmin || isCompanyAdmin) && currentGroup && (
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <label className="block text-xs font-semibold text-slate-600">
+                    Versão de Execução (Controle de Administrador):
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Opção Vigente */}
+                    <button
+                      type="button"
+                      disabled={!currentGroup.homologated}
+                      onClick={() => setSelectedVersionChoice('homologated')}
+                      className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
+                        selectedVersionChoice === 'homologated' && currentGroup.homologated
+                          ? 'border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-500/20'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      } ${!currentGroup.homologated ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">
+                          {currentGroup.homologated
+                            ? `Versão Homologada (v${currentGroup.homologated.versionNumber})`
+                            : 'Homologada (Indisponível)'}
+                        </span>
+                        {selectedVersionChoice === 'homologated' && currentGroup.homologated && (
+                          <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                        )}
+                      </div>
+                      <span className="text-[11px] text-slate-500 mt-1">
+                        Versão oficial e ativa utilizada pelas unidades.
+                      </span>
+                    </button>
+
+                    {/* Opção Em Criação / Rascunho */}
+                    <button
+                      type="button"
+                      disabled={!currentGroup.draft}
+                      onClick={() => setSelectedVersionChoice('draft')}
+                      className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
+                        selectedVersionChoice === 'draft' && currentGroup.draft
+                          ? 'border-amber-500 bg-amber-50/60 ring-2 ring-amber-500/20'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      } ${!currentGroup.draft ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-amber-900">
+                          {currentGroup.draft
+                            ? `Em Criação (v${currentGroup.draft.versionNumber})`
+                            : 'Em Criação (Nenhuma)'}
+                        </span>
+                        {selectedVersionChoice === 'draft' && currentGroup.draft && (
+                          <Sparkles className="w-4 h-4 text-amber-600" />
+                        )}
+                      </div>
+                      <span className="text-[11px] text-amber-800/80 mt-1">
+                        Rascunho para testes antes da homologação.
+                      </span>
+                    </button>
+                  </div>
+
+                  {selectedVersionChoice === 'draft' && currentGroup.draft && (
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        Você está iniciando em modo de teste com a árvore em criação (v{currentGroup.draft.versionNumber}).
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Informação sobre o Processo Selecionado */}
+              {selectedProcessType && (
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600 space-y-1">
+                  <div className="flex items-center justify-between font-semibold text-slate-800">
+                    <span>{selectedProcessType.name}</span>
+                    <span className="font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                      v{selectedProcessType.versionNumber}
+                    </span>
+                  </div>
+                  {selectedProcessType.description && (
+                    <p className="text-slate-500">{selectedProcessType.description}</p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Rodapé de Ações */}
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleStartProcess}
+            disabled={loading || !selectedProcessType || familyGroups.length === 0}
+            className="px-5 py-2.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm hover:shadow transition-all disabled:opacity-50 flex items-center gap-2"
+          >
+            {loading ? (
+              'Iniciando...'
+            ) : (
+              <>
+                <span>Iniciar Processo</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

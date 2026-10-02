@@ -17,6 +17,8 @@ type CreateAccessModalProps = {
   onClose: () => void;
   onCreated: () => Promise<void> | void;
   defaultCompanyId?: string;
+  defaultUserId?: string;
+  defaultAreaId?: string;
 };
 
 export function CreateAccessModal({
@@ -24,6 +26,8 @@ export function CreateAccessModal({
   onClose,
   onCreated,
   defaultCompanyId,
+  defaultUserId,
+  defaultAreaId,
 }: CreateAccessModalProps) {
   const { user: currentUser } = useAuth();
   const isSuperAdmin = currentUser?.roles.includes(SystemRoles.SuperAdmin) ?? false;
@@ -37,8 +41,8 @@ export function CreateAccessModal({
   const [areas, setAreas] = useState<CompanyArea[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
 
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedAreaId, setSelectedAreaId] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState(defaultUserId || '');
+  const [selectedAreaId, setSelectedAreaId] = useState(defaultAreaId || '');
   const [selectedUnitId, setSelectedUnitId] = useState('');
 
   const [canView, setCanView] = useState(true);
@@ -93,11 +97,19 @@ export function CreateAccessModal({
           (u: User) => u.isActive && (u.companyId === selectedCompanyId || (!u.companyId && isSuperAdmin)),
         );
         setUsers(filteredUsers);
-        if (filteredUsers.length > 0) setSelectedUserId(filteredUsers[0].id);
+        if (defaultUserId && filteredUsers.some((u) => u.id === defaultUserId)) {
+          setSelectedUserId(defaultUserId);
+        } else if (filteredUsers.length > 0) {
+          setSelectedUserId(filteredUsers[0].id);
+        }
 
         const activeAreas = areasData.filter((a: CompanyArea) => a.isActive);
         setAreas(activeAreas);
-        if (activeAreas.length > 0) setSelectedAreaId(activeAreas[0].id);
+        if (defaultAreaId && activeAreas.some((a) => a.id === defaultAreaId)) {
+          setSelectedAreaId(defaultAreaId);
+        } else if (activeAreas.length > 0) {
+          setSelectedAreaId(activeAreas[0].id);
+        }
 
         const activeUnits = unitsData.filter((u: Unit) => u.isActive);
         setUnits(activeUnits);

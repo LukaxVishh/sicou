@@ -334,6 +334,7 @@ public class ApplicationDbContext
             entity.ToTable("posts");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.CompanyId);
+            entity.Property(x => x.AreaId);
             entity.Property(x => x.AuthorId).HasMaxLength(450).IsRequired();
             entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Content).HasMaxLength(5000).IsRequired();
@@ -343,7 +344,8 @@ public class ApplicationDbContext
             entity.Property(x => x.UpdatedAt);
             entity.Property(x => x.IsActive).IsRequired();
             entity.HasOne(x => x.Company).WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
-            entity.HasIndex(x => new { x.CompanyId, x.IsActive, x.IsPinned, x.CreatedAt });
+            entity.HasOne(x => x.Area).WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => new { x.CompanyId, x.AreaId, x.IsActive, x.IsPinned, x.CreatedAt });
             entity.HasIndex(x => x.AuthorId);
         });
 

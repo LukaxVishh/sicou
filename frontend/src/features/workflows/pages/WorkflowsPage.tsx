@@ -8,13 +8,19 @@ import {
   Tag,
   Plus,
   RefreshCw,
+  Building,
   Building2,
   AlertCircle,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import { useAuth } from '../../auth/providers';
 import { SystemRoles } from '../../../shared/constants/roles';
+import { getCompanies } from '../../companies/api';
+import type { Company } from '../../companies/types';
 import { getAreasByCompanyId } from '../../areas/api';
 import type { CompanyArea } from '../../areas/types';
+import { getAccessesByUser } from '../../access-control/api';
+import type { UserAreaAccess } from '../../access-control/types';
 import * as workflowsApi from '../api';
 import type {
   FieldDefinition,
@@ -32,12 +38,22 @@ import {
 
 export const WorkflowsPage: React.FC = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialAreaParam = searchParams.get('areaId') || '';
+
   const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
   const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
 
   const [activeTab, setActiveTab] = useState<'inbox' | 'my' | 'trees' | 'nodes' | 'fields'>('inbox');
+
+  // Gestão de Empresas e Áreas Selecionadas
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(user?.companyId || '');
+
   const [areas, setAreas] = useState<CompanyArea[]>([]);
-  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+  const [selectedAreaId, setSelectedAreaId] = useState<string>(initialAreaParam);
+
+  const [userAccesses, setUserAccesses] = useState<UserAreaAccess[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,37 +68,94 @@ export const WorkflowsPage: React.FC = () => {
   // Modal de Abertura
   const [isOpenProcessModalOpen, setIsOpenProcessModalOpen] = useState(false);
 
-  // Permissões
-  const canManage = isSuperAdmin || isCompanyAdmin; // gestores
-  const canHandle = isSuperAdmin || isCompanyAdmin || !user?.unitId; // quem pode tramitar (sede/admin)
-
-  // 1. Carrega áreas da empresa do usuário
+  // 1. Carrega Empresas se for Super Admin
   useEffect(() => {
-    async function loadAreas() {
-      if (!user?.companyId) return;
-      try {
-        const areaList = await getAreasByCompanyId(user.companyId);
-        setAreas(areaList);
-        if (areaList.length > 0) {
-          setSelectedAreaId(areaList[0].id);
-        }
-      } catch (err: any) {
-        setError(err?.message || 'Erro ao carregar áreas da empresa.');
-      }
+    if (isSuperAdmin) {
+      getCompanies()
+        .then((data) => {
+          const activeCompanies = data.filter((c) => c.isActive);
+          setCompanies(activeCompanies);
+          if (activeCompanies.length > 0) {
+            setSelectedCompanyId((prev) => prev || activeCompanies[0].id);
+          }
+        })
+        .catch((err: any) => {
+          setError(err?.message || 'Erro ao carregar empresas.');
+        });
+    } else if (user?.companyId) {
+      setSelectedCompanyId(user.companyId);
     }
-    loadAreas();
-  }, [user?.companyId]);
+  }, [isSuperAdmin, user?.companyId]);
 
-  // 2. Carrega dados vinculados à área selecionada
+  // 2. Carrega acessos granulares do usuário
+  useEffect(() => {
+    if (!isSuperAdmin && !isCompanyAdmin && user?.id) {
+      getAccessesByUser(user.id)
+        .then((data) => setUserAccesses(data.filter((a) => a.isActive)))
+        .catch(() => setUserAccesses([]));
+    }
+  }, [isSuperAdmin, isCompanyAdmin, user?.id]);
+
+  // 3. Carrega Áreas da Empresa selecionada
+  useEffect(() => {
+    if (!selectedCompanyId) {
+      setAreas([]);
+      setSelectedAreaId('');
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    getAreasByCompanyId(selectedCompanyId)
+      .then((data) => {
+        if (!isMounted) return;
+        const activeAreas = data.filter((a) => a.isActive);
+        setAreas(activeAreas);
+        if (activeAreas.length > 0) {
+          setSelectedAreaId((prev) => {
+            if (prev && activeAreas.some((a) => a.id === prev)) return prev;
+            return activeAreas[0].id;
+          });
+        } else {
+          setSelectedAreaId('');
+          setLoading(false);
+        }
+      })
+      .catch((err: any) => {
+        if (!isMounted) return;
+        setAreas([]);
+        setSelectedAreaId('');
+        setLoading(false);
+        setError(err?.message || 'Erro ao carregar áreas da empresa selecionada.');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCompanyId]);
+
+  // 4. Carrega dados vinculados à área selecionada e solicitações do usuário
   const loadAreaData = useCallback(async () => {
-    if (!selectedAreaId) return;
     setLoading(true);
     setError(null);
 
     try {
+      const myProcsPromise = workflowsApi.getMyProcesses().catch(() => []);
+
+      if (!selectedAreaId) {
+        const myProcs = await myProcsPromise;
+        setMyProcesses(myProcs);
+        setAreaProcesses([]);
+        setProcessTypes([]);
+        setNodes([]);
+        setFields([]);
+        setLoading(false);
+        return;
+      }
+
       const [procsData, myProcsData, typesData, nodesData, fieldsData] = await Promise.all([
         workflowsApi.getAreaProcesses(selectedAreaId).catch(() => []),
-        workflowsApi.getMyProcesses().catch(() => []),
+        myProcsPromise,
         workflowsApi.getProcessTypesByAreaId(selectedAreaId).catch(() => []),
         workflowsApi.getNodesByAreaId(selectedAreaId).catch(() => []),
         workflowsApi.getFieldsByAreaId(selectedAreaId).catch(() => []),
@@ -104,10 +177,24 @@ export const WorkflowsPage: React.FC = () => {
     loadAreaData();
   }, [loadAreaData]);
 
+  // Permissões calculadas por área
+  const currentAreaAccess = userAccesses.find((a) => a.areaId === selectedAreaId && a.isActive);
+  const canManage =
+    isSuperAdmin ||
+    isCompanyAdmin ||
+    (currentAreaAccess?.canManageWorkflows ?? false) ||
+    (currentAreaAccess?.canManage ?? false);
+
+  const canHandle =
+    isSuperAdmin ||
+    isCompanyAdmin ||
+    (currentAreaAccess?.canHandleWorkflowRequests ?? false) ||
+    (currentAreaAccess?.canManage ?? false);
+
   return (
     <div className="space-y-6">
-      {/* Header com Seletor de Área */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Header com Seletor de Empresa e Área */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
             <Workflow className="w-6 h-6" />
@@ -122,16 +209,46 @@ export const WorkflowsPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {areas.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
-                <Building2 className="w-3.5 h-3.5" /> Área:
-              </span>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Seletor de Empresa para SuperAdmin */}
+          {isSuperAdmin && companies.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+              <Building className="w-4 h-4 text-slate-500" />
+              <span className="text-xs font-semibold text-slate-600">Empresa:</span>
+              <select
+                value={selectedCompanyId}
+                onChange={(e) => {
+                  setSelectedCompanyId(e.target.value);
+                  setSelectedAreaId('');
+                  setSearchParams({});
+                }}
+                className="px-2 py-1 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500"
+              >
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Seletor de Área da Sede */}
+          {areas.length > 0 ? (
+            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+              <Building2 className="w-4 h-4 text-indigo-600" />
+              <span className="text-xs font-semibold text-slate-600">Área:</span>
               <select
                 value={selectedAreaId}
-                onChange={(e) => setSelectedAreaId(e.target.value)}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500"
+                onChange={(e) => {
+                  setSelectedAreaId(e.target.value);
+                  if (e.target.value) {
+                    setSearchParams({ areaId: e.target.value });
+                  } else {
+                    setSearchParams({});
+                  }
+                }}
+                className="px-2 py-1 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500"
               >
                 {areas.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -140,6 +257,10 @@ export const WorkflowsPage: React.FC = () => {
                 ))}
               </select>
             </div>
+          ) : (
+            <span className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+              Nenhuma área cadastrada
+            </span>
           )}
 
           <button
@@ -155,7 +276,7 @@ export const WorkflowsPage: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
-            + Abrir Processo
+            Abrir Processo
           </button>
         </div>
       </div>
@@ -270,6 +391,14 @@ export const WorkflowsPage: React.FC = () => {
         <div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-slate-400 text-sm">
           Carregando informações da área...
         </div>
+      ) : !selectedAreaId && activeTab !== 'my' ? (
+        <div className="bg-white p-12 rounded-xl border border-slate-200 text-center space-y-3 shadow-sm">
+          <Building2 className="w-12 h-12 text-slate-300 mx-auto" />
+          <h3 className="text-base font-bold text-slate-700">Nenhuma Área da Sede Selecionada</h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            Para gerenciar árvores, locais e campos reutilizáveis, é necessário que a empresa possua áreas cadastradas na sede. Selecione outra empresa acima ou cadastre áreas no menu de Governança.
+          </p>
+        </div>
       ) : (
         <>
           {activeTab === 'inbox' && (
@@ -296,8 +425,6 @@ export const WorkflowsPage: React.FC = () => {
             <ProcessTypesTab
               areaId={selectedAreaId}
               processTypes={processTypes}
-              availableNodes={nodes}
-              availableFields={fields}
               onRefresh={loadAreaData}
               canManage={canManage}
             />

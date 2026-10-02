@@ -38,8 +38,40 @@ public class ProcessInstanceService : IProcessInstanceService
 
     public async Task<IReadOnlyList<ProcessInstanceSummaryResponse>> GetAreaProcessesAsync(Guid areaId, ProcessStatus? status = null)
     {
-        await ValidateAreaHandleAccessAsync(areaId);
-        var instances = await _instanceRepository.GetByAreaIdAsync(areaId, status);
+        var user = await GetCurrentUserAsync();
+        var roles = await _userManager.GetRolesAsync(user);
+        var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
+
+        var area = await _areaRepository.GetByIdAsync(areaId)
+            ?? throw new KeyNotFoundException("Área não encontrada.");
+
+        if (!isSuperAdmin && user.CompanyId != area.CompanyId)
+            throw new UnauthorizedAccessException("Acesso negado às solicitações de outra empresa.");
+
+        Guid? filterUnitId = null;
+
+        if (!isSuperAdmin && !isCompanyAdmin)
+        {
+            var isUnitUser = user.UnitId.HasValue && roles.Contains(SystemRoles.UnitUser);
+            if (isUnitUser)
+            {
+                // Usuário de unidade visualiza apenas os processos da sua própria unidade
+                filterUnitId = user.UnitId.Value;
+            }
+            else
+            {
+                // Usuário da sede visualiza de todas as unidades, mas precisa ter permissão de acesso à área
+                var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
+                var areaAccess = accesses.FirstOrDefault(a => a.AreaId == areaId && a.IsActive);
+                if (areaAccess == null || (!areaAccess.CanView && !areaAccess.CanHandleWorkflowRequests && !areaAccess.CanManage))
+                {
+                    throw new UnauthorizedAccessException("Você não possui permissão para visualizar processos desta área.");
+                }
+            }
+        }
+
+        var instances = await _instanceRepository.GetByAreaIdAsync(areaId, status, filterUnitId);
         return instances.Select(MapToSummaryResponse).ToList();
     }
 
@@ -71,6 +103,7 @@ public class ProcessInstanceService : IProcessInstanceService
 
         var roles = await _userManager.GetRolesAsync(user);
         var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
 
         var processType = await _processTypeRepository.GetCompleteTreeAsync(request.ProcessTypeId)
             ?? throw new KeyNotFoundException("Tipo de processo não encontrado.");
@@ -90,8 +123,28 @@ public class ProcessInstanceService : IProcessInstanceService
             throw new InvalidOperationException("Usuário não vinculado a uma empresa.");
         }
 
-        if (processType.Status != ProcessTypeStatus.Homologated || !processType.IsActive)
-            throw new InvalidOperationException("Este processo não está homologado para abertura.");
+        if (!processType.IsActive)
+            throw new InvalidOperationException("Este processo está desativado para abertura.");
+
+        if (processType.Status == ProcessTypeStatus.Draft)
+        {
+            var isAreaAdmin = false;
+            if (!isSuperAdmin && !isCompanyAdmin)
+            {
+                var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
+                var areaAccess = accesses.FirstOrDefault(a => a.AreaId == processType.AreaId && a.IsActive);
+                isAreaAdmin = areaAccess != null && (areaAccess.CanManage || areaAccess.CanManageWorkflows);
+            }
+
+            if (!isSuperAdmin && !isCompanyAdmin && !isAreaAdmin)
+            {
+                throw new UnauthorizedAccessException("Apenas administradores da área ou da empresa possuem permissão para abrir chamados utilizando árvores em criação/rascunho.");
+            }
+        }
+        else if (processType.Status != ProcessTypeStatus.Homologated)
+        {
+            throw new InvalidOperationException("Este processo não está homologado para abertura de novos chamados.");
+        }
 
         // Validar audiência
         if (!isSuperAdmin)
@@ -109,6 +162,9 @@ public class ProcessInstanceService : IProcessInstanceService
 
         var processNumber = await _instanceRepository.GenerateProcessNumberAsync(companyId, processType.AreaId);
 
+        var isDraft = request.IsDraft;
+        var initialStatus = isDraft ? ProcessStatus.Draft : ProcessStatus.InReview;
+
         var instance = new ProcessInstance
         {
             CompanyId = companyId,
@@ -117,7 +173,7 @@ public class ProcessInstanceService : IProcessInstanceService
             CurrentNodeId = processType.StartNodeId.Value,
             ProcessNumber = processNumber,
             Title = string.IsNullOrWhiteSpace(request.Title) ? $"{processType.Name} - {processNumber}" : request.Title.Trim(),
-            Status = ProcessStatus.InReview,
+            Status = initialStatus,
             CreatedByUserId = user.Id.ToString(),
             CreatedByUserName = user.FullName,
             OriginUnitId = request.OriginUnitId ?? user.UnitId
@@ -141,10 +197,10 @@ public class ProcessInstanceService : IProcessInstanceService
         {
             FromNodeId = null,
             ToNodeId = processType.StartNodeId.Value,
-            Action = ProcessActionType.Advance,
+            Action = isDraft ? ProcessActionType.Comment : ProcessActionType.Advance,
             UserId = user.Id.ToString(),
             UserFullName = user.FullName,
-            Observations = "Processo confeccionado e protocolado com sucesso."
+            Observations = isDraft ? "Rascunho do processo iniciado." : "Processo confeccionado e protocolado com sucesso."
         });
 
         await _instanceRepository.AddAsync(instance);
@@ -152,6 +208,144 @@ public class ProcessInstanceService : IProcessInstanceService
 
         var created = await _instanceRepository.GetCompleteInstanceAsync(instance.Id);
         return MapToCompleteResponse(created!);
+    }
+
+    public async Task<ProcessInstanceResponse> UpdateDraftAsync(Guid id, UpdateProcessDraftRequest request)
+    {
+        var instance = await _instanceRepository.GetCompleteInstanceAsync(id)
+            ?? throw new KeyNotFoundException("Processo não encontrado.");
+
+        var user = await GetCurrentUserAsync();
+        await ValidateCanHandleOrCreatorAsync(instance, user);
+
+        if (instance.Status != ProcessStatus.Draft)
+            throw new InvalidOperationException("Apenas rascunhos de processos podem ser alterados.");
+
+        if (!string.IsNullOrWhiteSpace(request.Title))
+        {
+            instance.Title = request.Title.Trim();
+        }
+
+        if (request.OriginUnitId.HasValue)
+        {
+            instance.OriginUnitId = request.OriginUnitId.Value;
+        }
+
+        if (request.FieldValues != null)
+        {
+            foreach (var kvp in request.FieldValues)
+            {
+                var existing = instance.FieldValues.FirstOrDefault(f => f.FieldDefinitionId == kvp.Key);
+                if (existing != null)
+                {
+                    existing.Value = kvp.Value;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    _instanceRepository.AddFieldValue(new ProcessFieldValue
+                    {
+                        ProcessInstanceId = instance.Id,
+                        FieldDefinitionId = kvp.Key,
+                        Value = kvp.Value
+                    });
+                }
+            }
+        }
+
+        instance.UpdatedAt = DateTime.UtcNow;
+        await _instanceRepository.SaveChangesAsync();
+
+        var updated = await _instanceRepository.GetCompleteInstanceAsync(id);
+        return MapToCompleteResponse(updated!);
+    }
+
+    public async Task<ProcessInstanceResponse> ProtocolAsync(Guid id, ProtocolProcessRequest request)
+    {
+        var instance = await _instanceRepository.GetCompleteInstanceAsync(id)
+            ?? throw new KeyNotFoundException("Processo não encontrado.");
+
+        var user = await GetCurrentUserAsync();
+        var roles = await _userManager.GetRolesAsync(user);
+        var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
+
+        if (!isSuperAdmin && !isCompanyAdmin && instance.CreatedByUserId != user.Id.ToString())
+            throw new UnauthorizedAccessException("Apenas o autor ou administradores podem protocolar este processo.");
+
+        if (instance.Status != ProcessStatus.Draft && instance.Status != ProcessStatus.Returned)
+            throw new InvalidOperationException("Este processo já se encontra protocolado e em tramitação.");
+
+        if (!string.IsNullOrWhiteSpace(request.Title))
+        {
+            instance.Title = request.Title.Trim();
+        }
+
+        if (request.FieldValues != null)
+        {
+            foreach (var kvp in request.FieldValues)
+            {
+                var existing = instance.FieldValues.FirstOrDefault(f => f.FieldDefinitionId == kvp.Key);
+                if (existing != null)
+                {
+                    existing.Value = kvp.Value;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    _instanceRepository.AddFieldValue(new ProcessFieldValue
+                    {
+                        ProcessInstanceId = instance.Id,
+                        FieldDefinitionId = kvp.Key,
+                        Value = kvp.Value
+                    });
+                }
+            }
+        }
+
+        var processType = await _processTypeRepository.GetCompleteTreeAsync(instance.ProcessTypeId)
+            ?? throw new InvalidOperationException("Árvore de processo associada não encontrada.");
+
+        var previousNodeId = instance.CurrentNodeId;
+        var transitions = processType.Transitions
+            .Where(t => t.FromNodeId == instance.CurrentNodeId && t.AllowAdvance)
+            .ToList();
+
+        if (transitions.Count > 0)
+        {
+            var firstTransition = transitions.First();
+            instance.CurrentNodeId = firstTransition.ToNodeId;
+            if (firstTransition.ToNode?.NodeType == ProcessNodeType.EndArchived)
+            {
+                instance.Status = ProcessStatus.Finished;
+            }
+            else
+            {
+                instance.Status = ProcessStatus.InReview;
+            }
+        }
+        else
+        {
+            instance.Status = ProcessStatus.InReview;
+        }
+
+        instance.UpdatedAt = DateTime.UtcNow;
+
+        _instanceRepository.AddHistory(new ProcessHistory
+        {
+            ProcessInstanceId = instance.Id,
+            FromNodeId = previousNodeId,
+            ToNodeId = instance.CurrentNodeId,
+            Action = ProcessActionType.Advance,
+            UserId = user.Id.ToString(),
+            UserFullName = user.FullName,
+            Observations = string.IsNullOrWhiteSpace(request.Observations) ? "Processo protocolado com sucesso." : request.Observations.Trim()
+        });
+
+        await _instanceRepository.SaveChangesAsync();
+
+        var updated = await _instanceRepository.GetCompleteInstanceAsync(id);
+        return MapToCompleteResponse(updated!);
     }
 
     public async Task<ProcessInstanceResponse> AdvanceAsync(Guid id, AdvanceProcessRequest request)
@@ -417,10 +611,20 @@ public class ProcessInstanceService : IProcessInstanceService
         if (roles.Contains(SystemRoles.CompanyAdmin) || instance.CreatedByUserId == user.Id.ToString())
             return;
 
+        var isUnitUser = user.UnitId.HasValue && roles.Contains(SystemRoles.UnitUser);
+        if (isUnitUser)
+        {
+            if (instance.OriginUnitId != user.UnitId)
+            {
+                throw new UnauthorizedAccessException("Usuários de unidade só podem visualizar processos abertos pela sua própria unidade.");
+            }
+            return;
+        }
+
         var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
         var areaAccess = accesses.FirstOrDefault(a => a.AreaId == instance.AreaId && a.IsActive);
 
-        if (areaAccess == null || !areaAccess.CanView)
+        if (areaAccess == null || (!areaAccess.CanView && !areaAccess.CanHandleWorkflowRequests && !areaAccess.CanManage))
             throw new UnauthorizedAccessException("Você não possui permissão para visualizar processos desta área.");
     }
 
