@@ -5,6 +5,7 @@ import { downloadGuideFile, getGuide, mutateGuide, uploadGuideFile, type GuideCa
 const input = 'mt-1 block w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900';
 const button = 'rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100 disabled:opacity-50';
 const emptyItem = { categoryId: '', title: '', content: '', url: '', sortOrder: 0, isPublished: false };
+const normalizeSearch = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
 
 export function GuideWorkspace({ areaId }: { areaId: string }) {
   const [data, setData] = useState<GuideData | null>(null);
@@ -12,6 +13,7 @@ export function GuideWorkspace({ areaId }: { areaId: string }) {
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [publication, setPublication] = useState('');
   const [itemForm, setItemForm] = useState<(typeof emptyItem & { id?: string }) | null>(null);
   const [categoryForm, setCategoryForm] = useState<{ id?: string; name: string; sortOrder: number } | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -22,9 +24,9 @@ export function GuideWorkspace({ areaId }: { areaId: string }) {
       .catch(e => { if (active) setError(e instanceof Error ? e.message : 'Erro ao carregar orientações.'); });
     return () => { active = false; };
   }, [areaId]);
-  async function run(action: () => Promise<void>) {
+  async function run(action: () => Promise<void>, refresh = true) {
     setBusy(true); setError('');
-    try { await action(); setData(await getGuide(areaId)); }
+    try { await action(); if (refresh) setData(await getGuide(areaId)); }
     catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível concluir a operação.'); }
     finally { setBusy(false); }
   }
@@ -34,8 +36,11 @@ export function GuideWorkspace({ areaId }: { areaId: string }) {
     if (file && (file.size === 0 || file.size > 10 * 1024 * 1024)) { setError('Selecione um arquivo de até 10 MB, não vazio.'); return; }
     await run(async () => {
       const saved = await mutateGuide<GuideItem>(areaId, itemForm.id ? `items/${itemForm.id}` : 'items', itemForm.id ? 'PUT' : 'POST', itemForm);
-      // Preserve the created id if an upload fails, so retry updates instead of duplicating the item.
       setItemForm({ ...itemForm, id: saved.id });
+      setData(previous => previous && {
+        ...previous, items: previous.items.some(i => i.id === saved.id)
+          ? previous.items.map(i => i.id === saved.id ? saved : i) : [...previous.items, saved]
+      });
       if (file) await uploadGuideFile(areaId, saved.id, file);
       setItemForm(null); setFile(null);
     });
@@ -49,14 +54,16 @@ export function GuideWorkspace({ areaId }: { areaId: string }) {
     });
   }
   const visible = data?.items.filter(i => (!category || i.categoryId === category) &&
-    `${i.title} ${i.content}`.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))) ?? [];
+    (!publication || (publication === 'published' ? i.isPublished : !i.isPublished)) &&
+    normalizeSearch(`${i.title} ${i.content} ${i.fileName ?? ''} ${data.categories.find(c => c.id === i.categoryId)?.name ?? ''}`).includes(normalizeSearch(query))) ?? [];
   return <section className="space-y-4" aria-label="Orientações da área" aria-busy={busy}>
     {error && <div role="alert" className="rounded-lg bg-rose-50 p-4 text-rose-700">{error}</div>}
     {!data && !error && <p role="status">Carregando orientações...</p>}
     {data && <>
       <div className="flex flex-wrap items-end gap-3">
-        <label className="min-w-48 flex-1 text-sm"><span className="flex items-center gap-2"><Search size={16} /> Buscar orientação</span><input className={input} value={query} onChange={e => setQuery(e.target.value)} placeholder="Título ou conteúdo" /></label>
+        <label className="min-w-48 flex-1 text-sm"><span className="flex items-center gap-2"><Search size={16} /> Buscar orientação</span><input className={input} value={query} onChange={e => setQuery(e.target.value)} placeholder="Título, conteúdo, categoria ou anexo" /></label>
         <label className="text-sm">Categoria<select className={input} value={category} onChange={e => setCategory(e.target.value)}><option value="">Todas</option>{data.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        {data.canManage && <label className="text-sm">Publicação<select className={input} value={publication} onChange={e => setPublication(e.target.value)}><option value="">Todas</option><option value="published">Publicadas</option><option value="draft">Rascunhos</option></select></label>}
         {data.canManage && <><button className={button} disabled={busy} onClick={() => { setCategoryForm({ name: '', sortOrder: 0 }); setItemForm(null); }}>Nova categoria</button>
           <button className={button} disabled={busy || !data.categories.length} onClick={() => { setItemForm({ ...emptyItem, categoryId: category || data.categories[0].id }); setCategoryForm(null); setFile(null); }}><Plus className="mr-1 inline h-4 w-4" />Nova orientação</button></>}
       </div>
@@ -79,7 +86,14 @@ export function GuideWorkspace({ areaId }: { areaId: string }) {
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={itemForm.isPublished} onChange={e => setItemForm({ ...itemForm, isPublished: e.target.checked })} />Publicar para consulta</label>
         <button className={button} disabled={busy}>{busy ? 'Salvando...' : 'Salvar orientação'}</button> <button className={button} type="button" disabled={busy} onClick={() => { setItemForm(null); setFile(null); }}>Cancelar</button>
       </form>}
-      {confirmation && <div role="alertdialog" aria-label="Confirmar exclusão" className="rounded-xl border border-rose-200 bg-rose-50 p-4"><p>Excluir “{confirmation.label}”? Esta ação é permanente.</p><div className="mt-3 flex gap-2"><button className={button} disabled={busy} onClick={() => void run(async () => { await mutateGuide(areaId, confirmation.path, 'DELETE'); setConfirmation(null); })}>Confirmar exclusão</button><button className={button} disabled={busy} onClick={() => setConfirmation(null)}>Cancelar</button></div></div>}
+      {confirmation && <div role="alertdialog" aria-label="Confirmar exclusão" className="rounded-xl border border-rose-200 bg-rose-50 p-4"><p>Excluir “{confirmation.label}”? Esta ação é permanente.</p><div className="mt-3 flex gap-2"><button className={button} disabled={busy} onClick={() => void run(async () => {
+        await mutateGuide(areaId, confirmation.path, 'DELETE');
+        if (confirmation.path === `categories/${category}`) setCategory('');
+        if (confirmation.path === `categories/${categoryForm?.id}`) setCategoryForm(null);
+        if (confirmation.path === `items/${itemForm?.id}`) { setItemForm(null); setFile(null); }
+        setConfirmation(null);
+      })}>Confirmar exclusão</button><button className={button} disabled={busy} onClick={() => setConfirmation(null)}>Cancelar</button></div></div>}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500"><p role="status">{visible.length} de {data.items.length} orientações</p>{(query || category || publication) && <button className={button} onClick={() => { setQuery(''); setCategory(''); setPublication(''); }}>Limpar filtros</button>}</div>
       {!visible.length && <p className="rounded-xl border border-dashed p-8 text-center text-slate-500">Nenhuma orientação encontrada.</p>}
       <div className="grid gap-4 lg:grid-cols-2">{visible.map(item => <article key={item.id} className="min-w-0 rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap gap-2 text-xs font-medium text-amber-800"><span>{data.categories.find(c => c.id === item.categoryId)?.name}</span>{!item.isPublished && <span className="rounded bg-slate-100 px-2 text-slate-600">Rascunho</span>}</div>
@@ -88,9 +102,11 @@ export function GuideWorkspace({ areaId }: { areaId: string }) {
         <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">{item.content}</p>
         <div className="mt-4 flex flex-wrap gap-3">
           {item.url && /^https?:\/\//i.test(item.url) && <a className={button} href={item.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} className="mr-2 inline" />Abrir link</a>}
-          {item.fileName && <button className={button} disabled={busy} onClick={() => void run(() => downloadGuideFile(areaId, item))}><Download size={14} className="mr-2 inline" />{item.fileName}</button>}
+          {item.fileName && <button className={button} disabled={busy} onClick={() => void run(() => downloadGuideFile(areaId, item), false)}><Download size={14} className="mr-2 inline" />{item.fileName}</button>}
         </div>
-        {data.canManage && <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3"><button className={button} disabled={busy} onClick={() => { setItemForm({ ...item, url: item.url ?? '' }); setCategoryForm(null); setFile(null); }}>Editar</button><button className={button} disabled={busy} onClick={() => setConfirmation({ path: `items/${item.id}`, label: item.title })}>Excluir</button>{item.fileName && <button className={button} disabled={busy} onClick={() => setConfirmation({ path: `items/${item.id}/file`, label: item.fileName! })}>Remover anexo</button>}</div>}
+        {data.canManage && <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3"><button className={button} disabled={busy} onClick={() => { setItemForm({ ...item, url: item.url ?? '' }); setCategoryForm(null); setFile(null); }}>Editar</button><button className={button} disabled={busy || itemForm?.id === item.id} onClick={() => void run(async () => {
+          await mutateGuide(areaId, `items/${item.id}`, 'PUT', { ...item, isPublished: !item.isPublished });
+        })}>{item.isPublished ? 'Despublicar' : 'Publicar'}</button><button className={button} disabled={busy} onClick={() => setConfirmation({ path: `items/${item.id}`, label: item.title })}>Excluir</button>{item.fileName && <button className={button} disabled={busy} onClick={() => setConfirmation({ path: `items/${item.id}/file`, label: item.fileName! })}>Remover anexo</button>}</div>}
       </article>)}</div>
     </>}
   </section>;

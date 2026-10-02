@@ -8,7 +8,9 @@ Disponível em `/app/guide`, pelo menu **Orientador**, e na aba **Orientador & G
 2. Conceda `CanManageGuide` aos responsáveis e `CanView` aos leitores no cadastro de permissões. Administradores da empresa podem gerenciar suas áreas; Super Admin pode gerenciar todas.
 3. Crie categorias e orientações. Cada orientação aceita título, instruções em texto, link HTTP/HTTPS, ordem e um anexo de até 10 MB.
 4. Marque **Publicar para consulta** para disponibilizar a orientação. Rascunhos e seus anexos ficam visíveis apenas para gestores.
-5. Use a busca e o filtro de categoria para consultar. Uma categoria só pode ser excluída depois de remover ou mover seus itens.
+5. Use a busca e o filtro de categoria para consultar. A busca ignora acentos e inclui título, instruções, categoria e nome do anexo. Gestores também podem filtrar publicadas e rascunhos e publicar ou despublicar diretamente na lista. Use **Limpar filtros** para voltar à consulta completa. Uma categoria só pode ser excluída depois de remover ou mover seus itens.
+
+Se o envio do anexo falhar após salvar uma orientação, ela permanece na lista e o formulário mantém seu identificador para tentar novamente sem duplicar o cadastro. Baixar anexos preserva a consulta atual sem recarregar a lista.
 
 Categorias e itens são ordenados por ordem numérica, seguida de nome/título. Exclusões são permanentes e pedem confirmação na interface. O upload substitui o anexo atual. O conteúdo é renderizado como texto, sem interpretar HTML.
 
@@ -39,7 +41,15 @@ A migração `20260926120000_AddGuideModule` cria `guide_categories` e `guide_it
 
 O anexo é armazenado em `bytea` no PostgreSQL, um por orientação, e faz parte do backup do banco. Não é publicado em `/uploads`: o download verifica autorização, usa `Content-Disposition: attachment`, `nosniff` e `Cache-Control: no-store`. A listagem não carrega os bytes dos arquivos. Para volumes altos de documentos, considere migrar o armazenamento para um serviço de objetos privado.
 
-## Bateria Python
+## Ambiente local de demonstração
+
+Inicie os serviços com `docker compose up -d --build` na raiz do projeto. O frontend fica em `http://localhost:3000/app/guide`, a documentação da API em `http://localhost:8080/swagger` e o PostgreSQL em `localhost:5433`, banco `sicou-dev`.
+
+Execute `node scratch/seed_guide_local.mjs` na raiz para preparar a empresa **Sicou - Demonstração Local**, uma unidade, uma área habilitada, categorias, orientações publicadas e em rascunho e um anexo de exemplo. O script reutiliza os registros existentes e verifica autenticação, permissões, consulta e download. Requer Node 22 e Docker Compose. Se Docker não estiver no PATH, configure `SICOU_DOCKER_PATH` com o caminho do executável.
+
+Contas locais: `admin.local@example.test` (administrador), `gestor.local@example.test` (gestão do Orientador) e `leitor.local@example.test` (consulta). A senha inicial é `Local123!`; pode ser definida por `SICOU_LOCAL_PASSWORD` antes da primeira execução. O script não altera senhas de contas existentes. Os dados persistem no volume `Sicou-DB-Data`.
+
+## Testes de integração Python
 
 Arquivo: `scratch/test_guide_module.py`. Usa apenas a biblioteca padrão do Python, sem instalar dependências.
 
