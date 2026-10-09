@@ -298,11 +298,13 @@ export const HomePage: React.FC = () => {
                           </p>
 
                           {postImg && (
-                            <div className="mt-3 overflow-hidden rounded-xl border border-slate-100 max-h-96">
+                            <div className="mt-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
                               <img
                                 src={postImg}
                                 alt={post.title}
-                                className="w-full h-full object-cover"
+                                loading="lazy"
+                                decoding="async"
+                                className="mx-auto block h-auto max-h-[min(65svh,32rem)] w-full max-w-full object-contain"
                               />
                             </div>
                           )}

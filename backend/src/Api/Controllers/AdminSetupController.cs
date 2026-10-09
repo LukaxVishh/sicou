@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sicou.Domain.Constants;
 using Sicou.Infrastructure.Identity;
@@ -7,6 +8,7 @@ namespace Sicou.Api.Controllers;
 
 [ApiController]
 [Route("api/admin-setup")]
+[Authorize(Roles = SystemRoles.SuperAdmin)]
 public class AdminSetupController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;

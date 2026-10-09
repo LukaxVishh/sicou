@@ -2,6 +2,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { AdminLayout } from '../layouts';
 import { DashboardPage, HomePage } from '../pages';
 import { LoginPage } from '../../features/auth/pages';
+import { ChangePasswordPage } from '../../features/auth/pages/ChangePasswordPage';
+import { PasswordRecoveryPage } from '../../features/auth/pages/PasswordRecoveryPage';
+import { EmailPasswordRecoveryPage } from '../../features/auth/pages/EmailPasswordRecoveryPage';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuth } from '../../features/auth/providers';
 import { SystemRoles } from '../../shared/constants/roles';
@@ -42,6 +45,9 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/forgot-password" element={<EmailPasswordRecoveryPage key="forgot" />} />
+        <Route path="/reset-password" element={<EmailPasswordRecoveryPage key="reset" reset />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route
           path="/"
           element={<IndexRedirect />}
@@ -108,6 +114,7 @@ export function AppRouter() {
             />
 
             <Route path="guide" element={<GuidePage />} />
+            <Route path="password-recovery" element={<PasswordRecoveryPage />} />
 
 
             <Route

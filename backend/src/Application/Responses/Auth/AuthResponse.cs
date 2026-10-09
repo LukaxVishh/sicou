@@ -11,6 +11,7 @@ public class AuthResponse
 
 public class UserAuthResponse
 {
+    public bool MustChangePassword { get; set; }
     public Guid Id { get; set; }
 
     public string FullName { get; set; } = string.Empty;

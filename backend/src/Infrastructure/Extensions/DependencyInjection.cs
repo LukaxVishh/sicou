@@ -63,6 +63,10 @@ public static class DependencyInjection
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
+        services.Configure<PasswordRecoveryEmailOptions>(configuration.GetSection("Email"));
+        services.AddScoped<IPasswordRecoveryEmailSender, SmtpPasswordRecoveryEmailSender>();
+        services.AddScoped<IEmailPasswordRecoveryService, EmailPasswordRecoveryService>();
         services.AddScoped<IUnitService, UnitService>();
         services.AddScoped<IAreaService, AreaService>();
         services.AddScoped<ICompanyService, CompanyService>();

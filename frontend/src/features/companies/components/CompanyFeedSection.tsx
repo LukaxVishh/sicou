@@ -162,7 +162,9 @@ export function CompanyFeedSection({ companyId }: CompanyFeedSectionProps) {
                   <img
                     src={postImageUrl(post.imageUrl) ?? undefined}
                     alt="Imagem do comunicado"
-                    className="max-h-64 w-full object-contain"
+                    loading="lazy"
+                    decoding="async"
+                    className="mx-auto block h-auto max-h-[min(65svh,32rem)] w-full max-w-full object-contain"
                   />
                 </div>
               )}

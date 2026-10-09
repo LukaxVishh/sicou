@@ -471,6 +471,12 @@ export function UserDetailsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {user.isActive && user.id !== currentUser?.id && !user.roles.includes('SUPER_ADMIN')
+            && (isSuperAdmin || (currentUser?.roles.includes(SystemRoles.CompanyAdmin) && !user.roles.includes('COMPANY_ADMIN'))) && (
+            <Link to={`/app/password-recovery?userId=${user.id}`} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+              <KeyRound className="h-4 w-4" /> Recuperar senha
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => loadUserDetails({ silent: true })}

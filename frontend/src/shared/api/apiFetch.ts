@@ -65,7 +65,7 @@ export async function apiFetch<TResponse>(
     headers: buildHeaders(options),
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && options.auth !== false) {
     localStorage.removeItem(storageKeys.accessToken);
     localStorage.removeItem(storageKeys.expiresAt);
     localStorage.removeItem(storageKeys.user);

@@ -1154,3 +1154,9 @@ A próxima etapa deve focar em transformar essa base estrutural em governança r
 ### Orientador implementado
 
 O módulo está disponível em /app/guide e na aba de guias da empresa. Inclui categorias, orientações, rascunhos, publicação, busca, links e anexos autenticados. Consulte [a documentação do módulo](../backend/ORIENTADOR.md).
+
+### Recuperação de senha e notificações
+
+Super Admin e Admin da Empresa podem gerar senhas temporárias em `/app/password-recovery` ou pelo botão **Recuperar senha** no perfil do usuário. O primeiro login exige definir a senha definitiva. O sino no cabeçalho lista notificações por empresa e área, com estado de leitura persistente. Consulte [a documentação](../backend/RECUPERACAO_E_NOTIFICACOES.md).
+
+O login também oferece **Esqueci minha senha**, com confirmação por link enviado ao e-mail cadastrado e definição da nova senha em `/reset-password`. Para testar localmente, inicie `docker compose up -d mail` e consulte as mensagens em `http://localhost:8025`.

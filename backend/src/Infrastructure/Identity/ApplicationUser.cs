@@ -15,4 +15,11 @@ public class ApplicationUser : IdentityUser<Guid>
     public Guid? CompanyId { get; set; }
 
     public Guid? UnitId { get; set; }
+
+    public bool MustChangePassword { get; set; }
+    public DateTime? TemporaryPasswordExpiresAt { get; set; }
+    public Guid? PasswordRecoveryByUserId { get; set; }
+    public DateTime? PasswordRecoveryAt { get; set; }
+    public string? EmailPasswordResetTokenHash { get; set; }
+    public DateTime? EmailPasswordResetExpiresAt { get; set; }
 }

@@ -4,7 +4,7 @@ namespace Sicou.Application.Interfaces.Auth;
 
 public interface IJwtTokenService
 {
-    string GenerateToken(Guid userId, string email, string fullName, IEnumerable<string> roles);
+    string GenerateToken(Guid userId, string email, string fullName, IEnumerable<string> roles, string securityStamp);
 
     DateTime GetExpirationDate();
 }

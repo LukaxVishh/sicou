@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../providers';
 
 type LocationState = {
@@ -9,15 +9,15 @@ type LocationState = {
 };
 
 export function LoginPage() {
-  const { isAuthenticated, isLoading, signIn } = useAuth();
+  const { isAuthenticated, isLoading, signIn, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const state = location.state as LocationState | null;
   const redirectTo = state?.from?.pathname ?? '/app/dashboard';
 
-  const [email, setEmail] = useState('admin@sicou.com');
-  const [password, setPassword] = useState('Admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -56,7 +56,7 @@ export function LoginPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/app/dashboard" replace />;
+    return <Navigate to={user?.mustChangePassword ? '/change-password' : '/app'} replace />;
   }
 
   return (
@@ -91,17 +91,17 @@ export function LoginPage() {
               htmlFor="email"
               className="block text-sm font-medium text-slate-700"
             >
-              E-mail
+              E-mail ou login
             </label>
 
             <input
               id="email"
-              type="email"
-              autoComplete="email"
+              type="text"
+              autoComplete="username"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className="mt-2 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-              placeholder="admin@sicou.com"
+              placeholder="E-mail ou nome de usuário"
               required
             />
           </div>
@@ -134,6 +134,11 @@ export function LoginPage() {
             {isSubmitting ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+
+        <p className="mt-5 text-sm text-slate-600">
+          <Link to="/forgot-password" className="font-medium text-indigo-700 underline">Esqueci minha senha</Link>
+          <span className="mt-2 block">Você também pode solicitar uma senha temporária ao administrador responsável.</span>
+        </p>
 
         <p className="mt-6 text-xs text-slate-500">
           Ambiente local conectado à API do Sicou.

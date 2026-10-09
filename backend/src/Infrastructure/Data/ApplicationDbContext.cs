@@ -7,7 +7,7 @@ using Sicou.Infrastructure.Identity;
 
 namespace Sicou.Infrastructure.Data;
 
-public class ApplicationDbContext
+public partial class ApplicationDbContext
     : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
 {
     public DbSet<Company> Companies => Set<Company>();
@@ -43,9 +43,13 @@ public class ApplicationDbContext
 
     public DbSet<ProcessHistory> ProcessHistories => Set<ProcessHistory>();
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+    private readonly Sicou.Application.Interfaces.Auth.ICurrentUserService? _notificationActor;
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
+        Sicou.Application.Interfaces.Auth.ICurrentUserService? notificationActor = null)
         : base(options)
     {
+        _notificationActor = notificationActor;
     }
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -56,6 +60,7 @@ public class ApplicationDbContext
         ConfigureDomainTables(builder);
         SeedModules(builder);
         GuideModelConfiguration.Configure(builder);
+        NotificationModelConfiguration.Configure(builder);
     }
 
     private static void ConfigureIdentityTables(ModelBuilder builder)
@@ -77,6 +82,7 @@ public class ApplicationDbContext
             entity.Property(x => x.UpdatedAt);
 
             entity.Property(x => x.CompanyId);
+            entity.Property(x => x.EmailPasswordResetTokenHash).HasMaxLength(64);
 
             entity.Property(x => x.UnitId);
         });
