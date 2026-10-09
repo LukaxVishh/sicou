@@ -68,4 +68,13 @@ public class AuthController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        Response.Headers.CacheControl = "no-store";
+        return Ok(await _authService.ChangePasswordAsync(userId, request));
+    }
 }

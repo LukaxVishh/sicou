@@ -9,5 +9,7 @@ public interface IAuthService
 
     Task<AuthResponse> LoginAsync(LoginRequest request);
 
+    Task<AuthResponse> ChangePasswordAsync(Guid userId, ChangePasswordRequest request);
+
     Task<UserAuthResponse> GetCurrentUserAsync(Guid userId);
 }

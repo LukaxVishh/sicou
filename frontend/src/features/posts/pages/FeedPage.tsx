@@ -268,7 +268,7 @@ export function FeedPage() {
   const canEdit = (post: Post) => post.authorId === user?.id || canModeratePost(post);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6">
       {/* Cabeçalho */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
@@ -370,8 +370,14 @@ export function FeedPage() {
         {posts.map((post) => (
           <article key={post.id} className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
             {post.imageUrl && (
-              <div className="flex max-h-[26rem] min-h-48 items-center justify-center bg-slate-100 p-3 sm:p-5">
-                <img src={postImageUrl(post.imageUrl) ?? undefined} alt="Imagem da publicação" className="max-h-[24rem] max-w-full rounded-lg object-contain" />
+              <div className="w-full overflow-hidden border-b border-slate-200 bg-slate-50">
+                <img
+                  src={postImageUrl(post.imageUrl) ?? undefined}
+                  alt={`Imagem da publicação: ${post.title}`}
+                  loading="lazy"
+                  decoding="async"
+                  className="mx-auto block h-auto max-h-[min(65svh,32rem)] w-full max-w-full object-contain"
+                />
               </div>
             )}
             <div className="p-5">
@@ -482,8 +488,8 @@ export function FeedPage() {
                 </label>
               )}
 
-              {imagePreview && <img src={imagePreview} alt="Prévia da imagem" className="mt-4 max-h-64 w-full rounded-xl bg-slate-100 object-contain border border-slate-200" />}
-              {!imagePreview && editingPost?.imageUrl && !form.removeImage && <img src={postImageUrl(editingPost.imageUrl) ?? undefined} alt="Imagem atual" className="mt-4 max-h-64 w-full rounded-xl bg-slate-100 object-contain border border-slate-200" />}
+              {imagePreview && <img src={imagePreview} alt="Prévia da imagem" className="mt-4 block h-auto max-h-[min(50svh,24rem)] w-full max-w-full rounded-xl border border-slate-200 bg-slate-100 object-contain" />}
+              {!imagePreview && editingPost?.imageUrl && !form.removeImage && <img src={postImageUrl(editingPost.imageUrl) ?? undefined} alt="Imagem atual" className="mt-4 block h-auto max-h-[min(50svh,24rem)] w-full max-w-full rounded-xl border border-slate-200 bg-slate-100 object-contain" />}
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm">

@@ -14,3 +14,9 @@ export async function getCurrentUser() {
     method: 'GET',
   });
 }
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  return apiFetch<LoginResponse>('/api/Auth/change-password', {
+    method: 'POST', body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}

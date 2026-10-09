@@ -5,6 +5,7 @@ export type AuthUser = {
   fullName: string;
   email: string;
   isActive: boolean;
+  mustChangePassword: boolean;
   companyId?: string | null;
   unitId?: string | null;
   roles: SystemRole[];

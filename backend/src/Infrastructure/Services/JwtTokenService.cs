@@ -16,7 +16,7 @@ public class JwtTokenService : IJwtTokenService
         _configuration = configuration;
     }
 
-    public string GenerateToken(Guid userId, string email, string fullName, IEnumerable<string> roles)
+    public string GenerateToken(Guid userId, string email, string fullName, IEnumerable<string> roles, string securityStamp)
     {
         var jwtSection = _configuration.GetSection("Jwt");
 
@@ -33,7 +33,8 @@ public class JwtTokenService : IJwtTokenService
             new(JwtRegisteredClaimNames.Email, email),
             new(ClaimTypes.NameIdentifier, userId.ToString()),
             new(ClaimTypes.Name, fullName),
-            new(ClaimTypes.Email, email)
+            new(ClaimTypes.Email, email),
+            new("security_stamp", securityStamp)
         };
 
         foreach (var role in roles)

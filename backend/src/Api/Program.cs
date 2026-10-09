@@ -15,6 +15,21 @@ using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellation) =>
+        await context.HttpContext.Response.WriteAsJsonAsync(new { message = "Muitas solicitações de recuperação. Aguarde alguns minutos e tente novamente." }, cancellation);
+    options.AddPolicy("email-password-recovery", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            $"{context.Connection.RemoteIpAddress}:{context.Request.Path.Value?.ToLowerInvariant()}",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Clamp(builder.Configuration.GetValue<int?>("Email:RequestLimit") ?? 5, 1, 100),
+                Window = TimeSpan.FromMinutes(15), QueueLimit = 0
+            }));
+});
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -75,6 +90,21 @@ builder.Services
     {
         options.RequireHttpsMetadata = false;
         options.SaveToken = true;
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var users = context.HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Sicou.Infrastructure.Identity.ApplicationUser>>();
+                var userId = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var user = await users.FindByIdAsync(userId ?? string.Empty);
+                var stamp = context.Principal?.FindFirst("security_stamp")?.Value;
+                if (user is null || !user.IsActive || string.IsNullOrEmpty(stamp) || stamp != user.SecurityStamp
+                    || (user.MustChangePassword && (!user.TemporaryPasswordExpiresAt.HasValue || user.TemporaryPasswordExpiresAt <= DateTime.UtcNow)))
+                    context.Fail("Sessão inválida. Faça login novamente.");
+                else context.HttpContext.Items["MustChangePassword"] = user.MustChangePassword;
+            }
+        };
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -149,8 +179,22 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(uploadsPath),
     RequestPath = "/uploads"
 });
+app.UseRouting();
 app.UseCorsConfiguration();
+app.UseRateLimiter();
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    if (context.Items["MustChangePassword"] is true
+        && !context.Request.Path.Equals(new PathString("/api/auth/me"))
+        && !context.Request.Path.Equals(new PathString("/api/auth/change-password")))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new { message = "Defina sua senha definitiva antes de acessar o sistema.", mustChangePassword = true });
+        return;
+    }
+    await next(context);
+});
 app.UseAuthorization();
 app.MapControllers();
 

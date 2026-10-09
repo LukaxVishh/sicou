@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../../features/auth/providers';
 
 export function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -23,5 +23,6 @@ export function ProtectedRoute() {
     );
   }
 
+  if (user?.mustChangePassword) return <Navigate to="/change-password" replace />;
   return <Outlet />;
 }

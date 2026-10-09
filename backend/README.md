@@ -1443,3 +1443,7 @@ Este README foi reescrito com base na estrutura e no código atual do `backend.z
 ### Orientador implementado
 
 Consulte [ORIENTADOR.md](ORIENTADOR.md) para uso, endpoints, migração e execução da bateria Python.
+
+### Recuperação de senha e notificações
+
+Recuperação administrativa com senha temporária, troca obrigatória e notificações no sistema por empresa/área. Consulte [RECUPERACAO_E_NOTIFICACOES.md](RECUPERACAO_E_NOTIFICACOES.md).

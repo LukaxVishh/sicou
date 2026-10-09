@@ -14,6 +14,7 @@ import {
   FolderTree,
   PanelLeftClose,
   PanelLeftOpen,
+  KeyRound,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
@@ -23,6 +24,7 @@ import { useAuth } from '../../features/auth/providers';
 import { getAreasByCompanyId } from '../../features/areas/api';
 import { getCompanies } from '../../features/companies/api';
 import type { CompanyArea } from '../../features/areas/types';
+import { NotificationBell } from '../../features/notifications/NotificationBell';
 
 
 export function AdminLayout() {
@@ -97,6 +99,10 @@ export function AdminLayout() {
 
   // Itens de Navegação Global
   const navigationItems = [
+    {
+      label: 'Recuperação de senha', path: '/app/password-recovery', icon: KeyRound,
+      roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin],
+    },
     {
       label: 'Página Inicial',
       path: '/app/home',
@@ -495,6 +501,7 @@ export function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold text-slate-900">
                 {user?.fullName}

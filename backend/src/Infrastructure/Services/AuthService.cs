@@ -52,7 +52,8 @@ public class AuthService : IAuthService
             user.Id,
             user.Email!,
             user.FullName,
-            roles
+            roles,
+            user.SecurityStamp!
         );
 
         return new AuthResponse
@@ -67,14 +68,17 @@ public class AuthService : IAuthService
                 IsActive = user.IsActive,
                 CompanyId = user.CompanyId,
                 UnitId = user.UnitId,
-                Roles = roles
+                Roles = roles,
+                MustChangePassword = user.MustChangePassword
             }
         };
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
     {
-        var user = await _userManager.FindByEmailAsync(request.Email);
+        var identifier = request.Email.Trim();
+        var user = await _userManager.FindByEmailAsync(identifier)
+            ?? await _userManager.FindByNameAsync(identifier);
 
         if (user is null)
             throw new UnauthorizedAccessException("E-mail ou senha inválidos.");
@@ -82,10 +86,20 @@ public class AuthService : IAuthService
         if (!user.IsActive)
             throw new UnauthorizedAccessException("Usuário inativo.");
 
+        if (await _userManager.IsLockedOutAsync(user))
+            throw new UnauthorizedAccessException("Acesso bloqueado temporariamente. Tente novamente mais tarde.");
+
+        if (user.MustChangePassword && (!user.TemporaryPasswordExpiresAt.HasValue || user.TemporaryPasswordExpiresAt <= DateTime.UtcNow))
+            throw new UnauthorizedAccessException("Senha temporária expirada. Solicite uma nova ao administrador.");
+
         var passwordValid = await _userManager.CheckPasswordAsync(user, request.Password);
 
         if (!passwordValid)
+        {
+            await _userManager.AccessFailedAsync(user);
             throw new UnauthorizedAccessException("E-mail ou senha inválidos.");
+        }
+        await _userManager.ResetAccessFailedCountAsync(user);
 
         var roles = await _userManager.GetRolesAsync(user);
 
@@ -93,7 +107,8 @@ public class AuthService : IAuthService
             user.Id,
             user.Email!,
             user.FullName,
-            roles
+            roles,
+            user.SecurityStamp!
         );
 
         return new AuthResponse
@@ -108,7 +123,8 @@ public class AuthService : IAuthService
                 IsActive = user.IsActive,
                 CompanyId = user.CompanyId,
                 UnitId = user.UnitId,
-                Roles = roles
+                Roles = roles,
+                MustChangePassword = user.MustChangePassword
             }
         };
     }
@@ -130,7 +146,33 @@ public class AuthService : IAuthService
             IsActive = user.IsActive,
             CompanyId = user.CompanyId,
             UnitId = user.UnitId,
-            Roles = roles
+            Roles = roles,
+            MustChangePassword = user.MustChangePassword
+        };
+    }
+
+    public async Task<AuthResponse> ChangePasswordAsync(Guid userId, ChangePasswordRequest request)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null || !user.IsActive) throw new UnauthorizedAccessException("Usuário inativo.");
+        if (user.MustChangePassword && (!user.TemporaryPasswordExpiresAt.HasValue || user.TemporaryPasswordExpiresAt <= DateTime.UtcNow))
+            throw new UnauthorizedAccessException("Senha temporária expirada. Solicite uma nova ao administrador.");
+        if (request.CurrentPassword == request.NewPassword)
+            throw new InvalidOperationException("A senha definitiva deve ser diferente da senha temporária.");
+        // Identity changes the hash and security stamp together with these flags.
+        user.MustChangePassword = false;
+        user.TemporaryPasswordExpiresAt = null;
+        user.EmailPasswordResetTokenHash = null;
+        user.EmailPasswordResetExpiresAt = null;
+        var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+            throw new InvalidOperationException(string.Join(" | ", result.Errors.Select(e => e.Description)));
+        var roles = await _userManager.GetRolesAsync(user);
+        return new AuthResponse
+        {
+            AccessToken = _jwtTokenService.GenerateToken(user.Id, user.Email!, user.FullName, roles, user.SecurityStamp!),
+            ExpiresAt = _jwtTokenService.GetExpirationDate(),
+            User = await GetCurrentUserAsync(user.Id)
         };
     }
 }
