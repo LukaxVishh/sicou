@@ -1447,3 +1447,7 @@ Consulte [ORIENTADOR.md](ORIENTADOR.md) para uso, endpoints, migração e execu�
 ### Recuperação de senha e notificações
 
 Recuperação administrativa com senha temporária, troca obrigatória e notificações no sistema por empresa/área. Consulte [RECUPERACAO_E_NOTIFICACOES.md](RECUPERACAO_E_NOTIFICACOES.md).
+
+### SMTP Gmail no ambiente local
+
+O envio automático do link em **Esqueci minha senha** pode usar Gmail. Consulte [_mds/SMTP.md](../_mds/SMTP.md) para preencher a senha de aplicativo em arquivo local ignorado e iniciar a API pelo script scripts/start-backend-smtp.ps1. A recuperação administrativa por senha temporária continua separada.

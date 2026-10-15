@@ -1160,3 +1160,5 @@ O módulo está disponível em /app/guide e na aba de guias da empresa. Inclui c
 Super Admin e Admin da Empresa podem gerar senhas temporárias em `/app/password-recovery` ou pelo botão **Recuperar senha** no perfil do usuário. O primeiro login exige definir a senha definitiva. O sino no cabeçalho lista notificações por empresa e área, com estado de leitura persistente. Consulte [a documentação](../backend/RECUPERACAO_E_NOTIFICACOES.md).
 
 O login também oferece **Esqueci minha senha**, com confirmação por link enviado ao e-mail cadastrado e definição da nova senha em `/reset-password`. Para testar localmente, inicie `docker compose up -d mail` e consulte as mensagens em `http://localhost:8025`.
+
+Na lista de usuários (/app/users), a última coluna oferece **Resetar senha** para Super Admin e Admin da Empresa. O frontend consulta /api/password-recovery/users para montar o array de acessos elegíveis; ações não permitidas ficam desabilitadas. O botão abre a confirmação da recuperação com o usuário selecionado, antes de gerar a senha temporária. A lista em /app/password-recovery usa a mesma identificação de ação.

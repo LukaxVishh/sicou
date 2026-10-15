@@ -16,7 +16,7 @@ A regra também está no [AGENTS.md da raiz](../AGENTS.md). Ferramentas sem supo
 - [ ] **RF-029 — Filtro por período:** adicionar datas inicial/final nas consultas e na interface de processos.
 - [ ] **RF-015 — Cancelamento de processos:** implementar estado e ação de cancelamento, autorização, histórico e tratamento das ações posteriores ao cancelamento.
 - [ ] **RF-010 — Transferência de usuários:** complementar a troca de unidade com revogação/recomposição dos acessos antigos e registro da transferência. Validar que a autoria de processos antigos não mantenha acesso operacional indevido.
-- [ ] **SMTP real:** configurar provedor, remetente, credenciais e origem HTTPS do frontend. A recuperação por e-mail já funciona na caixa local; esta tarefa depende das credenciais do provedor.
+- [ ] **SMTP real:** preparação para Gmail entregue; remetente Gmail solicitado configurado em arquivo local ignorado e script de inicialização entregue; campos locais preenchidos e API reiniciada com SMTP; teste externo atingiu timeout. Falta validar conectividade SMTP, autenticação, entrega e redefinição. Para demonstração no mesmo computador, usar localhost. Consulte o [guia SMTP](SMTP.md) e o [registro de 15/10/2026](ATUALIZACOES/2026-10-15.md).
 - [ ] **RNF-019 — Backup básico:** criar uma rotina agendada, definir retenção e validar uma restauração em ambiente separado. O volume Docker atual fornece persistência, mas não substitui backup.
 - [ ] **RNF-001, RNF-002 e RNF-003 — Homologação inicial:** verificar os fluxos completos em Chrome, Firefox, Edge e Safari, em telas de computador, tablet e celular, e registrar a quantidade de interações.
 
@@ -80,3 +80,9 @@ Os avisos existentes ainda precisam dos complementos de prazo, aprovação e aut
 - [Atualizações de 09/10/2026](ATUALIZACOES/2026-10-09.md)
 
 Responsáveis e datas de entrega devem ser definidos pela equipe. A inspeção das branches remotas não identificou commits pendentes de integração na `main`; trabalhos locais dos demais desenvolvedores podem não estar publicados.
+
+## Ambiente local — 15/10/2026
+
+- [x] Inicializar frontend, API e banco local: frontend em localhost:5173, API em localhost:5175 e PostgreSQL local preexistente em 127.0.0.1:55439. Login, consulta autenticada, HTTP e CORS validados. Consulte o [registro](ATUALIZACOES/2026-10-15.md).
+
+- [x] Ação **Resetar senha** na última coluna da lista de usuários, com array de elegibilidade da API e abertura da confirmação existente. Build de produção aprovado. [Registro de 15/10/2026](ATUALIZACOES/2026-10-15.md).

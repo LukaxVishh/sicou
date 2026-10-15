@@ -39,11 +39,13 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=sicou-dev;Username=postgres;Password=rootroot
       Cors__AllowedOrigins__0: http://localhost:3000
-      Email__Host: mail
-      Email__Port: 1025
-      Email__EnableSsl: "false"
-      Email__FromAddress: no-reply@sicou.local
-      Email__FrontendBaseUrl: http://localhost:3000
+      Email__Host: ${SMTP_HOST:-mail}
+      Email__Port: ${SMTP_PORT:-1025}
+      Email__EnableSsl: ${SMTP_ENABLE_SSL:-false}
+      Email__Username: ${SMTP_USERNAME:-}
+      Email__Password: ${SMTP_PASSWORD:-}
+      Email__FromAddress: ${SMTP_FROM_ADDRESS:-no-reply@sicou.local}
+      Email__FrontendBaseUrl: ${SMTP_FRONTEND_BASE_URL:-http://localhost:3000}
     ports:
       - "8080:8080"
     volumes:

@@ -12,6 +12,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ActionsDropdown } from '../../../shared/components';
+import { apiFetch } from '../../../shared/api';
 import { useAuth } from '../../auth/providers';
 import { SystemRoles } from '../../../shared/constants/roles';
 import { getCompanies } from '../../companies/api';
@@ -49,6 +50,8 @@ export function UsersPage() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const isSuperAdmin = currentUser?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const canResetPasswords = isSuperAdmin || (currentUser?.roles.includes(SystemRoles.CompanyAdmin) ?? false);
+  const [recoverableUserIds, setRecoverableUserIds] = useState<string[]>([]);
 
   // Empresas e Empresa Selecionada
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -103,9 +106,10 @@ export function UsersPage() {
 
       const targetCompanyId = isSuperAdmin ? selectedCompanyId : currentUser?.companyId;
 
-      const [usersData, accessesData] = await Promise.all([
+      const [usersData, accessesData, recoveryUsers] = await Promise.all([
         getUsers(),
         targetCompanyId ? getAccessesByCompany(targetCompanyId).catch(() => [] as UserAreaAccess[]) : Promise.resolve([] as UserAreaAccess[]),
+        canResetPasswords ? apiFetch<{ id: string }[]>('/api/password-recovery/users') : Promise.resolve([]),
       ]);
 
       const filtered = targetCompanyId
@@ -113,6 +117,7 @@ export function UsersPage() {
         : usersData;
 
       setUsers(filtered);
+      setRecoverableUserIds(recoveryUsers.map((candidate) => candidate.id));
       setAccesses(accessesData.filter((a) => a.isActive));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível carregar os colaboradores.';
@@ -121,7 +126,7 @@ export function UsersPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [isSuperAdmin, selectedCompanyId, currentUser?.companyId]);
+  }, [isSuperAdmin, selectedCompanyId, currentUser?.companyId, canResetPasswords]);
 
   useEffect(() => {
     void loadData();
@@ -317,7 +322,8 @@ export function UsersPage() {
                           onClick={() => navigate(`/app/users/${u.id}`)}
                           className="text-left group transition focus:outline-none"
                         >
-                          <p className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                          <p className="flex items-center gap-2 text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                            <span aria-hidden="true" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xs font-bold text-indigo-600">{u.fullName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span>
                             {u.fullName}
                           </p>
                           <p className="text-xs text-slate-500">{u.email}</p>
@@ -406,7 +412,7 @@ export function UsersPage() {
 
                       {/* Ações */}
                       <td className="whitespace-nowrap px-6 py-4 text-right">
-                        <div className="flex justify-end">
+                        <div className="flex items-center justify-end gap-2">
                           <ActionsDropdown
                             items={[
                               {
@@ -423,6 +429,19 @@ export function UsersPage() {
                               },
                             ]}
                           />
+                          {canResetPasswords && (
+                            <button
+                              type="button"
+                              disabled={!recoverableUserIds.includes(u.id)}
+                              onClick={() => navigate(`/app/password-recovery?userId=${encodeURIComponent(u.id)}`)}
+                              aria-label={`Resetar senha de ${u.fullName}`}
+                              title={recoverableUserIds.includes(u.id) ? 'Gerar uma senha temporária para este acesso' : 'Este acesso não permite redefinição pelo seu perfil'}
+                              className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-indigo-200 bg-indigo-50/50 px-3 py-2.5 text-xs font-semibold text-indigo-700 transition hover:border-indigo-600 hover:bg-indigo-600 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+                            >
+                              <KeyRound className="h-4 w-4" />
+                              Resetar senha
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
