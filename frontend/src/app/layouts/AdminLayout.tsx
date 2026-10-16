@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   KeyRound,
+  BarChart3,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
@@ -99,6 +100,10 @@ export function AdminLayout() {
 
   // Itens de Navegação Global
   const navigationItems = [
+    {
+      label: 'Relatórios', path: '/app/reports', icon: BarChart3,
+      roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin, SystemRoles.AreaAdmin, SystemRoles.HeadquarterUser, SystemRoles.UnitUser],
+    },
     {
       label: 'Recuperação de senha', path: '/app/password-recovery', icon: KeyRound,
       roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin],

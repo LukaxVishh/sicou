@@ -1162,3 +1162,15 @@ Super Admin e Admin da Empresa podem gerar senhas temporárias em `/app/password
 O login também oferece **Esqueci minha senha**, com confirmação por link enviado ao e-mail cadastrado e definição da nova senha em `/reset-password`. Para testar localmente, inicie `docker compose up -d mail` e consulte as mensagens em `http://localhost:8025`.
 
 Na lista de usuários (/app/users), a última coluna oferece **Resetar senha** para Super Admin e Admin da Empresa. O frontend consulta /api/password-recovery/users para montar o array de acessos elegíveis; ações não permitidas ficam desabilitadas. O botão abre a confirmação da recuperação com o usuário selecionado, antes de gerar a senha temporária. A lista em /app/password-recovery usa a mesma identificação de ação.
+
+### Integração de navegação e relatórios (16/10/2026)
+
+`/app/reports` permanece disponível junto das novas páginas de workflows: detalhes da árvore em `/app/workflows/trees/:treeId`, construtor em `/app/workflows/trees/:treeId/builder` e tramitação em `/app/workflows/processes/:id`. O filtro de status dos relatórios inclui **Cancelado administrativamente**, com o mesmo estado reconhecido pelo backend e pelas exportações. A seleção de unidade dos relatórios corresponde à unidade de origem, preservada após transferências. Consulte o [registro da integração](../_mds/ATUALIZACOES/2026-10-16.md).
+
+### Relatórios e processamento de documentos
+
+O menu **Relatórios** abre `/app/reports`. A API limita os dados por empresa, setor e unidade. O formulário combina período de criação UTC, empresa, setor, unidade, status e responsável. **Aplicar** atualiza o resultado; **Limpar** remove os filtros. **Colunas** personaliza tabela e downloads PDF, XLSX e CSV. Alterações no formulário ainda não aplicadas não mudam o recorte exportado. Downloads incluem todas as páginas dos filtros aplicados, dentro dos limites informados na tela.
+
+**Atribuir responsável** abre um diálogo com candidatos elegíveis para administradores e gestores autorizados. Salvar persiste a atribuição com histórico. Solicitação sem responsável não é confundida com solicitante.
+
+Na aba **Processar documentos**, selecione DOCX, XLSX, CSV ou PDF de até 10 MB e clique em **Extrair conteúdo**. A tela apresenta texto, tabelas, avisos e download JSON. A prévia mostra 50 linhas por tabela; o JSON contém todas as linhas extraídas dentro dos limites do backend. Arquivos não são armazenados nem alteram processos. OCR de PDFs digitalizados não está incluído. Consulte os [contratos e limites](../backend/README.md#relatorios-e-documentos).

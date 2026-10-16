@@ -7,5 +7,6 @@ public enum ProcessStatus
     Returned = 3,
     Approved = 4,
     Rejected = 5,
-    Finished = 6
+    Finished = 6,
+    AdministrativeCancellation = 7
 }

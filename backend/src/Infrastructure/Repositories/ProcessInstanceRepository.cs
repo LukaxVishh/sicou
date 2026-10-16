@@ -23,6 +23,7 @@ public class ProcessInstanceRepository : IProcessInstanceRepository
             .Include(x => x.ProcessType)
             .Include(x => x.CurrentNode)
             .Include(x => x.OriginUnit)
+            .Include(x => x.CurrentUnit)
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
@@ -34,6 +35,7 @@ public class ProcessInstanceRepository : IProcessInstanceRepository
             .Include(x => x.ProcessType)
             .Include(x => x.CurrentNode)
             .Include(x => x.OriginUnit)
+            .Include(x => x.CurrentUnit)
             .Include(x => x.FieldValues)
                 .ThenInclude(fv => fv.FieldDefinition)
             .Include(x => x.History.OrderByDescending(h => h.CreatedAt))
@@ -46,16 +48,18 @@ public class ProcessInstanceRepository : IProcessInstanceRepository
     public async Task<IReadOnlyList<ProcessInstance>> GetByAreaIdAsync(Guid areaId, ProcessStatus? status = null, Guid? originUnitId = null)
     {
         var query = _context.ProcessInstances
+            .Include(x => x.Area)
             .Include(x => x.ProcessType)
             .Include(x => x.CurrentNode)
             .Include(x => x.OriginUnit)
+            .Include(x => x.CurrentUnit)
             .Where(x => x.AreaId == areaId);
 
         if (status.HasValue)
             query = query.Where(x => x.Status == status.Value);
 
         if (originUnitId.HasValue)
-            query = query.Where(x => x.OriginUnitId == originUnitId.Value);
+            query = query.Where(x => x.OriginUnitId == originUnitId.Value || x.CurrentUnitId == originUnitId.Value);
 
         return await query
             .OrderByDescending(x => x.CreatedAt)
@@ -69,13 +73,14 @@ public class ProcessInstanceRepository : IProcessInstanceRepository
             .Include(x => x.ProcessType)
             .Include(x => x.CurrentNode)
             .Include(x => x.OriginUnit)
+            .Include(x => x.CurrentUnit)
             .Where(x => x.CompanyId == companyId);
 
         if (status.HasValue)
             query = query.Where(x => x.Status == status.Value);
 
         if (originUnitId.HasValue)
-            query = query.Where(x => x.OriginUnitId == originUnitId.Value);
+            query = query.Where(x => x.OriginUnitId == originUnitId.Value || x.CurrentUnitId == originUnitId.Value);
 
         return await query
             .OrderByDescending(x => x.CreatedAt)
@@ -89,7 +94,8 @@ public class ProcessInstanceRepository : IProcessInstanceRepository
             .Include(x => x.ProcessType)
             .Include(x => x.CurrentNode)
             .Include(x => x.OriginUnit)
-            .Where(x => x.CreatedByUserId == userId)
+            .Include(x => x.CurrentUnit)
+            .Where(x => x.CreatedByUserId == userId || x.OpenedByUserId == userId)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
     }

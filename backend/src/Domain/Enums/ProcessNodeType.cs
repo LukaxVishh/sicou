@@ -5,5 +5,7 @@ public enum ProcessNodeType
     StartConfection = 1,
     StandardStage = 2,
     ApprovalStage = 3,
-    EndArchived = 4
+    EndArchived = 4,
+    EndApproved = 5,
+    EndRejected = 6
 }

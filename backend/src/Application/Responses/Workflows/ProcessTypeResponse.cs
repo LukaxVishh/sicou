@@ -34,6 +34,8 @@ public class ProcessTypeNodeResponse
     public ProcessNodeType NodeType { get; set; }
     public int Order { get; set; }
     public string? Instructions { get; set; }
+    public double? CoordinateX { get; set; }
+    public double? CoordinateY { get; set; }
 }
 
 public class ProcessTypeFieldResponse

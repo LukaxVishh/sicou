@@ -1451,3 +1451,46 @@ Recuperação administrativa com senha temporária, troca obrigatória e notific
 ### SMTP Gmail no ambiente local
 
 O envio automático do link em **Esqueci minha senha** pode usar Gmail. Consulte [_mds/SMTP.md](../_mds/SMTP.md) para preencher a senha de aplicativo em arquivo local ignorado e iniciar a API pelo script scripts/start-backend-smtp.ps1. A recuperação administrativa por senha temporária continua separada.
+
+### Integração de workflows com relatórios (16/10/2026)
+
+O responsável do relatório (`ResponsibleUserId`) é preservado no detalhe e no resumo operacional do processo, junto dos metadados de abertura e da unidade atual. Ele é independente das atribuições por local/etapa em `user_process_nodes`; atribuir um responsável pelo relatório não concede permissão de tramitação. O filtro de unidade dos relatórios continua usando a **unidade de origem**, enquanto o localizador operacional permite consultar origem e lotação atual. Transferir um processo preserva sua origem e seu responsável.
+
+Relatórios e exportações reconhecem `status=AdministrativeCancellation`, exibido como **Cancelado administrativamente**. As migrations `AddUserProcessNodes`, `AddProcessTypeNodeCoordinates`, `AddProcessResponsible` e `AddProcessTransferAndMetadata` convivem com IDs e operações preservados; os metadados cumulativos e o snapshot refletem ambos os trabalhos. A API aplica as migrations pendentes e executa `HrHiringWorkflowSeeder` na inicialização; esse seeder da main pode criar setores, unidades e o workflow de RH nas empresas ativas. Nesta integração, a inicialização foi validada somente em banco descartável, sem aplicar mudanças ao banco de demonstração. Consulte o [registro](../_mds/ATUALIZACOES/2026-10-16.md).
+
+## Relatorios e documentos
+
+### Relatórios de processos
+
+As rotas exigem JWT e usuário ativo. Super Admin consulta empresas ativas; Admin da Empresa consulta sua empresa. Demais usuários precisam de vínculo ativo e permissão de consulta/tratamento no setor; lotados em unidade veem apenas processos da própria unidade. Empresas, setores, unidades e processos inativos não aparecem. Consulta e exportação usam o mesmo escopo no servidor.
+
+| Método e rota | Resultado |
+| --- | --- |
+| `GET /api/reports/options` | Empresas, setores, unidades e responsáveis permitidos. |
+| `GET /api/reports/processes` | `items`, `total`, `page`, `pageSize`. |
+| `GET /api/reports/processes/export/{format}` | Arquivo PDF, XLSX ou CSV do recorte inteiro, independente da página. |
+| `GET /api/reports/processes/{id}/responsible-options` | Candidatos elegíveis à atribuição. |
+| `PUT /api/reports/processes/{id}/responsible` | Corpo `{ "userId": "uuid" }`; `null` remove o responsável. |
+
+Filtros opcionais: `companyId`, `areaId`, `unitId`, `status` (Draft, InReview, Returned, Approved, Rejected, Finished), `responsibleUserId`, `unassignedOnly`, `startDate`, `endDate` (`AAAA-MM-DD`). O período usa a criação em UTC, inclui todo o dia final e rejeita datas invertidas. IDs fora do escopo retornam 403. `page` começa em 1; `pageSize` vai de 1 a 100 (padrão 25).
+
+`columns` aceita chaves separadas por vírgula: `number,title,company,area,unit,processType,status,responsible,createdBy,createdAt,updatedAt`. A ordem é a da tabela. Limites de exportação: 1.000 processos em PDF e 5.000 em XLSX/CSV; acima disso, retorna erro solicitando filtros adicionais. CSV usa UTF-8 com BOM, separador `;`, campos multilinha e neutralização de fórmulas. XLSX tem datas tipadas, filtro e cabeçalho congelado. PDF incorpora Noto Sans, cuja licença SIL OFL está em `src/Infrastructure/Assets/OFL.txt`, e repete cabeçalhos nas páginas.
+
+Responsável é uma atribuição explícita, diferente do solicitante. Admins e gestores autorizados podem atribuir usuários ativos da mesma empresa, da sede ou da unidade do processo, com permissão operacional no setor (ou Admin da Empresa). A alteração e seu autor entram em `ProcessHistory`. Processos antigos começam sem responsável. A migration `AddProcessResponsible` adiciona referência opcional, chave estrangeira e índices; o startup aplica migrations conforme o comportamento existente. DTOs operacionais também retornam `responsibleUserId`.
+
+### Processamento de documentos
+
+`POST /api/documents/process` recebe `multipart/form-data` no campo `file`. Retorna `{ fileName, format, text, tables: [{ name, rows }], warnings, pageCount }`. Integrações externas usam o mesmo contrato e JWT. Exige usuário ativo e empresa ativa, exceto Super Admin.
+
+O processamento ocorre localmente com Open XML, CsvHelper e PdfPig. Arquivos não são armazenados, enviados a terceiros nem importados como dados corporativos. Não substitui o armazenamento de anexos do Orientador.
+
+- DOCX: texto e tabelas do corpo, sem preservar layout do Word.
+- XLSX: valores e planilhas com posições de colunas vazias preservadas. Fórmulas não são executadas; valores em cache podem estar ausentes e datas podem aparecer como seriais.
+- CSV: UTF-8 (ou UTF-16 com BOM), vírgula/ponto e vírgula/tabulação, campos entre aspas e multilinha.
+- PDF: texto extraível de até 100 páginas. Sem OCR de digitalizações, interpretação de gráficos ou tabelas PDF estruturadas.
+
+Limites: 10 MB por upload; Office descompactado até 40 MB/2.000 entradas; 20 planilhas/tabelas, 500 linhas, 100 colunas; 2.000 caracteres por célula, 500.000 caracteres em tabelas e 100.000 de texto. Macros, extensões não suportadas e arquivos inválidos são rejeitados. Duas vagas simultâneas por instância; capacidade excedida retorna 429. Respostas marcadas `no-store`.
+
+### Verificação do módulo
+
+`dotnet test tests/Sicou.UnitTests` inclui exportações, paginação e acentos PDF, datas XLSX, neutralização de fórmula CSV, extração e limites de arquivos. O teste HTTP `scratch/test_reports_documents.mjs` deve ser executado da raiz com Node contra uma API de teste na porta 5185 e banco isolado indicado em `.cache/reports-test-db.txt` (nome obrigatório `reports_test_*`). Cria massa de teste, valida filtros/autorizações e reabre arquivos exportados. Não executar contra produção. A homologação visual de navegadores e dispositivos continua pendente.

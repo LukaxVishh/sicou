@@ -19,6 +19,8 @@ export const ProcessNodeType = {
   StandardStage: 2,
   ApprovalStage: 3,
   EndArchived: 4,
+  EndApproved: 5,
+  EndRejected: 6,
 } as const;
 
 export type ProcessNodeTypeValue = typeof ProcessNodeType[keyof typeof ProcessNodeType];
@@ -82,15 +84,35 @@ export const ProcessStatus = {
   Approved: 4,
   Rejected: 5,
   Finished: 6,
+  AdministrativeCancellation: 7,
 } as const;
 
 export type ProcessStatusValue = typeof ProcessStatus[keyof typeof ProcessStatus];
+
+export function isTerminalProcessStatus(status: unknown): boolean {
+  return (
+    status === 4 ||
+    status === 'Approved' ||
+    status === 5 ||
+    status === 'Rejected' ||
+    status === 6 ||
+    status === 'Finished' ||
+    status === 7 ||
+    status === 'AdministrativeCancellation' ||
+    status === ProcessStatus.Approved ||
+    status === ProcessStatus.Rejected ||
+    status === ProcessStatus.Finished ||
+    status === ProcessStatus.AdministrativeCancellation
+  );
+}
 
 export const ProcessActionType = {
   Advance: 1,
   Return: 2,
   Restart: 3,
   Comment: 4,
+  Cancel: 5,
+  Transfer: 6,
 } as const;
 
 export type ProcessActionTypeValue = typeof ProcessActionType[keyof typeof ProcessActionType];
@@ -155,6 +177,8 @@ export interface ProcessTypeNode {
   nodeType: ProcessNodeTypeValue;
   order: number;
   instructions?: string;
+  coordinateX?: number;
+  coordinateY?: number;
 }
 
 export interface ProcessTypeField {
@@ -236,6 +260,10 @@ export interface ProcessHistory {
   fromNodeName?: string;
   toNodeId?: string;
   toNodeName?: string;
+  fromUnitId?: string;
+  fromUnitName?: string;
+  toUnitId?: string;
+  toUnitName?: string;
   action: ProcessActionTypeValue;
   userId: string;
   userFullName?: string;
@@ -245,6 +273,8 @@ export interface ProcessHistory {
 
 export interface ProcessInstanceSummary {
   id: string;
+  areaId?: string;
+  areaName?: string;
   processNumber: string;
   title?: string;
   processTypeId: string;
@@ -254,7 +284,13 @@ export interface ProcessInstanceSummary {
   status: ProcessStatusValue;
   createdByUserId: string;
   createdByUserName?: string;
+  openedByUserId?: string;
+  openedByUserName?: string;
+  openedAt?: string;
+  originUnitId?: string;
   originUnitName?: string;
+  currentUnitId?: string;
+  currentUnitName?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -278,10 +314,32 @@ export interface ProcessInstance {
   createdByUserName?: string;
   originUnitId?: string;
   originUnitName?: string;
+  currentUnitId?: string;
+  currentUnitName?: string;
+  openedAt?: string;
+  openedByUserId?: string;
+  openedByUserName?: string;
+  openedByUnitName?: string;
+  destinationUnitName?: string;
+  canManipulate?: boolean;
   createdAt: string;
   updatedAt?: string;
   fieldValues: ProcessFieldValue[];
   history: ProcessHistory[];
+}
+
+export type OpinionRequirement = 'required' | 'optional' | 'hidden';
+
+export interface NodeOpinionConfig {
+  requirement: OpinionRequirement;
+  label?: string;
+  helpText?: string;
+}
+
+export interface NodeInstructionsConfig {
+  instructions: string;
+  opinionConfig?: NodeOpinionConfig;
+  position?: { x: number; y: number };
 }
 
 export interface CreateFieldDefinitionPayload {
@@ -333,6 +391,8 @@ export interface UpdateProcessTypePayload {
     processNodeId: string;
     order: number;
     instructions?: string;
+    coordinateX?: number;
+    coordinateY?: number;
   }[];
   fields: {
     fieldDefinitionId: string;
@@ -389,4 +449,25 @@ export interface RestartProcessPayload {
 
 export interface AddProcessCommentPayload {
   observations: string;
+}
+
+export interface CancelProcessPayload {
+  reason: string;
+}
+
+export interface TransferProcessPayload {
+  destinationUnitId?: string;
+  destinationUnitName?: string;
+  observations: string;
+}
+
+export interface ProcessSearchFilter {
+  areaId?: string;
+  searchTerm?: string;
+  unitId?: string;
+  unitName?: string;
+  status?: number | string;
+  creator?: string;
+  startDate?: string;
+  endDate?: string;
 }

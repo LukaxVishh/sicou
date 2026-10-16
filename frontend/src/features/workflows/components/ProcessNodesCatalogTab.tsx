@@ -1,9 +1,10 @@
-import React from 'react';
-import { Plus, Edit2, Trash2, GitCommit, Check, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Edit2, Trash2, GitCommit, Check, X, Users } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import type { ProcessNode } from '../types';
 import { ProcessNodeType } from '../types';
 import * as workflowsApi from '../api';
+import { AssignNodeUsersModal } from './AssignNodeUsersModal';
 
 interface ProcessNodesCatalogTabProps {
   areaId: string;
@@ -38,6 +39,7 @@ export const ProcessNodesCatalogTab: React.FC<ProcessNodesCatalogTabProps> = ({
   canManage,
 }) => {
   const navigate = useNavigate();
+  const [nodeForAssignment, setNodeForAssignment] = useState<ProcessNode | null>(null);
 
   const handleOpenCreate = () => {
     navigate(`/app/workflows/nodes/new?areaId=${areaId}`);
@@ -135,6 +137,13 @@ export const ProcessNodesCatalogTab: React.FC<ProcessNodesCatalogTabProps> = ({
                     {canManage && (
                       <td className="py-3 px-4 text-right space-x-2">
                         <button
+                          onClick={() => setNodeForAssignment(n)}
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Atribuir Responsáveis / Colaboradores a este Local"
+                        >
+                          <Users className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleOpenEdit(n)}
                           className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors"
                           title="Editar Local na Página Dedicada"
@@ -157,6 +166,14 @@ export const ProcessNodesCatalogTab: React.FC<ProcessNodesCatalogTabProps> = ({
           </table>
         </div>
       </div>
+
+      {nodeForAssignment && (
+        <AssignNodeUsersModal
+          isOpen={!!nodeForAssignment}
+          onClose={() => setNodeForAssignment(null)}
+          node={nodeForAssignment}
+        />
+      )}
     </div>
   );
 };

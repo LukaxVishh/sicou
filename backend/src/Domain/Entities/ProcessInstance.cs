@@ -25,8 +25,17 @@ public class ProcessInstance : BaseEntity
     public string CreatedByUserId { get; set; } = string.Empty;
     public string? CreatedByUserName { get; set; }
 
+    public string? OpenedByUserId { get; set; }
+    public string? OpenedByUserName { get; set; }
+    public DateTime? OpenedAt { get; set; }
+    public Guid? ResponsibleUserId { get; set; }
+
     public Guid? OriginUnitId { get; set; }
     public Unit? OriginUnit { get; set; }
+
+    public Guid? CurrentUnitId { get; set; }
+    public Unit? CurrentUnit { get; set; }
+    public string? CurrentUnitName { get; set; }
 
     public ICollection<ProcessFieldValue> FieldValues { get; set; } = new List<ProcessFieldValue>();
     public ICollection<ProcessHistory> History { get; set; } = new List<ProcessHistory>();

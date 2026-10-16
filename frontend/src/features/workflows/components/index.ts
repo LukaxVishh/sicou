@@ -7,4 +7,5 @@ export * from './ProcessInboxTab';
 export * from './ProcessDetailsDrawer';
 export * from './OpenProcessModal';
 export * from './WorkflowCustomNode';
+export * from './WorkflowCustomEdge';
 export * from './NodeConfigMacroModal';

@@ -3,8 +3,8 @@ import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import {
   Sparkles,
   Layers,
-  FileCheck2,
   CheckCircle2,
+  AlertCircle,
   Settings,
   Plus,
   Trash2,
@@ -29,81 +29,161 @@ export interface WorkflowCustomNodeData extends Record<string, unknown> {
 
 export type WorkflowNodeType = Node<WorkflowCustomNodeData, 'workflowNode'>;
 
-const NODE_THEMES: Record<
-  number,
-  {
-    headerBg: string;
-    borderClass: string;
-    icon: React.ElementType;
-    badgeText: string;
-    badgeColor: string;
-  }
-> = {
-  [ProcessNodeType.StartConfection]: {
-    headerBg: 'bg-emerald-600',
-    borderClass: 'border-emerald-500 hover:border-emerald-600',
+export interface NodeThemeToken {
+  category: 'analysis' | 'confection' | 'approved' | 'rejected' | string;
+  headerBg: string;
+  borderClass: string;
+  selectedRing: string;
+  handleClass: string;
+  icon: React.ElementType;
+  badgeText: string;
+  badgeClass: string;
+  pillButtonHover: string;
+  accentText: string;
+  miniMapColor: string;
+}
+
+/**
+ * Mapa escalável de tokens visuais para tipos de nós do fluxo
+ * - Análise: Azul padrão
+ * - Confecção: Amarelo
+ * - Deferido: Verde
+ * - Indeferido: Vermelho
+ */
+export const NODE_THEME_REGISTRY: Record<string, NodeThemeToken> = {
+  // 1. Confecção: Amarelo
+  confection: {
+    category: 'confection',
+    headerBg: 'bg-amber-500',
+    borderClass: 'border-amber-400 hover:border-amber-500',
+    selectedRing: 'ring-3 ring-amber-500/50 shadow-xl scale-[1.02]',
+    handleClass: '!bg-amber-500',
     icon: Sparkles,
-    badgeText: 'Ponto de Partida',
-    badgeColor: 'bg-emerald-100 text-emerald-800',
+    badgeText: 'Confecção',
+    badgeClass: 'bg-amber-100 text-amber-800',
+    pillButtonHover: 'hover:bg-amber-50 hover:text-amber-800',
+    accentText: 'text-amber-600',
+    miniMapColor: '#f59e0b',
   },
-  [ProcessNodeType.StandardStage]: {
-    headerBg: 'bg-indigo-600',
-    borderClass: 'border-indigo-400 hover:border-indigo-600',
+  // 2. Análise: Azul padrão
+  analysis: {
+    category: 'analysis',
+    headerBg: 'bg-blue-600',
+    borderClass: 'border-blue-400 hover:border-blue-600',
+    selectedRing: 'ring-3 ring-blue-500/50 shadow-xl scale-[1.02]',
+    handleClass: '!bg-blue-600',
     icon: Layers,
-    badgeText: 'Tramitação / Análise',
-    badgeColor: 'bg-indigo-100 text-indigo-800',
+    badgeText: 'Análise',
+    badgeClass: 'bg-blue-100 text-blue-800',
+    pillButtonHover: 'hover:bg-blue-50 hover:text-blue-700',
+    accentText: 'text-blue-600',
+    miniMapColor: '#2563eb',
   },
-  [ProcessNodeType.ApprovalStage]: {
-    headerBg: 'bg-amber-600',
-    borderClass: 'border-amber-400 hover:border-amber-600',
-    icon: FileCheck2,
-    badgeText: 'Decisão / Parecer',
-    badgeColor: 'bg-amber-100 text-amber-800',
-  },
-  [ProcessNodeType.EndArchived]: {
-    headerBg: 'bg-slate-700',
-    borderClass: 'border-slate-500 hover:border-slate-700',
+  // 3. Deferido: Verde
+  approved: {
+    category: 'approved',
+    headerBg: 'bg-emerald-600',
+    borderClass: 'border-emerald-400 hover:border-emerald-600',
+    selectedRing: 'ring-3 ring-emerald-500/50 shadow-xl scale-[1.02]',
+    handleClass: '!bg-emerald-600',
     icon: CheckCircle2,
-    badgeText: 'Arquivamento',
-    badgeColor: 'bg-slate-100 text-slate-800',
+    badgeText: 'Deferido',
+    badgeClass: 'bg-emerald-100 text-emerald-800',
+    pillButtonHover: 'hover:bg-emerald-50 hover:text-emerald-700',
+    accentText: 'text-emerald-600',
+    miniMapColor: '#10b981',
+  },
+  // 4. Indeferido: Vermelho
+  rejected: {
+    category: 'rejected',
+    headerBg: 'bg-rose-600',
+    borderClass: 'border-rose-400 hover:border-rose-600',
+    selectedRing: 'ring-3 ring-rose-500/50 shadow-xl scale-[1.02]',
+    handleClass: '!bg-rose-600',
+    icon: AlertCircle,
+    badgeText: 'Indeferido',
+    badgeClass: 'bg-rose-100 text-rose-800',
+    pillButtonHover: 'hover:bg-rose-50 hover:text-rose-700',
+    accentText: 'text-rose-600',
+    miniMapColor: '#e11d48',
   },
 };
 
+/**
+ * Função utilitária com resolução inteligente e escalável de tema
+ */
+export function resolveNodeTheme(data: WorkflowCustomNodeData): NodeThemeToken {
+  const codeLower = (data.code || '').toLowerCase().trim();
+  const labelLower = (data.label || '').toLowerCase().trim();
+
+  // 1. Confecção (Amarelo)
+  if (
+    data.isStart ||
+    data.nodeType === ProcessNodeType.StartConfection ||
+    codeLower === 'confeccao' ||
+    codeLower.startsWith('confeccao') ||
+    labelLower.includes('confec')
+  ) {
+    return NODE_THEME_REGISTRY.confection;
+  }
+
+  // 2. Indeferido (Vermelho) - testado antes de deferido por especificidade
+  if (
+    data.nodeType === ProcessNodeType.EndRejected ||
+    codeLower.includes('indeferido') ||
+    labelLower.includes('indeferido')
+  ) {
+    return NODE_THEME_REGISTRY.rejected;
+  }
+
+  // 3. Deferido (Verde)
+  if (
+    data.nodeType === ProcessNodeType.EndApproved ||
+    codeLower.includes('deferido') ||
+    labelLower.includes('deferido')
+  ) {
+    return NODE_THEME_REGISTRY.approved;
+  }
+
+  // 4. Padrão: Análise (Azul padrão)
+  return NODE_THEME_REGISTRY.analysis;
+}
+
 export const WorkflowCustomNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType>) => {
-  const theme = NODE_THEMES[data.nodeType] || NODE_THEMES[ProcessNodeType.StandardStage];
+  const theme = resolveNodeTheme(data);
   const Icon = theme.icon;
-  const isConfection = data.isStart || data.nodeType === ProcessNodeType.StartConfection;
+  const isConfection = theme.category === 'confection';
 
   return (
     <div
-      className={`group relative min-w-[240px] max-w-[280px] rounded-2xl bg-white shadow-md transition-all duration-200 ${
+      className={`group relative min-w-[240px] max-w-[280px] rounded-2xl bg-white shadow-md transition-all duration-200 border ${
         theme.borderClass
       } ${
         selected
-          ? 'ring-3 ring-indigo-500/50 shadow-xl scale-[1.02]'
+          ? theme.selectedRing
           : 'ring-1 ring-slate-200 hover:shadow-lg'
       }`}
     >
-      {/* Handles para conexões nos 4 eixos */}
+      {/* Handles para conexões nos 4 eixos, coloridos pelo tema */}
       <Handle
         type="target"
         position={Position.Top}
-        className="!h-3 !w-3 !rounded-full !border-2 !border-white !bg-indigo-600 transition hover:!scale-125"
+        className={`!h-3.5 !w-3.5 !rounded-full !border-2 !border-white transition hover:!scale-125 shadow-xs ${theme.handleClass}`}
       />
       <Handle
         type="target"
         position={Position.Left}
-        className="!h-3 !w-3 !rounded-full !border-2 !border-white !bg-indigo-600 transition hover:!scale-125"
+        className={`!h-3.5 !w-3.5 !rounded-full !border-2 !border-white transition hover:!scale-125 shadow-xs ${theme.handleClass}`}
       />
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!h-3 !w-3 !rounded-full !border-2 !border-white !bg-indigo-600 transition hover:!scale-125"
+        className={`!h-3.5 !w-3.5 !rounded-full !border-2 !border-white transition hover:!scale-125 shadow-xs ${theme.handleClass}`}
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!h-3 !w-3 !rounded-full !border-2 !border-white !bg-indigo-600 transition hover:!scale-125"
+        className={`!h-3.5 !w-3.5 !rounded-full !border-2 !border-white transition hover:!scale-125 shadow-xs ${theme.handleClass}`}
       />
 
       {/* Header do Card */}
@@ -117,7 +197,7 @@ export const WorkflowCustomNode = memo(({ id, data, selected }: NodeProps<Workfl
           </span>
         </div>
         {isConfection && (
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-extrabold uppercase text-white">
+          <span className="rounded-full bg-white/25 px-2 py-0.5 text-[9px] font-extrabold uppercase text-white shadow-2xs">
             Raiz
           </span>
         )}
@@ -137,7 +217,7 @@ export const WorkflowCustomNode = memo(({ id, data, selected }: NodeProps<Workfl
         {/* Indicadores de Campos e Regras */}
         <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] text-slate-600">
           <div className="flex items-center gap-1.5 font-semibold">
-            <Tag className="h-3.5 w-3.5 text-indigo-500" />
+            <Tag className={`h-3.5 w-3.5 ${theme.accentText}`} />
             <span>
               {data.fieldsCount} {data.fieldsCount === 1 ? 'campo' : 'campos'}
             </span>
@@ -161,7 +241,7 @@ export const WorkflowCustomNode = memo(({ id, data, selected }: NodeProps<Workfl
               e.stopPropagation();
               data.onConfigure?.(id);
             }}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700"
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-700 transition ${theme.pillButtonHover}`}
             title="Configurar Campos e Instruções deste Nó"
           >
             <Settings className="h-3.5 w-3.5" />
@@ -174,7 +254,7 @@ export const WorkflowCustomNode = memo(({ id, data, selected }: NodeProps<Workfl
               e.stopPropagation();
               data.onAddChild?.(id);
             }}
-            className="flex items-center justify-center rounded-xl bg-indigo-50 p-1.5 text-indigo-600 transition hover:bg-indigo-600 hover:text-white"
+            className="flex items-center justify-center rounded-xl bg-blue-50 p-1.5 text-blue-600 transition hover:bg-blue-600 hover:text-white"
             title="Adicionar Etapa Filha conectada a esta"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -182,7 +262,7 @@ export const WorkflowCustomNode = memo(({ id, data, selected }: NodeProps<Workfl
 
           {isConfection ? (
             <div
-              className="flex items-center justify-center rounded-xl bg-emerald-50 px-2.5 py-1.5 text-emerald-700 font-bold text-[10px] border border-emerald-200"
+              className="flex items-center justify-center rounded-xl bg-amber-50 px-2.5 py-1.5 text-amber-800 font-bold text-[10px] border border-amber-200"
               title="Ponto de Partida Obrigatório (Protegido contra exclusão)"
             >
               <Lock className="h-3 w-3 mr-1" />

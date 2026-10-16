@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Sicou.Application.Interfaces.Auth;
 using Sicou.Application.Interfaces.Repositories;
 using Sicou.Application.Interfaces.Services;
@@ -7,6 +8,7 @@ using Sicou.Application.Responses.Workflows;
 using Sicou.Domain.Constants;
 using Sicou.Domain.Entities;
 using Sicou.Domain.Enums;
+using Sicou.Infrastructure.Data;
 using Sicou.Infrastructure.Identity;
 
 namespace Sicou.Infrastructure.Services;
@@ -19,6 +21,7 @@ public class ProcessInstanceService : IProcessInstanceService
     private readonly ICurrentUserService _currentUser;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IUserAreaAccessRepository _userAreaAccessRepository;
+    private readonly ApplicationDbContext _context;
 
     public ProcessInstanceService(
         IProcessInstanceRepository instanceRepository,
@@ -26,7 +29,8 @@ public class ProcessInstanceService : IProcessInstanceService
         IAreaRepository areaRepository,
         ICurrentUserService currentUser,
         UserManager<ApplicationUser> userManager,
-        IUserAreaAccessRepository userAreaAccessRepository)
+        IUserAreaAccessRepository userAreaAccessRepository,
+        ApplicationDbContext context)
     {
         _instanceRepository = instanceRepository;
         _processTypeRepository = processTypeRepository;
@@ -34,9 +38,13 @@ public class ProcessInstanceService : IProcessInstanceService
         _currentUser = currentUser;
         _userManager = userManager;
         _userAreaAccessRepository = userAreaAccessRepository;
+        _context = context;
     }
 
-    public async Task<IReadOnlyList<ProcessInstanceSummaryResponse>> GetAreaProcessesAsync(Guid areaId, ProcessStatus? status = null)
+    public async Task<IReadOnlyList<ProcessInstanceSummaryResponse>> GetAreaProcessesAsync(
+        Guid areaId,
+        ProcessStatus? status = null,
+        ProcessSearchFilterRequest? filter = null)
     {
         var user = await GetCurrentUserAsync();
         var roles = await _userManager.GetRolesAsync(user);
@@ -56,7 +64,7 @@ public class ProcessInstanceService : IProcessInstanceService
             var isUnitUser = user.UnitId.HasValue && roles.Contains(SystemRoles.UnitUser);
             if (isUnitUser)
             {
-                // Usuário de unidade visualiza apenas os processos da sua própria unidade
+                // Usuário de unidade visualiza os processos originados ou atualmente lotados na sua própria unidade
                 filterUnitId = user.UnitId.Value;
             }
             else
@@ -71,8 +79,114 @@ public class ProcessInstanceService : IProcessInstanceService
             }
         }
 
-        var instances = await _instanceRepository.GetByAreaIdAsync(areaId, status, filterUnitId);
-        return instances.Select(MapToSummaryResponse).ToList();
+        var effectiveStatus = status ?? filter?.Status;
+        var instances = await _instanceRepository.GetByAreaIdAsync(areaId, effectiveStatus, filterUnitId);
+        var filtered = ApplySearchFilters(instances, filter);
+        return filtered.Select(MapToSummaryResponse).ToList();
+    }
+
+    public async Task<IReadOnlyList<ProcessInstanceSummaryResponse>> SearchProcessesAsync(ProcessSearchFilterRequest filter)
+    {
+        if (filter.AreaId.HasValue)
+        {
+            return await GetAreaProcessesAsync(filter.AreaId.Value, filter.Status, filter);
+        }
+
+        var user = await GetCurrentUserAsync();
+        var roles = await _userManager.GetRolesAsync(user);
+        var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
+
+        IReadOnlyList<ProcessInstance> instances;
+        if (user.CompanyId.HasValue)
+        {
+            Guid? unitRestriction = (!isSuperAdmin && !isCompanyAdmin && user.UnitId.HasValue && roles.Contains(SystemRoles.UnitUser))
+                ? user.UnitId.Value
+                : null;
+            instances = await _instanceRepository.GetByCompanyIdAsync(user.CompanyId.Value, filter.Status, unitRestriction);
+        }
+        else if (isSuperAdmin)
+        {
+            instances = await _context.ProcessInstances
+                .Include(x => x.Area)
+                .Include(x => x.ProcessType)
+                .Include(x => x.CurrentNode)
+                .Include(x => x.OriginUnit)
+                .Include(x => x.CurrentUnit)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToListAsync();
+        }
+        else
+        {
+            instances = await _instanceRepository.GetByUserIdAsync(user.Id.ToString());
+        }
+
+        var filtered = ApplySearchFilters(instances, filter);
+        return filtered.Select(MapToSummaryResponse).ToList();
+    }
+
+    private static IEnumerable<ProcessInstance> ApplySearchFilters(
+        IEnumerable<ProcessInstance> instances,
+        ProcessSearchFilterRequest? filter)
+    {
+        if (filter == null)
+            return instances;
+
+        var query = instances;
+
+        if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+        {
+            var term = filter.SearchTerm.Trim().TrimStart('#').ToLowerInvariant();
+            query = query.Where(p =>
+                (p.ProcessNumber != null && p.ProcessNumber.ToLowerInvariant().Contains(term)) ||
+                (p.Title != null && p.Title.ToLowerInvariant().Contains(term)) ||
+                (p.ProcessType?.Name != null && p.ProcessType.Name.ToLowerInvariant().Contains(term)) ||
+                (p.CurrentNode?.Name != null && p.CurrentNode.Name.ToLowerInvariant().Contains(term)));
+        }
+
+        if (filter.UnitId.HasValue)
+        {
+            query = query.Where(p =>
+                p.OriginUnitId == filter.UnitId.Value ||
+                p.CurrentUnitId == filter.UnitId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.UnitName))
+        {
+            var unitTerm = filter.UnitName.Trim().ToLowerInvariant();
+            query = query.Where(p =>
+                (p.OriginUnit?.Name ?? "Sede da Empresa").ToLowerInvariant().Contains(unitTerm) ||
+                (p.CurrentUnitName ?? p.CurrentUnit?.Name ?? p.OriginUnit?.Name ?? "Sede da Empresa").ToLowerInvariant().Contains(unitTerm));
+        }
+
+        if (filter.Status.HasValue)
+        {
+            query = query.Where(p => p.Status == filter.Status.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Creator))
+        {
+            var creatorTerm = filter.Creator.Trim().ToLowerInvariant();
+            query = query.Where(p =>
+                (p.CreatedByUserName != null && p.CreatedByUserName.ToLowerInvariant().Contains(creatorTerm)) ||
+                (p.OpenedByUserName != null && p.OpenedByUserName.ToLowerInvariant().Contains(creatorTerm)) ||
+                p.CreatedByUserId.ToLowerInvariant() == creatorTerm ||
+                (p.OpenedByUserId != null && p.OpenedByUserId.ToLowerInvariant() == creatorTerm));
+        }
+
+        if (filter.StartDate.HasValue)
+        {
+            var startDate = filter.StartDate.Value.Date;
+            query = query.Where(p => (p.OpenedAt ?? p.CreatedAt).Date >= startDate);
+        }
+
+        if (filter.EndDate.HasValue)
+        {
+            var endDate = filter.EndDate.Value.Date;
+            query = query.Where(p => (p.OpenedAt ?? p.CreatedAt).Date <= endDate);
+        }
+
+        return query;
     }
 
     public async Task<IReadOnlyList<ProcessInstanceSummaryResponse>> GetMyProcessesAsync()
@@ -90,7 +204,8 @@ public class ProcessInstanceService : IProcessInstanceService
             ?? throw new KeyNotFoundException($"Processo com ID '{id}' não encontrado.");
 
         await ValidateInstanceViewAccessAsync(instance);
-        return MapToCompleteResponse(instance);
+        var canManipulate = !IsTerminalStatus(instance.Status) && await CheckCanManipulateAsync(instance.CurrentNodeId);
+        return MapToCompleteResponse(instance, canManipulate);
     }
 
     public async Task<ProcessInstanceResponse> CreateAsync(CreateProcessInstanceRequest request)
@@ -164,6 +279,18 @@ public class ProcessInstanceService : IProcessInstanceService
 
         var isDraft = request.IsDraft;
         var initialStatus = isDraft ? ProcessStatus.Draft : ProcessStatus.InReview;
+        var originUnitId = request.OriginUnitId ?? user.UnitId;
+
+        if (!isDraft)
+        {
+            ValidateRequiredNodeFields(
+                processType,
+                processType.StartNodeId.Value,
+                Enumerable.Empty<ProcessFieldValue>(),
+                request.InitialFieldValues,
+                isRejectingTransition: false,
+                observations: "Processo confeccionado e protocolado com sucesso.");
+        }
 
         var instance = new ProcessInstance
         {
@@ -176,7 +303,11 @@ public class ProcessInstanceService : IProcessInstanceService
             Status = initialStatus,
             CreatedByUserId = user.Id.ToString(),
             CreatedByUserName = user.FullName,
-            OriginUnitId = request.OriginUnitId ?? user.UnitId
+            OpenedByUserId = isDraft ? null : user.Id.ToString(),
+            OpenedByUserName = isDraft ? null : user.FullName,
+            OpenedAt = isDraft ? null : DateTime.UtcNow,
+            OriginUnitId = originUnitId,
+            CurrentUnitId = originUnitId
         };
 
         // Salvar valores iniciais
@@ -207,7 +338,8 @@ public class ProcessInstanceService : IProcessInstanceService
         await _instanceRepository.SaveChangesAsync();
 
         var created = await _instanceRepository.GetCompleteInstanceAsync(instance.Id);
-        return MapToCompleteResponse(created!);
+        var canManipulateCreated = await CheckCanManipulateAsync(created!.CurrentNodeId);
+        return MapToCompleteResponse(created!, canManipulateCreated);
     }
 
     public async Task<ProcessInstanceResponse> UpdateDraftAsync(Guid id, UpdateProcessDraftRequest request)
@@ -229,6 +361,7 @@ public class ProcessInstanceService : IProcessInstanceService
         if (request.OriginUnitId.HasValue)
         {
             instance.OriginUnitId = request.OriginUnitId.Value;
+            instance.CurrentUnitId ??= request.OriginUnitId.Value;
         }
 
         if (request.FieldValues != null)
@@ -257,7 +390,8 @@ public class ProcessInstanceService : IProcessInstanceService
         await _instanceRepository.SaveChangesAsync();
 
         var updated = await _instanceRepository.GetCompleteInstanceAsync(id);
-        return MapToCompleteResponse(updated!);
+        var canManipulateUpdated = await CheckCanManipulateAsync(updated!.CurrentNodeId);
+        return MapToCompleteResponse(updated!, canManipulateUpdated);
     }
 
     public async Task<ProcessInstanceResponse> ProtocolAsync(Guid id, ProtocolProcessRequest request)
@@ -275,6 +409,18 @@ public class ProcessInstanceService : IProcessInstanceService
 
         if (instance.Status != ProcessStatus.Draft && instance.Status != ProcessStatus.Returned)
             throw new InvalidOperationException("Este processo já se encontra protocolado e em tramitação.");
+
+        var processType = await _processTypeRepository.GetCompleteTreeAsync(instance.ProcessTypeId)
+            ?? throw new InvalidOperationException("Árvore de processo associada não encontrada.");
+
+        // Validar campos obrigatórios configurados para o nó de confecção atual
+        ValidateRequiredNodeFields(
+            processType,
+            instance.CurrentNodeId,
+            instance.FieldValues,
+            request.FieldValues,
+            isRejectingTransition: false,
+            observations: request.Observations);
 
         if (!string.IsNullOrWhiteSpace(request.Title))
         {
@@ -303,9 +449,6 @@ public class ProcessInstanceService : IProcessInstanceService
             }
         }
 
-        var processType = await _processTypeRepository.GetCompleteTreeAsync(instance.ProcessTypeId)
-            ?? throw new InvalidOperationException("Árvore de processo associada não encontrada.");
-
         var previousNodeId = instance.CurrentNodeId;
         var transitions = processType.Transitions
             .Where(t => t.FromNodeId == instance.CurrentNodeId && t.AllowAdvance)
@@ -315,20 +458,18 @@ public class ProcessInstanceService : IProcessInstanceService
         {
             var firstTransition = transitions.First();
             instance.CurrentNodeId = firstTransition.ToNodeId;
-            if (firstTransition.ToNode?.NodeType == ProcessNodeType.EndArchived)
-            {
-                instance.Status = ProcessStatus.Finished;
-            }
-            else
-            {
-                instance.Status = ProcessStatus.InReview;
-            }
+            instance.Status = ResolveStatusForNode(firstTransition.ToNode);
         }
         else
         {
             instance.Status = ProcessStatus.InReview;
         }
 
+        // Registrar usuario_abertura e data de abertura
+        instance.OpenedByUserId ??= user.Id.ToString();
+        instance.OpenedByUserName ??= user.FullName;
+        instance.OpenedAt ??= DateTime.UtcNow;
+        instance.CurrentUnitId ??= instance.OriginUnitId ?? user.UnitId;
         instance.UpdatedAt = DateTime.UtcNow;
 
         _instanceRepository.AddHistory(new ProcessHistory
@@ -345,7 +486,8 @@ public class ProcessInstanceService : IProcessInstanceService
         await _instanceRepository.SaveChangesAsync();
 
         var updated = await _instanceRepository.GetCompleteInstanceAsync(id);
-        return MapToCompleteResponse(updated!);
+        var canManipulateUpdated = await CheckCanManipulateAsync(updated!.CurrentNodeId);
+        return MapToCompleteResponse(updated!, canManipulateUpdated);
     }
 
     public async Task<ProcessInstanceResponse> AdvanceAsync(Guid id, AdvanceProcessRequest request)
@@ -353,8 +495,12 @@ public class ProcessInstanceService : IProcessInstanceService
         var instance = await _instanceRepository.GetCompleteInstanceAsync(id)
             ?? throw new KeyNotFoundException("Processo não encontrado.");
 
+        if (IsTerminalStatus(instance.Status))
+            throw new InvalidOperationException("Não é possível tramitar um processo que já foi concluído ou cancelado.");
+
         var user = await GetCurrentUserAsync();
         await ValidateCanHandleOrCreatorAsync(instance, user);
+        await ValidateNodeManipulationAccessAsync(instance.CurrentNodeId, user);
 
         var processType = await _processTypeRepository.GetCompleteTreeAsync(instance.ProcessTypeId)
             ?? throw new InvalidOperationException("Árvore de processo associada não encontrada.");
@@ -377,6 +523,18 @@ public class ProcessInstanceService : IProcessInstanceService
         {
             transition = transitions.First();
         }
+
+        var nextStatus = ResolveStatusForNode(transition.ToNode);
+        var isRejectingTransition = nextStatus == ProcessStatus.Rejected;
+
+        // Validar campos obrigatórios da etapa atual antes de permitir a transição
+        ValidateRequiredNodeFields(
+            processType,
+            instance.CurrentNodeId,
+            instance.FieldValues,
+            request.FieldValues,
+            isRejectingTransition,
+            request.Observations);
 
         // Atualizar valores de campos
         if (request.FieldValues != null)
@@ -404,15 +562,7 @@ public class ProcessInstanceService : IProcessInstanceService
         var previousNodeId = instance.CurrentNodeId;
         instance.CurrentNodeId = transition.ToNodeId;
         instance.UpdatedAt = DateTime.UtcNow;
-
-        if (transition.ToNode?.NodeType == ProcessNodeType.EndArchived)
-        {
-            instance.Status = ProcessStatus.Finished;
-        }
-        else
-        {
-            instance.Status = ProcessStatus.InReview;
-        }
+        instance.Status = nextStatus;
 
         _instanceRepository.AddHistory(new ProcessHistory
         {
@@ -428,7 +578,8 @@ public class ProcessInstanceService : IProcessInstanceService
         await _instanceRepository.SaveChangesAsync();
 
         var updated = await _instanceRepository.GetCompleteInstanceAsync(id);
-        return MapToCompleteResponse(updated!);
+        var canManipulateAfter = !IsTerminalStatus(updated!.Status) && await CheckCanManipulateAsync(updated.CurrentNodeId);
+        return MapToCompleteResponse(updated, canManipulateAfter);
     }
 
     public async Task<ProcessInstanceResponse> ReturnAsync(Guid id, ReturnProcessRequest request)
@@ -436,8 +587,12 @@ public class ProcessInstanceService : IProcessInstanceService
         var instance = await _instanceRepository.GetCompleteInstanceAsync(id)
             ?? throw new KeyNotFoundException("Processo não encontrado.");
 
+        if (IsTerminalStatus(instance.Status))
+            throw new InvalidOperationException("Não é possível devolver um processo que já foi concluído ou cancelado.");
+
         var user = await GetCurrentUserAsync();
         await ValidateCanHandleAreaAsync(instance.AreaId, user);
+        await ValidateNodeManipulationAccessAsync(instance.CurrentNodeId, user);
 
         var processType = await _processTypeRepository.GetCompleteTreeAsync(instance.ProcessTypeId)
             ?? throw new InvalidOperationException("Árvore de processo associada não encontrada.");
@@ -485,7 +640,8 @@ public class ProcessInstanceService : IProcessInstanceService
         await _instanceRepository.SaveChangesAsync();
 
         var updated = await _instanceRepository.GetCompleteInstanceAsync(id);
-        return MapToCompleteResponse(updated!);
+        var canManipulateAfter = await CheckCanManipulateAsync(updated!.CurrentNodeId);
+        return MapToCompleteResponse(updated!, canManipulateAfter);
     }
 
     public async Task<ProcessInstanceResponse> RestartAsync(Guid id, RestartProcessRequest request)
@@ -493,8 +649,12 @@ public class ProcessInstanceService : IProcessInstanceService
         var instance = await _instanceRepository.GetCompleteInstanceAsync(id)
             ?? throw new KeyNotFoundException("Processo não encontrado.");
 
+        if (IsTerminalStatus(instance.Status))
+            throw new InvalidOperationException("Não é possível reiniciar um processo que já foi concluído ou cancelado.");
+
         var user = await GetCurrentUserAsync();
         await ValidateCanHandleAreaAsync(instance.AreaId, user);
+        await ValidateNodeManipulationAccessAsync(instance.CurrentNodeId, user);
 
         var processType = await _processTypeRepository.GetCompleteTreeAsync(instance.ProcessTypeId)
             ?? throw new InvalidOperationException("Árvore de processo associada não encontrada.");
@@ -521,13 +681,17 @@ public class ProcessInstanceService : IProcessInstanceService
         await _instanceRepository.SaveChangesAsync();
 
         var updated = await _instanceRepository.GetCompleteInstanceAsync(id);
-        return MapToCompleteResponse(updated!);
+        var canManipulateAfter = await CheckCanManipulateAsync(updated!.CurrentNodeId);
+        return MapToCompleteResponse(updated!, canManipulateAfter);
     }
 
     public async Task<ProcessInstanceResponse> AddCommentAsync(Guid id, AddProcessCommentRequest request)
     {
         var instance = await _instanceRepository.GetCompleteInstanceAsync(id)
             ?? throw new KeyNotFoundException("Processo não encontrado.");
+
+        if (IsTerminalStatus(instance.Status))
+            throw new InvalidOperationException("Não é possível adicionar parecer em um processo que já foi concluído ou cancelado.");
 
         var user = await GetCurrentUserAsync();
         await ValidateInstanceViewAccessAsync(instance);
@@ -546,7 +710,244 @@ public class ProcessInstanceService : IProcessInstanceService
         await _instanceRepository.SaveChangesAsync();
 
         var updated = await _instanceRepository.GetCompleteInstanceAsync(id);
-        return MapToCompleteResponse(updated!);
+        var canManipulateAfter = await CheckCanManipulateAsync(updated!.CurrentNodeId);
+        return MapToCompleteResponse(updated!, canManipulateAfter);
+    }
+
+    public async Task<ProcessInstanceResponse> CancelAsync(Guid id, CancelProcessRequest request)
+    {
+        var instance = await _instanceRepository.GetCompleteInstanceAsync(id)
+            ?? throw new KeyNotFoundException("Processo não encontrado.");
+
+        var user = await GetCurrentUserAsync();
+        var roles = await _userManager.GetRolesAsync(user);
+        var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
+
+        if (!isSuperAdmin && user.CompanyId != instance.CompanyId)
+            throw new UnauthorizedAccessException("Acesso negado a processos de outra empresa.");
+
+        var isCreator = instance.CreatedByUserId == user.Id.ToString();
+        var isAreaAdmin = false;
+        if (!isSuperAdmin && !isCompanyAdmin)
+        {
+            var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
+            var areaAccess = accesses.FirstOrDefault(a => a.AreaId == instance.AreaId && a.IsActive);
+            isAreaAdmin = areaAccess != null && (areaAccess.CanManage || areaAccess.CanManageWorkflows);
+        }
+
+        if (!isSuperAdmin && !isCompanyAdmin && !isCreator && !isAreaAdmin)
+        {
+            throw new UnauthorizedAccessException("Apenas o autor do processo ou administradores da respectiva área possuem permissão para realizar o cancelamento administrativo.");
+        }
+
+        if (instance.Status == ProcessStatus.AdministrativeCancellation)
+            throw new InvalidOperationException("Este processo já se encontra cancelado administrativamente.");
+
+        if (IsTerminalStatus(instance.Status))
+            throw new InvalidOperationException("Não é possível cancelar um processo que já atingiu um estado de conclusão final.");
+
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 5)
+            throw new InvalidOperationException("A justificativa do cancelamento é obrigatória e deve conter pelo menos 5 caracteres.");
+
+        var currentNodeId = instance.CurrentNodeId;
+        instance.Status = ProcessStatus.AdministrativeCancellation;
+        instance.UpdatedAt = DateTime.UtcNow;
+
+        _instanceRepository.AddHistory(new ProcessHistory
+        {
+            ProcessInstanceId = instance.Id,
+            FromNodeId = currentNodeId,
+            ToNodeId = currentNodeId,
+            Action = ProcessActionType.Cancel,
+            UserId = user.Id.ToString(),
+            UserFullName = user.FullName,
+            Observations = $"Cancelamento Administrativo: {request.Reason.Trim()}"
+        });
+
+        await _instanceRepository.SaveChangesAsync();
+
+        var updated = await _instanceRepository.GetCompleteInstanceAsync(id);
+        return MapToCompleteResponse(updated!, false);
+    }
+
+    public async Task<ProcessInstanceResponse> TransferAsync(Guid id, TransferProcessRequest request)
+    {
+        var instance = await _instanceRepository.GetCompleteInstanceAsync(id)
+            ?? throw new KeyNotFoundException("Processo não encontrado.");
+
+        if (IsTerminalStatus(instance.Status))
+            throw new InvalidOperationException("Não é possível transferir um processo que já foi concluído ou cancelado.");
+
+        var user = await GetCurrentUserAsync();
+        await ValidateCanHandleOrCreatorAsync(instance, user);
+
+        if (string.IsNullOrWhiteSpace(request.Observations) || request.Observations.Trim().Length < 5)
+            throw new InvalidOperationException("O motivo / justificativa da transferência é obrigatório (mínimo de 5 caracteres).");
+
+        var previousUnitId = instance.CurrentUnitId ?? instance.OriginUnitId;
+        var previousUnitName = !string.IsNullOrWhiteSpace(instance.CurrentUnitName)
+            ? instance.CurrentUnitName
+            : (instance.CurrentUnit?.Name ?? instance.OriginUnit?.Name ?? (instance.Area != null ? $"Sede - {instance.Area.Name}" : "Sede da Empresa"));
+
+        Guid? newUnitId = null;
+        string newUnitName;
+
+        if (request.DestinationUnitId.HasValue)
+        {
+            var targetUnit = await _context.Units
+                .FirstOrDefaultAsync(u => u.Id == request.DestinationUnitId.Value && u.CompanyId == instance.CompanyId && u.IsActive)
+                ?? throw new KeyNotFoundException("Unidade de destino não encontrada ou inativa nesta empresa.");
+
+            newUnitId = targetUnit.Id;
+            newUnitName = targetUnit.Name;
+        }
+        else if (!string.IsNullOrWhiteSpace(request.DestinationUnitName))
+        {
+            var trimmedName = request.DestinationUnitName.Trim();
+            var matchedUnit = await _context.Units
+                .FirstOrDefaultAsync(u => u.CompanyId == instance.CompanyId && u.IsActive && u.Name.ToLower() == trimmedName.ToLower());
+
+            newUnitId = matchedUnit?.Id;
+            newUnitName = matchedUnit?.Name ?? trimmedName;
+        }
+        else
+        {
+            throw new InvalidOperationException("Selecione ou informe a unidade de destino para realizar a transferência.");
+        }
+
+        if ((newUnitId.HasValue && previousUnitId.HasValue && newUnitId.Value == previousUnitId.Value) ||
+            string.Equals(previousUnitName, newUnitName, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"O processo já se encontra lotado na unidade/departamento '{newUnitName}'.");
+        }
+
+        // Atualiza a lotação/unidade corrente mantendo o nó e o status atuais intactos
+        instance.CurrentUnitId = newUnitId;
+        instance.CurrentUnitName = newUnitName;
+        instance.UpdatedAt = DateTime.UtcNow;
+
+        _instanceRepository.AddHistory(new ProcessHistory
+        {
+            ProcessInstanceId = instance.Id,
+            FromNodeId = instance.CurrentNodeId,
+            ToNodeId = instance.CurrentNodeId,
+            FromUnitId = previousUnitId,
+            FromUnitName = previousUnitName,
+            ToUnitId = newUnitId,
+            ToUnitName = newUnitName,
+            Action = ProcessActionType.Transfer,
+            UserId = user.Id.ToString(),
+            UserFullName = user.FullName,
+            Observations = $"Transferência de unidade ({previousUnitName} → {newUnitName}): {request.Observations.Trim()}"
+        });
+
+        await _instanceRepository.SaveChangesAsync();
+
+        var updated = await _instanceRepository.GetCompleteInstanceAsync(id);
+        var canManipulateAfter = !IsTerminalStatus(updated!.Status) && await CheckCanManipulateAsync(updated.CurrentNodeId);
+        return MapToCompleteResponse(updated, canManipulateAfter);
+    }
+
+    private static void ValidateRequiredNodeFields(
+        ProcessType processType,
+        Guid nodeId,
+        IEnumerable<ProcessFieldValue> existingValues,
+        Dictionary<Guid, string?>? incomingValues,
+        bool isRejectingTransition,
+        string? observations)
+    {
+        var merged = new Dictionary<Guid, string?>();
+        foreach (var fv in existingValues)
+        {
+            merged[fv.FieldDefinitionId] = fv.Value;
+        }
+
+        if (incomingValues != null)
+        {
+            foreach (var kvp in incomingValues)
+            {
+                merged[kvp.Key] = kvp.Value;
+            }
+        }
+
+        if (isRejectingTransition)
+        {
+            var hasRejectionReasonField = processType.Fields
+                .Where(f => f.IsActive && f.FieldDefinition != null &&
+                            (f.FieldDefinition.Code.Contains("rejeicao") || f.FieldDefinition.Code.Contains("indefer")))
+                .Any(f => merged.TryGetValue(f.FieldDefinitionId, out var v) && !string.IsNullOrWhiteSpace(v));
+
+            if (!hasRejectionReasonField && string.IsNullOrWhiteSpace(observations))
+            {
+                throw new InvalidOperationException("Para reprovar ou indeferir a solicitação, é obrigatório informar a justificativa ou o motivo da rejeição.");
+            }
+            return;
+        }
+
+        var requiredFieldsForNode = processType.Fields
+            .Where(f => f.ProcessNodeId == nodeId && f.IsActive && f.IsRequired)
+            .OrderBy(f => f.DisplayOrder)
+            .ToList();
+
+        foreach (var reqField in requiredFieldsForNode)
+        {
+            if (!merged.TryGetValue(reqField.FieldDefinitionId, out var val) || string.IsNullOrWhiteSpace(val))
+            {
+                var fieldLabel = !string.IsNullOrWhiteSpace(reqField.CustomLabel)
+                    ? reqField.CustomLabel
+                    : (reqField.FieldDefinition?.Name ?? "Campo obrigatório");
+                throw new InvalidOperationException($"O campo obrigatório '{fieldLabel}' deve ser preenchido para concluir esta etapa.");
+            }
+        }
+    }
+
+    private static bool IsTerminalStatus(ProcessStatus status) =>
+        status is ProcessStatus.Approved or ProcessStatus.Rejected or ProcessStatus.Finished or ProcessStatus.AdministrativeCancellation;
+
+    private static ProcessStatus ResolveStatusForNode(ProcessNode? node)
+    {
+        if (node == null)
+            return ProcessStatus.InReview;
+
+        if (node.NodeType == ProcessNodeType.EndApproved)
+            return ProcessStatus.Approved;
+
+        if (node.NodeType == ProcessNodeType.EndRejected)
+            return ProcessStatus.Rejected;
+
+        if (node.NodeType == ProcessNodeType.EndArchived)
+            return ProcessStatus.Finished;
+
+        var normalizedName = (node.Name ?? string.Empty).ToLowerInvariant();
+        if (normalizedName.Contains("deferid") && !normalizedName.Contains("indeferid"))
+            return ProcessStatus.Approved;
+
+        if (normalizedName.Contains("indeferid"))
+            return ProcessStatus.Rejected;
+
+        return ProcessStatus.InReview;
+    }
+
+    private async Task ValidateNodeManipulationAccessAsync(Guid nodeId, ApplicationUser user)
+    {
+        var hasNodeAccess = await _context.UserProcessNodes
+            .AnyAsync(upn => upn.UserId == user.Id.ToString() && upn.ProcessNodeId == nodeId && upn.IsActive);
+
+        if (!hasNodeAccess)
+        {
+            throw new UnauthorizedAccessException("Você não possui o local de processo desta etapa atribuído ao seu perfil para manipular este processo.");
+        }
+    }
+
+    private async Task<bool> CheckCanManipulateAsync(Guid nodeId)
+    {
+        var currentUserId = _currentUser.UserId;
+        if (string.IsNullOrEmpty(currentUserId))
+            return false;
+
+        return await _context.UserProcessNodes
+            .AnyAsync(upn => upn.UserId == currentUserId && upn.ProcessNodeId == nodeId && upn.IsActive);
     }
 
     private async Task<ApplicationUser> GetCurrentUserAsync()
@@ -614,9 +1015,9 @@ public class ProcessInstanceService : IProcessInstanceService
         var isUnitUser = user.UnitId.HasValue && roles.Contains(SystemRoles.UnitUser);
         if (isUnitUser)
         {
-            if (instance.OriginUnitId != user.UnitId)
+            if (instance.OriginUnitId != user.UnitId && instance.CurrentUnitId != user.UnitId)
             {
-                throw new UnauthorizedAccessException("Usuários de unidade só podem visualizar processos abertos pela sua própria unidade.");
+                throw new UnauthorizedAccessException("Usuários de unidade só podem visualizar processos originados ou lotados na sua própria unidade.");
             }
             return;
         }
@@ -628,65 +1029,118 @@ public class ProcessInstanceService : IProcessInstanceService
             throw new UnauthorizedAccessException("Você não possui permissão para visualizar processos desta área.");
     }
 
-    private static ProcessInstanceSummaryResponse MapToSummaryResponse(ProcessInstance p) => new()
+    private static ProcessInstanceSummaryResponse MapToSummaryResponse(ProcessInstance p)
     {
-        Id = p.Id,
-        ProcessNumber = p.ProcessNumber,
-        Title = p.Title,
-        ProcessTypeId = p.ProcessTypeId,
-        ProcessTypeName = p.ProcessType?.Name ?? string.Empty,
-        CurrentNodeId = p.CurrentNodeId,
-        CurrentNodeName = p.CurrentNode?.Name ?? string.Empty,
-        Status = p.Status,
-        CreatedByUserId = p.CreatedByUserId,
-        CreatedByUserName = p.CreatedByUserName,
-        OriginUnitName = p.OriginUnit?.Name,
-        CreatedAt = p.CreatedAt,
-        UpdatedAt = p.UpdatedAt
-    };
+        var originUnitName = p.OriginUnit?.Name ?? "Sede da Empresa";
+        var currentUnitName = !string.IsNullOrWhiteSpace(p.CurrentUnitName)
+            ? p.CurrentUnitName
+            : (p.CurrentUnit?.Name ?? originUnitName);
+        var destinationUnitName = !string.IsNullOrWhiteSpace(p.CurrentUnitName)
+            ? p.CurrentUnitName
+            : (p.CurrentUnit?.Name ?? (p.Area != null ? $"Sede - {p.Area.Name}" : originUnitName));
 
-    private static ProcessInstanceResponse MapToCompleteResponse(ProcessInstance p) => new()
+        return new ProcessInstanceSummaryResponse
+        {
+            ResponsibleUserId = p.ResponsibleUserId,
+            Id = p.Id,
+            AreaId = p.AreaId,
+            AreaName = p.Area?.Name ?? string.Empty,
+            ProcessNumber = p.ProcessNumber,
+            Title = p.Title,
+            ProcessTypeId = p.ProcessTypeId,
+            ProcessTypeName = p.ProcessType?.Name ?? string.Empty,
+            CurrentNodeId = p.CurrentNodeId,
+            CurrentNodeName = p.CurrentNode?.Name ?? string.Empty,
+            Status = p.Status,
+            CreatedByUserId = p.CreatedByUserId,
+            CreatedByUserName = p.CreatedByUserName,
+            OpenedByUserId = p.OpenedByUserId,
+            OpenedByUserName = p.OpenedByUserName ?? (p.Status == ProcessStatus.Draft ? null : p.CreatedByUserName),
+            OpenedAt = p.OpenedAt ?? (p.Status == ProcessStatus.Draft ? null : p.CreatedAt),
+            OriginUnitId = p.OriginUnitId,
+            OriginUnitName = originUnitName,
+            CurrentUnitId = p.CurrentUnitId ?? p.OriginUnitId,
+            CurrentUnitName = currentUnitName,
+            DestinationUnitName = destinationUnitName,
+            CreatedAt = p.CreatedAt,
+            UpdatedAt = p.UpdatedAt
+        };
+    }
+
+    private static ProcessInstanceResponse MapToCompleteResponse(ProcessInstance p, bool canManipulate = false)
     {
-        Id = p.Id,
-        CompanyId = p.CompanyId,
-        CompanyName = p.Company?.Name ?? string.Empty,
-        AreaId = p.AreaId,
-        AreaName = p.Area?.Name ?? string.Empty,
-        ProcessTypeId = p.ProcessTypeId,
-        ProcessTypeName = p.ProcessType?.Name ?? string.Empty,
-        ProcessTypeVersion = p.ProcessType?.VersionNumber ?? 1,
-        CurrentNodeId = p.CurrentNodeId,
-        CurrentNodeName = p.CurrentNode?.Name ?? string.Empty,
-        CurrentNodeType = p.CurrentNode?.NodeType ?? ProcessNodeType.StandardStage,
-        ProcessNumber = p.ProcessNumber,
-        Title = p.Title,
-        Status = p.Status,
-        CreatedByUserId = p.CreatedByUserId,
-        CreatedByUserName = p.CreatedByUserName,
-        OriginUnitId = p.OriginUnitId,
-        OriginUnitName = p.OriginUnit?.Name,
-        CreatedAt = p.CreatedAt,
-        UpdatedAt = p.UpdatedAt,
-        FieldValues = p.FieldValues.Select(fv => new ProcessFieldValueResponse
+        var openEvent = p.History
+            .OrderBy(h => h.CreatedAt)
+            .FirstOrDefault(h => h.Action == ProcessActionType.Advance);
+
+        DateTime? openedAt = p.OpenedAt ?? (p.Status == ProcessStatus.Draft ? null : (openEvent?.CreatedAt ?? p.CreatedAt));
+        string? openedByUserId = p.OpenedByUserId ?? (p.Status == ProcessStatus.Draft ? null : (openEvent?.UserId ?? p.CreatedByUserId));
+        string? openedByUserName = p.OpenedByUserName ?? (p.Status == ProcessStatus.Draft ? null : (openEvent?.UserFullName ?? p.CreatedByUserName));
+        string originUnitName = p.OriginUnit?.Name ?? "Sede da Empresa";
+        string? openedByUnitName = p.Status == ProcessStatus.Draft ? null : originUnitName;
+        string currentUnitName = !string.IsNullOrWhiteSpace(p.CurrentUnitName)
+            ? p.CurrentUnitName
+            : (p.CurrentUnit?.Name ?? originUnitName);
+        string destinationUnitName = !string.IsNullOrWhiteSpace(p.CurrentUnitName)
+            ? p.CurrentUnitName
+            : (p.CurrentUnit?.Name ?? (p.Area != null ? $"Sede - {p.Area.Name}" : "Sede da Empresa"));
+
+        return new ProcessInstanceResponse
         {
-            FieldDefinitionId = fv.FieldDefinitionId,
-            Code = fv.FieldDefinition?.Code ?? string.Empty,
-            Name = fv.FieldDefinition?.Name ?? string.Empty,
-            Type = fv.FieldDefinition?.Type ?? FieldType.Text,
-            Value = fv.Value
-        }).ToList(),
-        History = p.History.OrderByDescending(h => h.CreatedAt).Select(h => new ProcessHistoryResponse
-        {
-            Id = h.Id,
-            FromNodeId = h.FromNodeId,
-            FromNodeName = h.FromNode?.Name,
-            ToNodeId = h.ToNodeId,
-            ToNodeName = h.ToNode?.Name,
-            Action = h.Action,
-            UserId = h.UserId,
-            UserFullName = h.UserFullName,
-            Observations = h.Observations,
-            CreatedAt = h.CreatedAt
-        }).ToList()
-    };
+            ResponsibleUserId = p.ResponsibleUserId,
+            Id = p.Id,
+            CompanyId = p.CompanyId,
+            CompanyName = p.Company?.Name ?? string.Empty,
+            AreaId = p.AreaId,
+            AreaName = p.Area?.Name ?? string.Empty,
+            ProcessTypeId = p.ProcessTypeId,
+            ProcessTypeName = p.ProcessType?.Name ?? string.Empty,
+            ProcessTypeVersion = p.ProcessType?.VersionNumber ?? 1,
+            CurrentNodeId = p.CurrentNodeId,
+            CurrentNodeName = p.CurrentNode?.Name ?? string.Empty,
+            CurrentNodeType = p.CurrentNode?.NodeType ?? ProcessNodeType.StandardStage,
+            ProcessNumber = p.ProcessNumber,
+            Title = p.Title,
+            Status = p.Status,
+            CreatedByUserId = p.CreatedByUserId,
+            CreatedByUserName = p.CreatedByUserName,
+            OriginUnitId = p.OriginUnitId,
+            OriginUnitName = originUnitName,
+            CurrentUnitId = p.CurrentUnitId ?? p.OriginUnitId,
+            CurrentUnitName = currentUnitName,
+            OpenedAt = openedAt,
+            OpenedByUserId = openedByUserId,
+            OpenedByUserName = openedByUserName,
+            OpenedByUnitName = openedByUnitName,
+            DestinationUnitName = destinationUnitName,
+            CanManipulate = canManipulate,
+            CreatedAt = p.CreatedAt,
+            UpdatedAt = p.UpdatedAt,
+            FieldValues = p.FieldValues.Select(fv => new ProcessFieldValueResponse
+            {
+                FieldDefinitionId = fv.FieldDefinitionId,
+                Code = fv.FieldDefinition?.Code ?? string.Empty,
+                Name = fv.FieldDefinition?.Name ?? string.Empty,
+                Type = fv.FieldDefinition?.Type ?? FieldType.Text,
+                Value = fv.Value
+            }).ToList(),
+            History = p.History.OrderByDescending(h => h.CreatedAt).Select(h => new ProcessHistoryResponse
+            {
+                Id = h.Id,
+                FromNodeId = h.FromNodeId,
+                FromNodeName = h.FromNode?.Name,
+                ToNodeId = h.ToNodeId,
+                ToNodeName = h.ToNode?.Name,
+                FromUnitId = h.FromUnitId,
+                FromUnitName = h.FromUnitName,
+                ToUnitId = h.ToUnitId,
+                ToUnitName = h.ToUnitName,
+                Action = h.Action,
+                UserId = h.UserId,
+                UserFullName = h.UserFullName,
+                Observations = h.Observations,
+                CreatedAt = h.CreatedAt
+            }).ToList()
+        };
+    }
 }

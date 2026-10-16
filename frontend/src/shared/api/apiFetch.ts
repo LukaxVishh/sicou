@@ -56,10 +56,10 @@ async function parseErrorMessage(response: Response) {
   return 'Erro inesperado ao comunicar com a API.';
 }
 
-export async function apiFetch<TResponse>(
+async function request(
   path: string,
   options: ApiFetchOptions = {},
-): Promise<TResponse> {
+): Promise<Response> {
   const response = await fetch(`${env.apiBaseUrl}${path}`, {
     ...options,
     headers: buildHeaders(options),
@@ -85,9 +85,16 @@ export async function apiFetch<TResponse>(
     throw new Error(message);
   }
 
-  if (response.status === 204) {
-    return undefined as TResponse;
-  }
+  return response;
+}
+
+export async function apiFetch<TResponse>(path: string, options: ApiFetchOptions = {}): Promise<TResponse> {
+  const response = await request(path, options);
+  if (response.status === 204) return undefined as TResponse;
 
   return response.json() as Promise<TResponse>;
+}
+
+export async function apiFetchBlob(path: string, options: ApiFetchOptions = {}): Promise<Blob> {
+  return (await request(path, options)).blob();
 }

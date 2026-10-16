@@ -5,5 +5,7 @@ public enum ProcessActionType
     Advance = 1,
     Return = 2,
     Restart = 3,
-    Comment = 4
+    Comment = 4,
+    Cancel = 5,
+    Transfer = 6
 }
