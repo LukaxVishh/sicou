@@ -85,7 +85,7 @@ Os avisos existentes ainda precisam dos complementos de prazo, aprovação e aut
 - [Atualizações de 14/10/2026](ATUALIZACOES/2026-10-14.md)
 - [Atualizações de 15/10/2026](ATUALIZACOES/2026-10-15.md)
 
-Responsáveis e datas de entrega devem ser definidos pela equipe. A consulta de 16/10/2026 identificou `origin/main` em `bf402ee`; suas alterações foram integradas ao workspace de `implementacao-do-orientador`, preservando os trabalhos locais. O merge ainda não foi commitado nem publicado. Consulte o [registro da integração](ATUALIZACOES/2026-10-16.md).
+Responsáveis e datas de entrega devem ser definidos pela equipe. Em 16/10/2026, a integração de `origin/main` (`bf402ee`) com `implementacao-do-orientador` e os trabalhos locais foi concluída no commit `7c60bd5`, enviado primeiro à branch e depois integrado e publicado na `main`, conforme autorização do desenvolvedor. Consulte o [registro da integração e publicação](ATUALIZACOES/2026-10-16.md).
 
 ## Ambiente local — 15/10/2026
 
@@ -96,4 +96,4 @@ Responsáveis e datas de entrega devem ser definidos pela equipe. A consulta de 
 ## Integração da main — 16/10/2026
 
 - [x] Conciliar workflows, transferências e cancelamento da `main` com recuperação de senha, relatórios e importação da branch/local. Conflitos resolvidos, metadados das migrations conciliados e cancelamento incluído nos relatórios. Builds, testes e limites da validação descritos no [registro](ATUALIZACOES/2026-10-16.md).
-- [ ] Versionar e publicar o merge quando solicitado pelo desenvolvedor. A integração permanece local, com backup e stash preservados; não representa publicação na `main` nem homologação visual dos requisitos.
+- [x] Versionar e publicar o merge: commit `7c60bd5` enviado para `implementacao-do-orientador` e integrado à `main` por fast-forward. Os dois hashes remotos foram conferidos após o push. Backup e stash preservados; homologação visual dos requisitos continua pendente. Consulte o [registro da publicação](ATUALIZACOES/2026-10-16.md).
