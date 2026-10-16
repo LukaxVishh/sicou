@@ -19,6 +19,9 @@ import type {
   ReturnProcessPayload,
   RestartProcessPayload,
   AddProcessCommentPayload,
+  CancelProcessPayload,
+  TransferProcessPayload,
+  ProcessSearchFilter,
 } from '../types';
 
 // --- Catálogo de Campos ---
@@ -141,12 +144,35 @@ export async function deleteProcessType(id: string): Promise<void> {
 }
 
 // --- Instâncias e Tramitação de Processos ---
+function buildSearchQuery(status?: number | string, filter?: ProcessSearchFilter): string {
+  const params = new URLSearchParams();
+  if (status !== undefined && status !== '') params.set('status', String(status));
+  if (filter) {
+    if (filter.areaId) params.set('areaId', filter.areaId);
+    if (filter.searchTerm) params.set('searchTerm', filter.searchTerm);
+    if (filter.unitId) params.set('unitId', filter.unitId);
+    if (filter.unitName) params.set('unitName', filter.unitName);
+    if (filter.status !== undefined && filter.status !== '') params.set('status', String(filter.status));
+    if (filter.creator) params.set('creator', filter.creator);
+    if (filter.startDate) params.set('startDate', filter.startDate);
+    if (filter.endDate) params.set('endDate', filter.endDate);
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
 export async function getAreaProcesses(
   areaId: string,
-  status?: number
+  status?: number,
+  filter?: ProcessSearchFilter
 ): Promise<ProcessInstanceSummary[]> {
-  const query = status !== undefined ? `?status=${status}` : '';
+  const query = buildSearchQuery(status, filter);
   return apiFetch<ProcessInstanceSummary[]>(`/api/areas/${areaId}/processes${query}`, { method: 'GET' });
+}
+
+export async function searchProcesses(filter: ProcessSearchFilter): Promise<ProcessInstanceSummary[]> {
+  const query = buildSearchQuery(undefined, filter);
+  return apiFetch<ProcessInstanceSummary[]>(`/api/processes/search${query}`, { method: 'GET' });
 }
 
 export async function getMyProcesses(): Promise<ProcessInstanceSummary[]> {
@@ -221,5 +247,58 @@ export async function addProcessComment(
   return apiFetch<ProcessInstance>(`/api/processes/${id}/comments`, {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function cancelProcess(
+  id: string,
+  payload: CancelProcessPayload
+): Promise<ProcessInstance> {
+  return apiFetch<ProcessInstance>(`/api/processes/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function transferProcess(
+  id: string,
+  payload: TransferProcessPayload
+): Promise<ProcessInstance> {
+  return apiFetch<ProcessInstance>(`/api/processes/${id}/transfer`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// Atribuição de Usuários e Locais de Processos
+export async function getMyProcessNodes(): Promise<ProcessNode[]> {
+  return apiFetch<ProcessNode[]>('/api/users/me/process-nodes');
+}
+
+export async function getUserProcessNodes(userId: string): Promise<ProcessNode[]> {
+  return apiFetch<ProcessNode[]>(`/api/users/${userId}/process-nodes`);
+}
+
+export async function assignUserProcessNodes(
+  userId: string,
+  processNodeIds: string[]
+): Promise<ProcessNode[]> {
+  return apiFetch<ProcessNode[]>(`/api/users/${userId}/process-nodes`, {
+    method: 'PUT',
+    body: JSON.stringify({ processNodeIds }),
+  });
+}
+
+export async function getNodeAssignedUsers(processNodeId: string): Promise<any[]> {
+  return apiFetch<any[]>(`/api/process-nodes/${processNodeId}/users`);
+}
+
+export async function assignNodeUsers(
+  processNodeId: string,
+  userIds: string[]
+): Promise<any[]> {
+  return apiFetch<any[]>(`/api/process-nodes/${processNodeId}/users`, {
+    method: 'PUT',
+    body: JSON.stringify({ userIds }),
   });
 }

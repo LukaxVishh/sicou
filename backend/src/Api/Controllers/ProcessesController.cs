@@ -18,11 +18,32 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpGet("api/areas/{areaId:guid}/processes")]
-    public async Task<IActionResult> GetAreaProcesses(Guid areaId, [FromQuery] ProcessStatus? status = null)
+    public async Task<IActionResult> GetAreaProcesses(
+        Guid areaId,
+        [FromQuery] ProcessStatus? status = null,
+        [FromQuery] ProcessSearchFilterRequest? filter = null)
     {
         try
         {
-            var response = await _instanceService.GetAreaProcessesAsync(areaId, status);
+            var response = await _instanceService.GetAreaProcessesAsync(areaId, status, filter);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("api/processes/search")]
+    public async Task<IActionResult> SearchProcesses([FromQuery] ProcessSearchFilterRequest filter)
+    {
+        try
+        {
+            var response = await _instanceService.SearchProcessesAsync(filter);
             return Ok(response);
         }
         catch (UnauthorizedAccessException ex)
@@ -205,6 +226,50 @@ public class ProcessesController : ControllerBase
         try
         {
             var response = await _instanceService.AddCommentAsync(id, request);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("api/processes/{id:guid}/cancel")]
+    public async Task<IActionResult> Cancel(Guid id, [FromBody] CancelProcessRequest request)
+    {
+        try
+        {
+            var response = await _instanceService.CancelAsync(id, request);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("api/processes/{id:guid}/transfer")]
+    public async Task<IActionResult> Transfer(Guid id, [FromBody] TransferProcessRequest request)
+    {
+        try
+        {
+            var response = await _instanceService.TransferAsync(id, request);
             return Ok(response);
         }
         catch (UnauthorizedAccessException ex)

@@ -22,6 +22,14 @@ public class ProcessInstanceResponse
     public string? CreatedByUserName { get; set; }
     public Guid? OriginUnitId { get; set; }
     public string? OriginUnitName { get; set; }
+    public Guid? CurrentUnitId { get; set; }
+    public string? CurrentUnitName { get; set; }
+    public DateTime? OpenedAt { get; set; }
+    public string? OpenedByUserId { get; set; }
+    public string? OpenedByUserName { get; set; }
+    public string? OpenedByUnitName { get; set; }
+    public string? DestinationUnitName { get; set; }
+    public bool CanManipulate { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
@@ -45,6 +53,10 @@ public class ProcessHistoryResponse
     public string? FromNodeName { get; set; }
     public Guid? ToNodeId { get; set; }
     public string? ToNodeName { get; set; }
+    public Guid? FromUnitId { get; set; }
+    public string? FromUnitName { get; set; }
+    public Guid? ToUnitId { get; set; }
+    public string? ToUnitName { get; set; }
     public ProcessActionType Action { get; set; }
     public string UserId { get; set; } = string.Empty;
     public string? UserFullName { get; set; }
@@ -55,6 +67,8 @@ public class ProcessHistoryResponse
 public class ProcessInstanceSummaryResponse
 {
     public Guid Id { get; set; }
+    public Guid AreaId { get; set; }
+    public string AreaName { get; set; } = string.Empty;
     public string ProcessNumber { get; set; } = string.Empty;
     public string? Title { get; set; }
     public Guid ProcessTypeId { get; set; }
@@ -64,7 +78,14 @@ public class ProcessInstanceSummaryResponse
     public ProcessStatus Status { get; set; }
     public string CreatedByUserId { get; set; } = string.Empty;
     public string? CreatedByUserName { get; set; }
+    public string? OpenedByUserId { get; set; }
+    public string? OpenedByUserName { get; set; }
+    public DateTime? OpenedAt { get; set; }
+    public Guid? OriginUnitId { get; set; }
     public string? OriginUnitName { get; set; }
+    public Guid? CurrentUnitId { get; set; }
+    public string? CurrentUnitName { get; set; }
+    public string? DestinationUnitName { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

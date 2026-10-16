@@ -142,7 +142,9 @@ public class ProcessTypeService : IProcessTypeService
             ProcessTypeId = processType.Id,
             ProcessNodeId = n.ProcessNodeId,
             Order = n.Order,
-            Instructions = n.Instructions?.Trim()
+            Instructions = n.Instructions?.Trim(),
+            CoordinateX = n.CoordinateX,
+            CoordinateY = n.CoordinateY
         }).ToList();
         _processTypeRepository.AddNodes(newNodes);
 
@@ -215,7 +217,9 @@ public class ProcessTypeService : IProcessTypeService
             {
                 ProcessNodeId = n.ProcessNodeId,
                 Order = n.Order,
-                Instructions = n.Instructions
+                Instructions = n.Instructions,
+                CoordinateX = n.CoordinateX,
+                CoordinateY = n.CoordinateY
             }).ToList(),
             Fields = original.Fields.Select(f => new ProcessTypeField
             {
@@ -419,7 +423,9 @@ public class ProcessTypeService : IProcessTypeService
             Name = n.ProcessNode?.Name ?? string.Empty,
             NodeType = n.ProcessNode?.NodeType ?? ProcessNodeType.StandardStage,
             Order = n.Order,
-            Instructions = n.Instructions
+            Instructions = n.Instructions,
+            CoordinateX = n.CoordinateX,
+            CoordinateY = n.CoordinateY
         }).ToList(),
         Fields = p.Fields.OrderBy(f => f.DisplayOrder).Select(f => new ProcessTypeFieldResponse
         {

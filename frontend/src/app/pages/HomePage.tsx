@@ -14,13 +14,14 @@ import {
   User,
   CheckCircle2,
 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../../features/auth/providers';
 import { getPosts, postImageUrl } from '../../features/posts/api';
 import type { Post } from '../../features/posts/types';
 import * as workflowsApi from '../../features/workflows/api';
 import type { ProcessInstanceSummary } from '../../features/workflows/types';
 import { ProcessStatus } from '../../features/workflows/types';
-import { ProcessDetailsDrawer, OpenProcessModal } from '../../features/workflows/components';
+import { OpenProcessModal } from '../../features/workflows/components';
 
 type ViewPreference = 'feed' | 'processes' | 'split';
 
@@ -28,6 +29,7 @@ const STORAGE_PREF_KEY = 'sicou_home_view_preference';
 
 export const HomePage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Preferência de visualização salva
   const [viewMode, setViewMode] = useState<ViewPreference>(() => {
@@ -46,7 +48,6 @@ export const HomePage: React.FC = () => {
   const [processStatusFilter, setProcessStatusFilter] = useState<string>('all');
 
   // Modais e Painéis
-  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
   const [isOpenProcessModalOpen, setIsOpenProcessModalOpen] = useState(false);
   const [savedSuccessMessage, setSavedSuccessMessage] = useState(false);
 
@@ -391,7 +392,7 @@ export const HomePage: React.FC = () => {
                     return (
                       <div
                         key={proc.id}
-                        onClick={() => setSelectedProcessId(proc.id)}
+                        onClick={() => navigate(`/app/workflows/processes/${proc.id}`)}
                         className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer space-y-2 group"
                       >
                         <div className="flex items-center justify-between">
@@ -445,16 +446,6 @@ export const HomePage: React.FC = () => {
             </div>
           )}
         </div>
-      )}
-
-      {/* Drawer de Detalhes e Acompanhamento do Processo */}
-      {selectedProcessId && (
-        <ProcessDetailsDrawer
-          processId={selectedProcessId}
-          onClose={() => setSelectedProcessId(null)}
-          onRefresh={() => loadData(true)}
-          canHandle={false}
-        />
       )}
 
       {/* Modal de Abertura de Novo Processo */}

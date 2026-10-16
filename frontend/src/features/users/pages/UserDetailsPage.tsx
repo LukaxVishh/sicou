@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Trash2,
   User as UserIcon,
+  Workflow,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -34,6 +35,8 @@ import {
   updateAccess,
 } from '../../access-control/api';
 import type { UserAreaAccess } from '../../access-control/types';
+import * as workflowsApi from '../../workflows/api';
+import type { ProcessNode } from '../../workflows/types';
 
 const roleOptions: Array<{
   value: UserRole;
@@ -114,6 +117,11 @@ export function UserDetailsPage() {
   const [newCanHandleWorkflowRequests, setNewCanHandleWorkflowRequests] = useState(false);
   const [isSubmittingNewArea, setIsSubmittingNewArea] = useState(false);
 
+  // Estados de Locais de Processos Atribuídos
+  const [assignedNodes, setAssignedNodes] = useState<ProcessNode[]>([]);
+  const [allAvailableNodes, setAllAvailableNodes] = useState<ProcessNode[]>([]);
+  const [isSavingNodes, setIsSavingNodes] = useState(false);
+
   // Estados de Carregamento e Notificações
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -172,7 +180,22 @@ export function UserDetailsPage() {
       if (targetCompanyId) {
         setUnits(results[idx++] || []);
         const loadedAreas: CompanyArea[] = results[idx++] || [];
-        setAreas(loadedAreas.filter((a) => a.isActive));
+        const activeAreas = loadedAreas.filter((a) => a.isActive);
+        setAreas(activeAreas);
+
+        // Carregar locais de processos
+        try {
+          const [userNodes, ...areaNodesList] = await Promise.all([
+            workflowsApi.getUserProcessNodes(userId).catch(() => [] as ProcessNode[]),
+            ...activeAreas.map(a => workflowsApi.getNodesByAreaId(a.id).catch(() => [] as ProcessNode[]))
+          ]);
+          setAssignedNodes(userNodes);
+          const flatNodes = (areaNodesList as ProcessNode[][]).flat().filter(n => n.isActive);
+          const uniqueNodes = Array.from(new Map(flatNodes.map(n => [n.id, n])).values());
+          setAllAvailableNodes(uniqueNodes);
+        } catch {
+          // Fallback silencioso
+        }
       }
     } catch (error) {
       setFeedbackMessage({
@@ -216,6 +239,38 @@ export function UserDetailsPage() {
     setRoles((prev) =>
       prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
     );
+  };
+
+  const handleToggleAssignedNode = (nodeId: string) => {
+    setAssignedNodes((prev) => {
+      const exists = prev.some((n) => n.id === nodeId);
+      if (exists) return prev.filter((n) => n.id !== nodeId);
+      const target = allAvailableNodes.find((n) => n.id === nodeId);
+      return target ? [...prev, target] : prev;
+    });
+  };
+
+  const handleSaveAssignedNodes = async () => {
+    if (!userId) return;
+    setIsSavingNodes(true);
+    try {
+      const updated = await workflowsApi.assignUserProcessNodes(
+        userId,
+        assignedNodes.map((n) => n.id)
+      );
+      setAssignedNodes(updated);
+      setFeedbackMessage({
+        type: 'success',
+        text: 'Locais de processo do colaborador atualizados com sucesso!',
+      });
+    } catch (err: any) {
+      setFeedbackMessage({
+        type: 'error',
+        text: err?.message || 'Erro ao salvar locais de processos atribuídos.',
+      });
+    } finally {
+      setIsSavingNodes(false);
+    }
   };
 
   // 2. Salvar Dados Cadastrais & Papéis
@@ -1121,6 +1176,82 @@ export function UserDetailsPage() {
                 })
               )}
             </div>
+          </div>
+
+          {/* Card 3: Locais de Processos Atribuídos */}
+          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                  <Workflow className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">3. Locais de Processos Atribuídos</h2>
+                  <p className="text-xs text-slate-500">
+                    Estações autorizadas para tramitar fases.
+                  </p>
+                </div>
+              </div>
+              <span className="font-mono text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
+                {assignedNodes.length} {assignedNodes.length === 1 ? 'local' : 'locais'}
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200/60">
+              Para manipular um processo em qualquer fase (avançar, devolver ou reiniciar), o colaborador deve ter a respectiva etapa atribuída ao seu perfil. Esta exigência aplica-se a todos os usuários, inclusive administradores.
+            </p>
+
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {allAvailableNodes.length === 0 ? (
+                <p className="text-xs text-slate-400 py-4 text-center">
+                  Nenhum local de processo cadastrado nas áreas da empresa.
+                </p>
+              ) : (
+                allAvailableNodes.map((node) => {
+                  const isChecked = assignedNodes.some((n) => n.id === node.id);
+                  return (
+                    <label
+                      key={node.id}
+                      className={`flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all ${
+                        isChecked
+                          ? 'bg-indigo-50/50 border-indigo-200 shadow-2xs'
+                          : 'bg-white border-slate-200/70 hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1 pr-2">
+                        <p className="text-xs font-bold text-slate-800 truncate">{node.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono truncate">{node.code}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleAssignedNode(node.id)}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                      />
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveAssignedNodes}
+              disabled={isSavingNodes}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {isSavingNodes ? (
+                <>
+                  <RefreshCcw className="h-4 w-4 animate-spin" />
+                  Salvando Locais...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Salvar Locais Atribuídos
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>

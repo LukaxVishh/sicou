@@ -81,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IProcessNodeService, ProcessNodeService>();
         services.AddScoped<IProcessTypeService, ProcessTypeService>();
         services.AddScoped<IProcessInstanceService, ProcessInstanceService>();
+        services.AddScoped<IUserProcessNodeService, UserProcessNodeService>();
 
         services.AddScoped<IAuthorizationHandler, AreaPermissionHandler>();
 

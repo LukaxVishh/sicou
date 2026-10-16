@@ -43,6 +43,8 @@ public partial class ApplicationDbContext
 
     public DbSet<ProcessHistory> ProcessHistories => Set<ProcessHistory>();
 
+    public DbSet<UserProcessNode> UserProcessNodes => Set<UserProcessNode>();
+
     private readonly Sicou.Application.Interfaces.Auth.ICurrentUserService? _notificationActor;
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
@@ -387,6 +389,19 @@ public partial class ApplicationDbContext
             entity.HasIndex(x => new { x.AreaId, x.Code }).IsUnique();
         });
 
+        builder.Entity<UserProcessNode>(entity =>
+        {
+            entity.ToTable("user_process_nodes");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedAt);
+            entity.Property(x => x.IsActive).IsRequired();
+            entity.HasOne(x => x.ProcessNode).WithMany().HasForeignKey(x => x.ProcessNodeId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(x => new { x.UserId, x.ProcessNodeId }).IsUnique();
+            entity.HasIndex(x => x.UserId);
+        });
+
         builder.Entity<ProcessType>(entity =>
         {
             entity.ToTable("process_types");
@@ -411,6 +426,8 @@ public partial class ApplicationDbContext
             entity.ToTable("process_type_nodes");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Instructions).HasMaxLength(1000);
+            entity.Property(x => x.CoordinateX);
+            entity.Property(x => x.CoordinateY);
             entity.Property(x => x.CreatedAt).IsRequired();
             entity.Property(x => x.UpdatedAt);
             entity.Property(x => x.IsActive).IsRequired();
@@ -457,6 +474,11 @@ public partial class ApplicationDbContext
             entity.Property(x => x.Status).HasConversion<int>().IsRequired();
             entity.Property(x => x.CreatedByUserId).HasMaxLength(450).IsRequired();
             entity.Property(x => x.CreatedByUserName).HasMaxLength(200);
+            entity.Property(x => x.OpenedByUserId).HasMaxLength(450);
+            entity.Property(x => x.OpenedByUserName).HasMaxLength(200);
+            entity.Property(x => x.OpenedAt);
+            entity.Property(x => x.CurrentUnitId);
+            entity.Property(x => x.CurrentUnitName).HasMaxLength(200);
             entity.Property(x => x.CreatedAt).IsRequired();
             entity.Property(x => x.UpdatedAt);
             entity.Property(x => x.IsActive).IsRequired();
@@ -465,6 +487,7 @@ public partial class ApplicationDbContext
             entity.HasOne(x => x.ProcessType).WithMany().HasForeignKey(x => x.ProcessTypeId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.CurrentNode).WithMany().HasForeignKey(x => x.CurrentNodeId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.OriginUnit).WithMany().HasForeignKey(x => x.OriginUnitId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CurrentUnit).WithMany().HasForeignKey(x => x.CurrentUnitId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(x => new { x.CompanyId, x.ProcessNumber }).IsUnique();
             entity.HasIndex(x => new { x.AreaId, x.Status, x.CreatedAt });
         });
@@ -487,6 +510,10 @@ public partial class ApplicationDbContext
             entity.ToTable("process_histories");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Action).HasConversion<int>().IsRequired();
+            entity.Property(x => x.FromUnitId);
+            entity.Property(x => x.FromUnitName).HasMaxLength(200);
+            entity.Property(x => x.ToUnitId);
+            entity.Property(x => x.ToUnitName).HasMaxLength(200);
             entity.Property(x => x.UserId).HasMaxLength(450).IsRequired();
             entity.Property(x => x.UserFullName).HasMaxLength(200);
             entity.Property(x => x.Observations).HasMaxLength(2000);

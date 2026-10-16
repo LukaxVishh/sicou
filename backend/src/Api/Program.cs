@@ -160,6 +160,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 await IdentitySeeder.SeedRolesAsync(app.Services);
+await HrHiringWorkflowSeeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {

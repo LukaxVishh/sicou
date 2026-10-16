@@ -473,8 +473,15 @@ export const ProcessConfectionPage: React.FC = () => {
 
                   if (isHidden) return null;
 
+                  const fType = field.type as unknown;
+                  const isSelect = fType === FieldType.Select || fType === 'Select' || fType === 8;
+                  const isTextArea = fType === FieldType.TextArea || fType === 'TextArea' || fType === 2;
+                  const isDate = fType === FieldType.Date || fType === 'Date' || fType === 7;
+                  const isCurrency = fType === FieldType.Currency || fType === 'Currency' || fType === 4;
+                  const isNumber = fType === FieldType.Number || fType === 'Number' || fType === 3;
+
                   const isFullWidth =
-                    field.type === FieldType.TextArea ||
+                    isTextArea ||
                     confectionFields.length === 1;
 
                   return (
@@ -495,7 +502,7 @@ export const ProcessConfectionPage: React.FC = () => {
                       )}
 
                       {/* Renderização de acordo com o Tipo do Campo */}
-                      {field.type === FieldType.Select ? (
+                      {isSelect ? (
                         <select
                           disabled={isDisabled}
                           value={formValues[field.fieldDefinitionId] || ''}
@@ -517,7 +524,11 @@ export const ProcessConfectionPage: React.FC = () => {
                                     ))
                                   : null;
                               } catch {
-                                return null;
+                                return field.globalOptionsJson.split(',').map((opt: string) => (
+                                  <option key={opt.trim()} value={opt.trim()}>
+                                    {opt.trim()}
+                                  </option>
+                                ));
                               }
                             })()
                           ) : (
@@ -527,7 +538,7 @@ export const ProcessConfectionPage: React.FC = () => {
                             </>
                           )}
                         </select>
-                      ) : field.type === FieldType.TextArea ? (
+                      ) : isTextArea ? (
                         <textarea
                           rows={3}
                           disabled={isDisabled}
@@ -538,7 +549,7 @@ export const ProcessConfectionPage: React.FC = () => {
                             fieldError ? 'border-rose-500 bg-rose-50/50' : 'border-slate-300'
                           }`}
                         />
-                      ) : field.type === FieldType.Date ? (
+                      ) : isDate ? (
                         <input
                           type="date"
                           disabled={isDisabled}
@@ -550,12 +561,12 @@ export const ProcessConfectionPage: React.FC = () => {
                         />
                       ) : (
                         <input
-                          type={field.type === FieldType.Number || field.type === FieldType.Currency ? 'number' : 'text'}
-                          step={field.type === FieldType.Currency ? '0.01' : undefined}
+                          type={isNumber || isCurrency ? 'number' : 'text'}
+                          step={isCurrency ? '0.01' : undefined}
                           disabled={isDisabled}
                           value={formValues[field.fieldDefinitionId] || ''}
                           onChange={(e) => handleFieldChange(field.fieldDefinitionId, e.target.value)}
-                          placeholder={field.placeholder || (field.type === FieldType.Currency ? 'R$ 0,00' : 'Preencha...')}
+                          placeholder={field.placeholder || (isCurrency ? 'R$ 0,00' : 'Preencha...')}
                           className={`w-full px-3.5 py-2.5 bg-slate-50 hover:bg-white border rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-colors ${
                             fieldError ? 'border-rose-500 bg-rose-50/50' : 'border-slate-300'
                           }`}

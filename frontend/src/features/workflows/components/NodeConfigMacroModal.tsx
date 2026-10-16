@@ -21,6 +21,7 @@ import {
   ToggleLeft,
   Paperclip,
   Check,
+  MessageSquare,
 } from 'lucide-react';
 import type {
   ProcessNode,
@@ -121,7 +122,26 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
   const [nodeCode, setNodeCode] = useState(initialNodeCode);
   const [nodeType, setNodeType] = useState(initialNodeType);
   const [processNodeId, setProcessNodeId] = useState(initialProcessNodeId || '');
-  const [instructions, setInstructions] = useState(initialInstructions || '');
+
+  // Parse de instruções e parecer
+  const parsedInstructionsData = useMemo(() => {
+    if (!initialInstructions) return { text: '', requirement: 'optional' as const };
+    try {
+      const parsed = JSON.parse(initialInstructions);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          text: parsed.instructions || '',
+          requirement: parsed.opinionConfig?.requirement || 'optional',
+        };
+      }
+    } catch {}
+    return { text: initialInstructions, requirement: 'optional' as const };
+  }, [initialInstructions]);
+
+  const [instructions, setInstructions] = useState(parsedInstructionsData.text);
+  const [opinionRequirement, setOpinionRequirement] = useState<'required' | 'optional' | 'hidden'>(
+    parsedInstructionsData.requirement
+  );
 
   // Lista de Campos Vinculados a este Nó
   const [nodeFields, setNodeFields] = useState<NodeFieldItemConfig[]>(initialFields);
@@ -379,12 +399,19 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
       };
     });
 
+    const instructionsPayload = {
+      instructions: instructions.trim(),
+      opinionConfig: {
+        requirement: opinionRequirement,
+      },
+    };
+
     onSave({
       nodeLabel: nodeLabel.trim(),
       nodeCode: nodeCode.trim(),
       nodeType,
       processNodeId: processNodeId || undefined,
-      instructions: instructions.trim() || undefined,
+      instructions: JSON.stringify(instructionsPayload),
       fields: fieldsWithRules,
     });
   };
@@ -937,6 +964,29 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                           </label>
                         );
                       })}
+
+                    {/* Opção para aplicar regra ao Parecer da Etapa */}
+                    <label
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer text-xs transition sm:col-span-2 md:col-span-3 ${
+                        newRuleTargetIds.includes('__opinion__')
+                          ? 'border-purple-500 bg-purple-50 text-purple-900 font-bold'
+                          : 'border-purple-200 bg-purple-50/30 hover:bg-purple-50 text-purple-800'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newRuleTargetIds.includes('__opinion__')}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setNewRuleTargetIds((prev) => [...prev, '__opinion__']);
+                          } else {
+                            setNewRuleTargetIds((prev) => prev.filter((id) => id !== '__opinion__'));
+                          }
+                        }}
+                        className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span>💬 Parecer / Despacho desta Etapa (Regra de Exigência / Ocultação)</span>
+                    </label>
                   </div>
                 </div>
 
@@ -1096,10 +1146,11 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                     onChange={(e) => setNodeType(Number(e.target.value))}
                     className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500"
                   >
-                    <option value={ProcessNodeType.StartConfection}>Confecção / Ponto de Partida</option>
-                    <option value={ProcessNodeType.StandardStage}>Tramitação / Análise</option>
-                    <option value={ProcessNodeType.ApprovalStage}>Decisão / Parecer</option>
-                    <option value={ProcessNodeType.EndArchived}>Conclusão / Arquivamento</option>
+                    <option value={ProcessNodeType.StartConfection}>Confecção (Amarelo - Ponto de Partida)</option>
+                    <option value={ProcessNodeType.StandardStage}>Análise (Azul - Tramitação Regular)</option>
+                    <option value={ProcessNodeType.EndApproved}>Deferido (Verde - Arquivamento Aprovado)</option>
+                    <option value={ProcessNodeType.EndRejected}>Indeferido (Vermelho - Arquivamento Reprovado)</option>
+                    <option value={ProcessNodeType.EndArchived}>Arquivamento Geral</option>
                   </select>
                 </div>
               </div>
@@ -1115,6 +1166,88 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                   placeholder="Descreva o passo a passo, critérios de análise e parecer que o responsável deve seguir ao tramitar nesta etapa..."
                   className="w-full rounded-xl border border-slate-300 p-3 text-xs text-slate-900 outline-none focus:border-indigo-500"
                 />
+              </div>
+
+              {/* Configuração do Parecer Técnico desta Etapa */}
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-indigo-600 text-white rounded-lg">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-indigo-950">
+                      Regra de Parecer / Despacho desta Etapa
+                    </h4>
+                    <p className="text-[11px] text-indigo-800/80">
+                      Defina se o analista deve obrigatoriamente preencher um parecer ao tramitar ou se pode ser opcional/oculto.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  <label
+                    className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer text-xs transition ${
+                      opinionRequirement === 'required'
+                        ? 'border-indigo-600 bg-white shadow-sm text-indigo-900 font-bold ring-2 ring-indigo-500/20'
+                        : 'border-slate-200 bg-white/60 hover:bg-white text-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="opinionReq"
+                      value="required"
+                      checked={opinionRequirement === 'required'}
+                      onChange={() => setOpinionRequirement('required')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div>
+                      <span className="block font-bold">Obrigatório</span>
+                      <span className="text-[10px] text-slate-500">Exige parecer para tramitar</span>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer text-xs transition ${
+                      opinionRequirement === 'optional'
+                        ? 'border-indigo-600 bg-white shadow-sm text-indigo-900 font-bold ring-2 ring-indigo-500/20'
+                        : 'border-slate-200 bg-white/60 hover:bg-white text-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="opinionReq"
+                      value="optional"
+                      checked={opinionRequirement === 'optional'}
+                      onChange={() => setOpinionRequirement('optional')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div>
+                      <span className="block font-bold">Opcional</span>
+                      <span className="text-[10px] text-slate-500">Analista preenche se quiser</span>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer text-xs transition ${
+                      opinionRequirement === 'hidden'
+                        ? 'border-indigo-600 bg-white shadow-sm text-indigo-900 font-bold ring-2 ring-indigo-500/20'
+                        : 'border-slate-200 bg-white/60 hover:bg-white text-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="opinionReq"
+                      value="hidden"
+                      checked={opinionRequirement === 'hidden'}
+                      onChange={() => setOpinionRequirement('hidden')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div>
+                      <span className="block font-bold">Oculto</span>
+                      <span className="text-[10px] text-slate-500">Não exibe parecer na etapa</span>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
           )}

@@ -29,3 +29,4 @@ Ao concluir ou descobrir uma pendência, atualize `PENDENCIAS.md` e vincule o re
 Os documentos dos módulos complementam os registros diários com detalhes de uso, configuração e contratos.
 
 - [09/10/2026 — Recuperação, notificações e documentação](ATUALIZACOES/2026-10-09.md)
+- [14/10/2026 — Página Isolada de Tramitação e Regras de Parecer](ATUALIZACOES/2026-10-14.md)

@@ -535,6 +535,13 @@ namespace Sicou.Infrastructure.Data.Migrations
                     b.Property<Guid?>("FromNodeId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("FromUnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FromUnitName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -547,6 +554,13 @@ namespace Sicou.Infrastructure.Data.Migrations
 
                     b.Property<Guid?>("ToNodeId")
                         .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ToUnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ToUnitName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -598,8 +612,26 @@ namespace Sicou.Infrastructure.Data.Migrations
                     b.Property<Guid>("CurrentNodeId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CurrentUnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CurrentUnitName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("OpenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OpenedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("OpenedByUserName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<Guid?>("OriginUnitId")
                         .HasColumnType("uuid");
@@ -625,6 +657,8 @@ namespace Sicou.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CurrentNodeId");
+
+                    b.HasIndex("CurrentUnitId");
 
                     b.HasIndex("OriginUnitId");
 
@@ -841,6 +875,12 @@ namespace Sicou.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<double?>("CoordinateX")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("CoordinateY")
+                        .HasColumnType("double precision");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1023,6 +1063,41 @@ namespace Sicou.Infrastructure.Data.Migrations
                     b.HasIndex("UserId", "ReadAt", "CreatedAt");
 
                     b.ToTable("user_notifications", (string)null);
+                });
+
+            modelBuilder.Entity("Sicou.Domain.Entities.UserProcessNode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ProcessNodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProcessNodeId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "ProcessNodeId")
+                        .IsUnique();
+
+                    b.ToTable("user_process_nodes", (string)null);
                 });
 
             modelBuilder.Entity("Sicou.Infrastructure.Identity.ApplicationRole", b =>
@@ -1358,6 +1433,11 @@ namespace Sicou.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Sicou.Domain.Entities.Unit", "CurrentUnit")
+                        .WithMany()
+                        .HasForeignKey("CurrentUnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Sicou.Domain.Entities.Unit", "OriginUnit")
                         .WithMany()
                         .HasForeignKey("OriginUnitId")
@@ -1374,6 +1454,8 @@ namespace Sicou.Infrastructure.Data.Migrations
                     b.Navigation("Company");
 
                     b.Navigation("CurrentNode");
+
+                    b.Navigation("CurrentUnit");
 
                     b.Navigation("OriginUnit");
 
@@ -1525,6 +1607,17 @@ namespace Sicou.Infrastructure.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Sicou.Domain.Entities.UserProcessNode", b =>
+                {
+                    b.HasOne("Sicou.Domain.Entities.ProcessNode", "ProcessNode")
+                        .WithMany()
+                        .HasForeignKey("ProcessNodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ProcessNode");
                 });
 
             modelBuilder.Entity("Sicou.Domain.Entities.Area", b =>

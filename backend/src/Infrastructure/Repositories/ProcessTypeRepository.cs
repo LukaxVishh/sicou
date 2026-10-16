@@ -62,6 +62,8 @@ public class ProcessTypeRepository : IProcessTypeRepository
         var query = _context.ProcessTypes
             .Include(x => x.Area)
             .Include(x => x.StartNode)
+            .Include(x => x.Nodes)
+            .Include(x => x.Fields)
             .Where(x => x.IsActive);
 
         if (companyId.HasValue)

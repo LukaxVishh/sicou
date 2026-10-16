@@ -20,7 +20,9 @@ import {
   FieldEditorPage,
   ProcessNodeEditorPage,
   ProcessTreeBuilderPage,
+  ProcessTreeDetailsPage,
   ProcessConfectionPage,
+  ProcessTrackingPage,
 } from '../../features/workflows';
 
 
@@ -143,8 +145,23 @@ export function AppRouter() {
             />
 
             <Route
-              path="workflows/trees/:treeId"
+              path="workflows/trees/:treeId/builder"
               element={<ProcessTreeBuilderPage />}
+            />
+
+            <Route
+              path="workflows/trees/:treeId"
+              element={<ProcessTreeDetailsPage />}
+            />
+
+            <Route
+              path="workflows/trees/:treeId/details"
+              element={<ProcessTreeDetailsPage />}
+            />
+
+            <Route
+              path="arvores/:treeId"
+              element={<ProcessTreeDetailsPage />}
             />
 
             <Route
@@ -152,6 +169,10 @@ export function AppRouter() {
               element={<ProcessConfectionPage />}
             />
 
+            <Route
+              path="workflows/processes/:id"
+              element={<ProcessTrackingPage />}
+            />
           </Route>
         </Route>
 

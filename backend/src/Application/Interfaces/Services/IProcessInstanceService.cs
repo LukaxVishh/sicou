@@ -6,7 +6,8 @@ namespace Sicou.Application.Interfaces.Services;
 
 public interface IProcessInstanceService
 {
-    Task<IReadOnlyList<ProcessInstanceSummaryResponse>> GetAreaProcessesAsync(Guid areaId, ProcessStatus? status = null);
+    Task<IReadOnlyList<ProcessInstanceSummaryResponse>> GetAreaProcessesAsync(Guid areaId, ProcessStatus? status = null, ProcessSearchFilterRequest? filter = null);
+    Task<IReadOnlyList<ProcessInstanceSummaryResponse>> SearchProcessesAsync(ProcessSearchFilterRequest filter);
     Task<IReadOnlyList<ProcessInstanceSummaryResponse>> GetMyProcessesAsync();
     Task<ProcessInstanceResponse> GetByIdAsync(Guid id);
     Task<ProcessInstanceResponse> CreateAsync(CreateProcessInstanceRequest request);
@@ -16,4 +17,6 @@ public interface IProcessInstanceService
     Task<ProcessInstanceResponse> ReturnAsync(Guid id, ReturnProcessRequest request);
     Task<ProcessInstanceResponse> RestartAsync(Guid id, RestartProcessRequest request);
     Task<ProcessInstanceResponse> AddCommentAsync(Guid id, AddProcessCommentRequest request);
+    Task<ProcessInstanceResponse> CancelAsync(Guid id, CancelProcessRequest request);
+    Task<ProcessInstanceResponse> TransferAsync(Guid id, TransferProcessRequest request);
 }

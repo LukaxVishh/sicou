@@ -53,8 +53,12 @@ import {
 } from '../types';
 import {
   WorkflowCustomNode,
+  resolveNodeTheme,
   type WorkflowCustomNodeData,
 } from '../components/WorkflowCustomNode';
+import {
+  WorkflowCustomEdge,
+} from '../components/WorkflowCustomEdge';
 import {
   NodeConfigMacroModal,
   type NodeFieldItemConfig,
@@ -63,6 +67,10 @@ import { ProcessSimulatorModal } from '../components/ProcessSimulatorModal';
 
 const nodeTypes = {
   workflowNode: WorkflowCustomNode,
+};
+
+const edgeTypes = {
+  workflowEdge: WorkflowCustomEdge,
 };
 
 export const ProcessTreeBuilderPage: React.FC = () => {
@@ -186,6 +194,25 @@ export const ProcessTreeBuilderPage: React.FC = () => {
     [setNodes, setEdges]
   );
 
+  // Handler para remover aresta/conexão manualmente (via botão na aresta)
+  const handleDeleteEdge = useCallback(
+    (edgeIdToDelete: string) => {
+      setEdges((currentEdges) => currentEdges.filter((e) => e.id !== edgeIdToDelete));
+      setFeedback({ type: 'success', text: 'Conexão entre etapas removida com sucesso.' });
+    },
+    [setEdges]
+  );
+
+  // Handler disparado ao deletar aresta selecionada via tecla Delete/Backspace
+  const onEdgesDelete = useCallback((deletedEdges: Edge[]) => {
+    if (deletedEdges.length > 0) {
+      setFeedback({
+        type: 'success',
+        text: `${deletedEdges.length === 1 ? 'Conexão removida' : `${deletedEdges.length} conexões removidas`} com sucesso.`,
+      });
+    }
+  }, []);
+
   // Handler para adicionar filho conectado a um nó (corrige arestas duplicadas e StrictMode)
   const handleAddChildToNode = useCallback(
     (parentNodeId: string) => {
@@ -227,15 +254,18 @@ export const ProcessTreeBuilderPage: React.FC = () => {
             id: edgeId,
             source: parentNodeId,
             target: childId,
-            type: 'smoothstep',
+            type: 'workflowEdge',
             animated: true,
             markerEnd: { type: MarkerType.ArrowClosed, color: '#4f46e5' },
             style: { stroke: '#4f46e5', strokeWidth: 2 },
+            data: {
+              onDeleteEdge: handleDeleteEdge,
+            },
           },
         ];
       });
     },
-    [handleOpenConfigureNode, handleDeleteNode, setNodes, setEdges]
+    [handleOpenConfigureNode, handleDeleteNode, handleDeleteEdge, setNodes, setEdges]
   );
 
   // Inicializar Árvore Nova ou Carregar Existente (uma única vez por ID/sessão)
@@ -276,7 +306,7 @@ export const ProcessTreeBuilderPage: React.FC = () => {
           const instructionsMap: Record<string, string> = {};
           const locationsMap: Record<string, string> = {};
 
-          // Construir Nodos do React Flow
+          // Construir Nodos do React Flow respeitando coordenadas salvas
           const flowNodes: Node<WorkflowCustomNodeData>[] = pt.nodes.map((node, index) => {
             const isStart =
               node.processNodeId === pt.startNodeId ||
@@ -286,8 +316,36 @@ export const ProcessTreeBuilderPage: React.FC = () => {
             locationsMap[node.processNodeId] = node.processNodeId;
 
             const attachedFieldsCount = (fieldsMap[node.processNodeId] || []).length;
-            const posX = 100 + (index % 3) * 320;
-            const posY = 120 + Math.floor(index / 3) * 220;
+
+            // Resolução de Coordenadas (x, y) do Nó:
+            // 1. Prioridade para coordenadas explicitamente persistidas no banco
+            let posX: number;
+            let posY: number;
+
+            if (node.coordinateX != null && node.coordinateY != null) {
+              posX = node.coordinateX;
+              posY = node.coordinateY;
+            } else {
+              // 2. Fallback para coordenadas salvas no JSON de instruções
+              let extractedPosition: { x: number; y: number } | null = null;
+              if (node.instructions) {
+                try {
+                  const parsed = JSON.parse(node.instructions);
+                  if (parsed?.position?.x != null && parsed?.position?.y != null) {
+                    extractedPosition = parsed.position;
+                  }
+                } catch {}
+              }
+
+              if (extractedPosition) {
+                posX = extractedPosition.x;
+                posY = extractedPosition.y;
+              } else {
+                // 3. Fallback legado apenas se nunca foi posicionado
+                posX = 100 + (index % 3) * 320;
+                posY = 120 + Math.floor(index / 3) * 220;
+              }
+            }
 
             return {
               id: node.processNodeId,
@@ -309,15 +367,18 @@ export const ProcessTreeBuilderPage: React.FC = () => {
             };
           });
 
-          // Construir Arestas de Transição do React Flow
+          // Construir Arestas de Transição do React Flow com tipo interativo workflowEdge
           const flowEdges: Edge[] = pt.transitions.map((t) => ({
             id: `e_${t.fromNodeId}_${t.toNodeId}`,
             source: t.fromNodeId,
             target: t.toNodeId,
-            type: 'smoothstep',
+            type: 'workflowEdge',
             animated: true,
             markerEnd: { type: MarkerType.ArrowClosed, color: '#4f46e5' },
             style: { stroke: '#4f46e5', strokeWidth: 2 },
+            data: {
+              onDeleteEdge: handleDeleteEdge,
+            },
           }));
 
           setNodeInstructionsMap(instructionsMap);
@@ -362,7 +423,7 @@ export const ProcessTreeBuilderPage: React.FC = () => {
       setNodeLocationMap({});
       setLoading(false);
     }
-  }, [isEditing, treeId, handleOpenConfigureNode, handleAddChildToNode, handleDeleteNode, setNodes, setEdges]);
+  }, [isEditing, treeId, handleOpenConfigureNode, handleAddChildToNode, handleDeleteNode, handleDeleteEdge, setNodes, setEdges]);
 
   // Atualizar contador de campos nos dados dos nós sempre que o nodeFieldsMap mudar
   useEffect(() => {
@@ -397,16 +458,19 @@ export const ProcessTreeBuilderPage: React.FC = () => {
           {
             ...params,
             id: edgeId,
-            type: 'smoothstep',
+            type: 'workflowEdge',
             animated: true,
             markerEnd: { type: MarkerType.ArrowClosed, color: '#4f46e5' },
             style: { stroke: '#4f46e5', strokeWidth: 2 },
+            data: {
+              onDeleteEdge: handleDeleteEdge,
+            },
           },
           eds
         );
       });
     },
-    [setEdges]
+    [setEdges, handleDeleteEdge]
   );
 
   // Adicionar Nó Avulso a partir da Toolbar
@@ -591,15 +655,31 @@ const isGuid = (val?: string | null): boolean => {
         throw new Error('Não foi possível identificar o local de processo da etapa inicial (Confecção).');
       }
 
-      // Construir lista de nós com GUIDs válidos
+      // Construir lista de nós com GUIDs válidos e persistência explícita de coordenadas (x, y)
       const nodesPayload: UpdateProcessTypePayload['nodes'] = [];
       nodes.forEach((n, idx) => {
         const resolvedGuid = locationIdsMap[n.id];
         if (isGuid(resolvedGuid)) {
+          let instObj: any = {};
+          const rawInst = nodeInstructionsMap[n.id] || n.data.instructions || '';
+          if (rawInst) {
+            try {
+              instObj = JSON.parse(rawInst);
+              if (typeof instObj !== 'object' || instObj === null) {
+                instObj = { instructions: rawInst };
+              }
+            } catch {
+              instObj = { instructions: rawInst };
+            }
+          }
+          instObj.position = { x: Math.round(n.position.x), y: Math.round(n.position.y) };
+
           nodesPayload.push({
             processNodeId: resolvedGuid,
             order: idx + 1,
-            instructions: nodeInstructionsMap[n.id]?.trim() || undefined,
+            instructions: JSON.stringify(instObj),
+            coordinateX: Math.round(n.position.x),
+            coordinateY: Math.round(n.position.y),
           });
         }
       });
@@ -753,7 +833,7 @@ const isGuid = (val?: string | null): boolean => {
     }
   };
 
-  // Homologar Árvore
+  // Homologar Árvore (salvando explicitamente o layout e posições atuais)
   const handleHomologate = async () => {
     if (
       !treeId ||
@@ -763,14 +843,22 @@ const isGuid = (val?: string | null): boolean => {
     )
       return;
     try {
+      setSaving(true);
+      // Salva explicitamente as coordenadas espaciais atuais de todos os nós antes de homologar
+      await handleSaveTree(false);
       await workflowsApi.homologateProcessType(treeId);
       setStatus(ProcessTypeStatus.Homologated);
-      setFeedback({ type: 'success', text: 'Árvore homologada com sucesso para produção!' });
+      setFeedback({
+        type: 'success',
+        text: 'Árvore homologada com sucesso para produção com o layout espacial dos nós persistido!',
+      });
     } catch (err) {
       setFeedback({
         type: 'error',
         text: err instanceof Error ? err.message : 'Falha ao homologar a árvore.',
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1093,9 +1181,12 @@ const isGuid = (val?: string | null): boolean => {
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodesDelete={onNodesDelete}
+          onEdgesDelete={onEdgesDelete}
+          deleteKeyCode={['Backspace', 'Delete']}
           onConnect={onConnect}
           fitView
           minZoom={0.2}
@@ -1106,10 +1197,8 @@ const isGuid = (val?: string | null): boolean => {
           <MiniMap
             className="!rounded-xl !border-slate-200 !bg-white !shadow-md"
             nodeColor={(node) => {
-              if (node.data?.nodeType === ProcessNodeType.StartConfection) return '#10b981';
-              if (node.data?.nodeType === ProcessNodeType.ApprovalStage) return '#f59e0b';
-              if (node.data?.nodeType === ProcessNodeType.EndArchived) return '#334155';
-              return '#6366f1';
+              const theme = resolveNodeTheme(node.data as any);
+              return theme.miniMapColor;
             }}
           />
 
@@ -1117,18 +1206,24 @@ const isGuid = (val?: string | null): boolean => {
           <Panel position="top-left" className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => handleAddStandaloneNode()}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-white px-3.5 py-2 text-xs font-bold text-indigo-700 shadow-sm transition hover:bg-indigo-50"
+              onClick={() =>
+                handleAddStandaloneNode(
+                  ProcessNodeType.StandardStage,
+                  'Nova Etapa de Análise',
+                  'analise'
+                )
+              }
+              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-3.5 py-2 text-xs font-bold text-blue-700 shadow-sm transition hover:bg-blue-50"
             >
               <Plus className="h-4 w-4" />
-              + Nova Etapa
+              + Nova Etapa (Análise)
             </button>
 
             <button
               type="button"
               onClick={() =>
                 handleAddStandaloneNode(
-                  ProcessNodeType.EndArchived,
+                  ProcessNodeType.EndApproved,
                   'Arquivamento - Deferido',
                   'arquivamento_deferido'
                 )
@@ -1143,7 +1238,7 @@ const isGuid = (val?: string | null): boolean => {
               type="button"
               onClick={() =>
                 handleAddStandaloneNode(
-                  ProcessNodeType.EndArchived,
+                  ProcessNodeType.EndRejected,
                   'Arquivamento - Indeferido',
                   'arquivamento_indeferido'
                 )

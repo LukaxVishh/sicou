@@ -12,4 +12,6 @@ public class ProcessTypeNode : BaseEntity
 
     public int Order { get; set; } = 1;
     public string? Instructions { get; set; }
+    public double? CoordinateX { get; set; }
+    public double? CoordinateY { get; set; }
 }

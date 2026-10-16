@@ -13,30 +13,30 @@ A regra também está no [AGENTS.md da raiz](../AGENTS.md). Ferramentas sem supo
 ## Mais simples para começar
 
 - [ ] **RF-004 — Perfil Desenvolvedor:** definir permissões e criar o perfil, ou documentar sua equivalência com Super Admin conforme decisão da equipe.
-- [ ] **RF-029 — Filtro por período:** adicionar datas inicial/final nas consultas e na interface de processos.
-- [ ] **RF-015 — Cancelamento de processos:** implementar estado e ação de cancelamento, autorização, histórico e tratamento das ações posteriores ao cancelamento.
+- [x] **RF-029 — Filtro por período:** adicionar datas inicial/final nas consultas e na interface de processos ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
+- [x] **RF-015 — Cancelamento de processos:** implementar estado e ação de cancelamento administrativo, autorização restrita ao criador ou administradores da área, histórico de auditoria com justificativa obrigatória e bloqueio de tramitações posteriores ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
 - [ ] **RF-010 — Transferência de usuários:** complementar a troca de unidade com revogação/recomposição dos acessos antigos e registro da transferência. Validar que a autoria de processos antigos não mantenha acesso operacional indevido.
 - [ ] **SMTP real:** configurar provedor, remetente, credenciais e origem HTTPS do frontend. A recuperação por e-mail já funciona na caixa local; esta tarefa depende das credenciais do provedor.
 - [ ] **RNF-019 — Backup básico:** criar uma rotina agendada, definir retenção e validar uma restauração em ambiente separado. O volume Docker atual fornece persistência, mas não substitui backup.
 - [ ] **RNF-001, RNF-002 e RNF-003 — Homologação inicial:** verificar os fluxos completos em Chrome, Firefox, Edge e Safari, em telas de computador, tablet e celular, e registrar a quantidade de interações.
 
-**Ordem inicial sugerida:** perfil Desenvolvedor, filtro por período e cancelamento de processos. A transferência de usuários exige atenção às regras de acesso; homologação pode revelar correções adicionais.
+**Ordem inicial sugerida:** perfil Desenvolvedor. A transferência de usuários exige atenção às regras de acesso; homologação pode revelar correções adicionais.
 
 ## Funcionalidades existentes que precisam de complemento
 
 - [ ] **RF-008 / RNF-006 — Segregação por unidade:** garantir que todos os fluxos respeitem a unidade atual do usuário, inclusive após transferência e nas exceções por autoria.
 - [ ] **RF-012 — Escalonamento para a sede:** definir critérios de encaminhamento por tipo de processo, criticidade, aprovação centralizada e solicitação manual autorizada.
-- [ ] **RF-013 — Workflows completos:** incluir responsáveis por etapa e prazos.
-- [ ] **RF-014 — Validação da execução:** validar campos obrigatórios, campos pertencentes à árvore/etapa, regras condicionais e transições no backend.
-- [ ] **RF-015 — Estados de aprovação e rejeição:** completar as operações que atribuem esses estados e sua apresentação na interface; a declaração dos estados no enum não implementa o fluxo.
+- [ ] **RF-013 — Workflows completos:** incluir responsáveis por etapa e prazos. *(Atribuição de responsáveis por etapa/local de processo e bloqueio universal de manipulação entregues em [2026-10-14.md](ATUALIZACOES/2026-10-14.md); persistência de layout espacial, categorização por cores, exclusão de arestas e árvore homologada de Contratação RH entregues em [2026-10-15.md](ATUALIZACOES/2026-10-15.md); controle de prazos por etapa pendente).*
+- [x] **RF-014 — Validação da execução:** validar campos obrigatórios, campos pertencentes à árvore/etapa, regras condicionais e transições no backend ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
+- [x] **RF-015 — Estados de aprovação e rejeição:** operações e transições automáticas que atribuem estados terminais de aprovação (Approved), rejeição (Rejected) e finalização (Finished) ao atingir nós terminais, com apresentação destacada na interface e bloqueio de novas mutações ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
 - [ ] **RF-016 / RNF-007 — Auditoria administrativa:** registrar alterações de usuários, setores, unidades e permissões com responsável, data/hora e dados relevantes da mudança.
 - [ ] **RF-017 / RNF-018 — Notificações de pendências:** complementar os avisos de ações com aprovação direcionada ao responsável, vencimento e atraso. Depende de responsáveis, aprovação e controle de prazos.
-- [ ] **RF-028 — Aprovação efetiva:** configurar aprovadores/setores responsáveis e validar as decisões de aprovação e rejeição na API.
-- [ ] **RF-029 — Filtro por responsável:** implementar a atribuição de responsáveis e acrescentar esse filtro às consultas e à interface.
+- [x] **RF-028 — Aprovação efetiva:** configurar aprovadores/setores responsáveis e validar as decisões de aprovação e rejeição na API ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
+- [ ] **RF-029 — Filtro por responsável:** implementar a atribuição de responsáveis e acrescentar esse filtro às consultas e à interface *(filtros por código, unidade atual/origem, status, usuário criador/solicitante e período entregues em [2026-10-15.md](ATUALIZACOES/2026-10-15.md))*.
 
 ## Funcionalidades ainda ausentes
 
-- [ ] **RF-011 — Transferência de processos:** mover processos entre unidades e registrar unidade de origem, destino, responsável, data e horário.
+- [x] **RF-011 — Transferência de processos:** mover processos entre unidades e registrar unidade de origem, destino, responsável, data e horário ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
 - [ ] **RF-018 — Dashboard gerencial:** apresentar indicadores reais de processos, unidades, prazos, status e desempenho operacional.
 - [ ] **RF-019 — Relatórios:** oferecer relatórios customizáveis com filtros por período, setor, unidade, status e responsável.
 - [ ] **RF-020 — Exportação de relatórios:** exportar em PDF, XLSX e CSV. Depende da implementação dos relatórios.
@@ -70,13 +70,19 @@ A regra também está no [AGENTS.md da raiz](../AGENTS.md). Ferramentas sem supo
 - [x] Notificações no sistema por empresa/área, com estado de leitura persistente.
 - [x] Avisos detalhados do Orientador para criação, atualização, remoção, publicação e alterações de anexos.
 - [x] Orientador com categorias, orientações, publicação/rascunho, busca, links e anexos autorizados.
+- [x] Página dedicada de tramitação de processo com linha de vida, temporizador em tempo real, visualizador de dados do processo e regras/obrigatoriedade de parecer em nodos de análise ([14/10/2026](ATUALIZACOES/2026-10-14.md)).
+- [x] Ciclo de vida e encerramento de processos com estados finais (Deferido, Indeferido, Concluído) e cancelamento administrativo com justificativa e bloqueio de tramitação ([15/10/2026](ATUALIZACOES/2026-10-15.md)).
+- [x] Reformulação de UI/UX de árvores de decisão: página dedicada de detalhes (`/app/workflows/trees/:id`), histórico unificado de versões, ações rápidas, modais flutuantes centralizados e remoção total de drawers laterais ([15/10/2026](ATUALIZACOES/2026-10-15.md)).
+- [x] Transferência de processos entre unidades com trilha de auditoria (`FromUnit` -> `ToUnit`), localizador avançado de processos com filtros combinados (código, unidade, status, solicitante e período de abertura), validação de campos obrigatórios por etapa na API/UI e provisionamento homologado da árvore "Contratação de Novo Colaborador" na área de Recursos Humanos ([15/10/2026](ATUALIZACOES/2026-10-15.md)).
 
-Os avisos existentes ainda precisam dos complementos de prazo, aprovação e automações descritos acima. Os **51 testes HTTP aprovados** nesta sessão validam cenários específicos de recuperação, notificações e Orientador; não certificam todos os requisitos do apêndice.
+Os avisos existentes ainda precisam dos complementos de prazo, aprovação e automações descritos acima. Os **51 testes HTTP aprovados** na sessão anterior validam cenários específicos de recuperação, notificações e Orientador; não certificam todos os requisitos do apêndice.
 
 ## Documentação relacionada
 
 - [Recuperação de senha e notificações](../backend/RECUPERACAO_E_NOTIFICACOES.md)
 - [Orientador](../backend/ORIENTADOR.md)
 - [Atualizações de 09/10/2026](ATUALIZACOES/2026-10-09.md)
+- [Atualizações de 14/10/2026](ATUALIZACOES/2026-10-14.md)
+- [Atualizações de 15/10/2026](ATUALIZACOES/2026-10-15.md)
 
 Responsáveis e datas de entrega devem ser definidos pela equipe. A inspeção das branches remotas não identificou commits pendentes de integração na `main`; trabalhos locais dos demais desenvolvedores podem não estar publicados.
