@@ -62,6 +62,17 @@ A regra também está no [AGENTS.md da raiz](../AGENTS.md). Ferramentas sem supo
 
 ## Entregas recentes já realizadas
 
+- [x] **Orientador — painel e lista lateral:** seleção abre detalhes em painel amplo, com cards empilhados à direita para alternar orientações; fechar restaura o grid. Frontend Docker atualizado, interação desktop validada com dados reais. [Registro](ATUALIZACOES/2026-10-16.md).
+
+- [x] **Orientador — leitura dos cards:** bloco redundante de setor removido no contexto, cards ampliados para 56 px e fonte 16 px; frontend Docker atualizado e validado em desktop. [Registro](ATUALIZACOES/2026-10-16.md).
+
+- [x] **Orientador — cards compactos desktop:** tipos e orientações em retângulos com ícone/nome; orientações expandem detalhes por clique ou teclado. Frontend atualizado no Docker e validado com dados reais. [Registro](ATUALIZACOES/2026-10-16.md).
+
+- [x] **Orientador — população acadêmica:** 72 orientações em três setores, seis tipos por setor, 66 publicações, seis rascunhos e 60 anexos PDF/DOCX/CSV. Carga aplicada na API local 8080 e reexecução sem duplicação verificada. [Instruções](../scratch/guide-population/README.md) e [registro](ATUALIZACOES/2026-10-16.md). A API em execução ainda retorna 404 na prévia nova e precisa ser atualizada/reiniciada com o código do visualizador.
+
+- [x] **Orientador — consulta por setor/tipo e cadastro recolhido:** setores e tipos em grids, orientações recolhidas com título/ícone, gestão por engrenagem autorizada e prévia interna de PDF/DOCX/XLSX/CSV. [Registro de 16/10](ATUALIZACOES/2026-10-16.md). Prévia Office é de conteúdo, sem fidelidade completa de layout.
+- [ ] **Orientador — homologação de anexos:** validar o fluxo integrado com arquivos reais, PDF nos navegadores suportados e permissões HTTP da nova prévia; suporte a DOC/XLS antigos e fidelidade de imagens/gráficos Office não entregues. A navegação desktop/celular foi validada com API simulada.
+
 - [x] **RF-019 — Relatórios:** `/app/reports` com processos, unidades, usuários e orientações, filtros próprios, seleção de colunas e paginação. Processos incluem período UTC, empresa, setor, unidade, status e responsável; atribuição com histórico. Diretórios de unidades/usuários são administrativos; orientações respeitam setores, módulo e publicação. [Tipos e contratos](README.md#tipos-de-relatorio).
 - [x] **RF-020 — Exportação:** PDF, XLSX e CSV com os mesmos filtros e permissões da consulta. Limites explícitos: 1.000 processos em PDF, 5.000 em XLSX/CSV, sem truncamento silencioso.
 - [x] **RF-022 / RNF-016 — Processamento de documentos:** extração de texto/tabelas de DOCX, XLSX, CSV e PDF; aplicação concreta em **Relatórios → Importar dados** para unidades, usuários e orientações por CSV/XLSX e workflows completos por JSON. Modelos, prévia com erros por linha, confirmação com permissões revalidadas e gravação transacional sem lotes parciais. Sem OCR, atualização em massa ou execução de macros/fórmulas. [Contratos, limites e validações](README.md#importacao-de-cadastros). Homologação visual de navegadores/dispositivos permanece pendente.
@@ -88,6 +99,8 @@ Os avisos existentes ainda precisam dos complementos de prazo, aprovação e aut
 Responsáveis e datas de entrega devem ser definidos pela equipe. Em 16/10/2026, a integração de `origin/main` (`bf402ee`) com `implementacao-do-orientador` e os trabalhos locais foi concluída no commit `7c60bd5`, enviado primeiro à branch e depois integrado e publicado na `main`, conforme autorização do desenvolvedor. Consulte o [registro da integração e publicação](ATUALIZACOES/2026-10-16.md).
 
 ## Ambiente local — 15/10/2026
+
+- [x] **Contêineres — 16/10/2026:** frontend/backend reconstruídos e quatro serviços do Compose ativos; banco e Mailpit saudáveis. Site, login e prévias autenticadas DOCX/CSV validados. A necessidade de atualizar a API para disponibilizar a rota de prévia foi resolvida; homologação completa de anexos permanece aberta. [Registro](ATUALIZACOES/2026-10-16.md).
 
 - [x] Inicializar frontend, API e banco local: frontend em localhost:5173, API em localhost:5175 e PostgreSQL local preexistente em 127.0.0.1:55439. Login, consulta autenticada, HTTP e CORS validados. Consulte o [registro](ATUALIZACOES/2026-10-15.md).
 

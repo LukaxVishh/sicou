@@ -35,11 +35,9 @@ export function GuidePage({ companyId }: { companyId?: string }) {
     {error && <p role="alert" className="rounded-lg bg-rose-50 p-4 text-rose-700">{error}</p>}
     {loading ? <p role="status">Carregando áreas...</p> : <>
       {areas.length === 0 ? <p className="rounded-xl border border-dashed p-8 text-center text-slate-500">Nenhuma área autorizada com o Orientador habilitado.</p> : <>
-        <label className="block text-sm font-medium">Área
-          <select className="mt-2 block w-full rounded-lg border border-slate-300 bg-white p-3" value={selected} onChange={e => setSelected(e.target.value)}>
-            {areas.map(a => <option key={a.id} value={a.id}>{a.companyName} — {a.name}</option>)}
-          </select>
-        </label>
+        {!contextAreaId && areas.length > 1 && <nav aria-label="Setores do Orientador" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {areas.map(area => <button key={area.id} type="button" aria-pressed={selected === area.id} onClick={() => setSelected(area.id)} className={`rounded-xl border p-4 text-left transition ${selected === area.id ? 'border-amber-400 bg-amber-50 text-amber-900' : 'border-slate-200 bg-white text-slate-700 hover:border-amber-300'}`}><span className="block font-semibold">{area.name}</span><span className="text-xs text-slate-500">{area.companyName}</span></button>)}
+        </nav>}
         <GuideWorkspace key={`${selected}-${revision}`} areaId={selected} />
       </>}
     </>}

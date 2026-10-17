@@ -1,0 +1,7 @@
+{
+  "name": "sicou-guide-population",
+  "private": true,
+  "type": "module",
+  "scripts": { "seed": "node seed.mjs" },
+  "dependencies": { "docx": "^9.5.1", "pdf-lib": "^1.17.1" }
+}

@@ -1442,6 +1442,12 @@ Este README foi reescrito com base na estrutura e no código atual do `backend.z
 
 ### Orientador implementado
 
+#### Prévia autorizada de anexos — 16/10/2026
+
+`GET /api/areas/{areaId}/guide/items/{id}/preview` usa a mesma autorização de `GetFileAsync`: setor e empresa autorizados, módulo habilitado e publicação para leitores; gestores podem consultar rascunhos no próprio escopo. Retorna o resultado de `DocumentProcessingService` (`fileName`, `format`, `text`, `tables`, `warnings`, `pageCount`), com `Cache-Control: no-store`.
+
+O processamento mantém os limites existentes (10 MB de entrada, proteção de arquivos ZIP, texto/tabelas limitados e sem execução de macros/fórmulas). Duas prévias podem ser processadas simultaneamente por instância; excedentes recebem 429. Os limites de extração aparecem nos avisos. DOCX/XLSX/CSV são usados pela interface; PDF usa o endpoint de arquivo existente, autenticado, com Blob PDF no navegador. Nenhum serviço externo recebe os anexos. A rota de download existente permanece compatível. Sem migrations ou dependências adicionais.
+
 Consulte [ORIENTADOR.md](ORIENTADOR.md) para uso, endpoints, migração e execução da bateria Python.
 
 ### Recuperação de senha e notificações

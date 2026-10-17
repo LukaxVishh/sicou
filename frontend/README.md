@@ -1153,6 +1153,20 @@ A próxima etapa deve focar em transformar essa base estrutural em governança r
 
 ### Orientador implementado
 
+#### Consulta por setor e tipo — 16/10/2026
+
+A interação final usa um painel de detalhes separado: selecionar uma orientação abre título, atualização, conteúdo e ações no espaço principal; os cards passam a uma coluna lateral direita de 320 px, com seleção destacada e rolagem própria. Fechar o painel restaura o grid e devolve foco ao card. Trocar de tipo limpa a seleção. Essa interação substitui a expansão dentro de cada retângulo descrita nos ajustes anteriores.
+
+Ajuste posterior: cabeçalhos ampliados para 56 px, fonte de 16 px, ícones de 20 px e colunas a partir de 280 px. O bloco de setor/empresa é omitido quando o setor já vem do contexto da página ou há somente um setor disponível; a consulta geral com vários setores mantém a seleção.
+
+Os grids de tipos e orientações usam retângulos compactos: cabeçalho de 48 px, ícone e nome em uma linha, sem contadores, seta ou metadados dentro do card fechado. Títulos longos têm reticências e tooltip; ao expandir por clique ou Enter, a orientação revela título completo, atualização, instruções e ações de consulta. As colunas são distribuídas a partir de 230 px; abrir um item não estica os vizinhos. Ajuste validado em desktop, conforme o foco solicitado pelo desenvolvedor.
+
+A página mostra os setores autorizados em cards. Ao escolher um setor, o primeiro grid contém os tipos de orientação (categorias existentes); selecionar um tipo abre o grid das orientações. A busca filtra os itens e as contagens dos tipos. Os cards começam recolhidos, com título e ícone do formato; expandir revela instruções e ações de consulta.
+
+A engrenagem no canto superior direito do workspace aparece somente quando `canManage` é verdadeiro. Ela abre a seção de cadastro, com tipos, formulário de orientação e ações de edição/publicação/exclusão. Trocar de setor reinicia esse estado. A autorização permanece no servidor.
+
+`GuideFilePreview` abre um diálogo dentro da aplicação, com fechamento por botão ou Escape e foco controlado pelo diálogo nativo. PDF é carregado por requisição autenticada e exibido por URL de objeto, revogada ao fechar. DOCX, XLSX e CSV usam texto/tabelas do endpoint autenticado de prévia. Não há download automático nem envio a visualizadores externos. Prévia Office não preserva layout, imagens e gráficos; DOC/XLS antigos e demais formatos informam indisponibilidade e pedem versão compatível. Links externos continuam abrindo em outra aba.
+
 O módulo está disponível em /app/guide e na aba de guias da empresa. Inclui categorias, orientações, rascunhos, publicação, busca, links e anexos autenticados. Consulte [a documentação do módulo](../backend/ORIENTADOR.md).
 
 ### Recuperação de senha e notificações

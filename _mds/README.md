@@ -35,6 +35,8 @@ Os documentos dos módulos complementam os registros diários com detalhes de us
 
 ## Dados de demonstração local
 
+Para uma população mais completa do Orientador, use [scratch/guide-population](../scratch/guide-population/README.md): 72 orientações em Operações, Recursos Humanos e Tecnologia, com seis tipos por setor e 60 anexos PDF/DOCX/CSV. A carga foi aplicada em 16/10 na API local da porta 8080 e pode ser repetida sem duplicação. Não é executada automaticamente na inicialização.
+
 O script [scratch/seed_large_demo.mjs](../scratch/seed_large_demo.mjs) popula somente o banco local `guide_test` em `127.0.0.1:55439`, com a API em `localhost:5175`. Execute da raiz: `node scratch/seed_large_demo.mjs`. Requer o PostgreSQL, a API e o acesso administrativo de demonstração já configurados localmente.
 
 A população padrão contém 7.200 processos em três empresas e 12 setores, distribuídos pelos últimos 180 dias, com todos os status, responsáveis e solicitações sem responsável. Também prepara 15 unidades novas, 42 usuários, 24 tipos de processo homologados, 48 campos reutilizáveis e orientações para consulta. A empresa de demonstração original e seus logins continuam disponíveis; os gestores, analistas e usuários de unidade já existentes recebem acesso aos setores de teste da própria empresa.
