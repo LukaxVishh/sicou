@@ -1,3 +1,4 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import React, { useState, useMemo } from 'react';
 import { X, Play, ArrowRight, RotateCcw, CornerUpLeft, CheckCircle2, Layers, Info } from 'lucide-react';
 import type { ProcessType } from '../types';
@@ -223,7 +224,7 @@ export const ProcessSimulatorModal: React.FC<ProcessSimulatorModalProps> = ({
 
                       {/* Renderizador de Inputs */}
                       {field.type === FieldType.Select ? (
-                        <select
+                        <NativeSelectDropdown
                           disabled={isDisabled}
                           value={formValues[field.fieldDefinitionId] || ''}
                           onChange={(e) => handleFieldChange(field.fieldDefinitionId, e.target.value)}
@@ -251,7 +252,7 @@ export const ProcessSimulatorModal: React.FC<ProcessSimulatorModalProps> = ({
                               <option value="Não">Não</option>
                             </>
                           )}
-                        </select>
+                        </NativeSelectDropdown>
                       ) : field.type === FieldType.TextArea ? (
                         <textarea
                           rows={2}

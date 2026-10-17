@@ -1,6 +1,6 @@
-import { Building2, Edit, Eye, Plus, RefreshCcw, Trash2 } from 'lucide-react';
+import { BadgeCheck, Ban, Building2, Edit, Eye, Plus, RefreshCcw, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { ActionsDropdown } from '../../../shared/components';
+import { ActionsDropdown, SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import {
   CreateCompanyModal,
   DeleteCompanyModal,
@@ -69,6 +69,9 @@ export function CompaniesPage() {
     setSelectedCompany(null);
   }
 
+  const activeCompanies = companies.filter((company) => company.isActive).length;
+  const inactiveCompanies = companies.length - activeCompanies;
+
   useEffect(() => {
     let isMounted = true;
 
@@ -107,26 +110,25 @@ export function CompaniesPage() {
   }, []);
 
   return (
-    <div>
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Administração</p>
-
-          <h1 className="mt-2 text-2xl font-bold text-slate-900">
-            Empresas
-          </h1>
-
-          <p className="mt-2 text-sm text-slate-600">
-            Gerencie as empresas cadastradas na plataforma Sicou.
-          </p>
+    <div className="mx-auto w-full max-w-[1680px] space-y-6">
+      <header className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-5 xl:flex-row xl:items-end">
+        <div className="flex items-start gap-4">
+          <div className="hidden h-14 w-1 shrink-0 rounded-full bg-indigo-500 sm:block" />
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700">Administração · Cadastros</p>
+            <h1 className="mt-1.5 text-3xl font-semibold tracking-tight text-slate-950">Empresas</h1>
+            <p className="mt-1.5 max-w-xl text-sm leading-5 text-slate-500">
+              Consulte e mantenha os cadastros das organizações da plataforma.
+            </p>
+          </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2 xl:pb-0.5">
           <button
             type="button"
             onClick={() => void loadCompanies({ silent: true })}
             disabled={isRefreshing || isLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
           >
             <RefreshCcw className="h-4 w-4" />
             Atualizar
@@ -135,73 +137,102 @@ export function CompaniesPage() {
           <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm shadow-indigo-600/15 transition hover:bg-indigo-700"
           >
             <Plus className="h-4 w-4" />
             Nova empresa
           </button>
         </div>
-      </div>
+      </header>
+
+      <section aria-label="Resumo das empresas" className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white sm:grid-cols-3">
+        <div className="flex items-center justify-between gap-4 px-5 py-4 sm:border-r sm:border-slate-200 sm:px-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total cadastradas</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{isLoading ? '—' : companies.length}</p>
+          </div>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+            <Building2 className="h-5 w-5" />
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-slate-200 px-5 py-4 sm:border-r sm:border-t-0 sm:px-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ativas</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{isLoading ? '—' : activeCompanies}</p>
+          </div>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+            <BadgeCheck className="h-5 w-5" />
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-slate-200 px-5 py-4 sm:border-t-0 sm:px-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Inativas</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{isLoading ? '—' : inactiveCompanies}</p>
+          </div>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
+            <Ban className="h-5 w-5" />
+          </span>
+        </div>
+      </section>
 
       {errorMessage && (
-        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMessage}
-        </div>
+        <SystemNotice className="mt-6">{errorMessage}</SystemNotice>
       )}
 
-      <div className="mt-6 rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-        <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-4">
-          <div className="rounded-xl bg-slate-100 p-2">
-            <Building2 className="h-5 w-5 text-slate-700" />
-          </div>
-
+      <section aria-labelledby="company-directory-title" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">
-              Empresas cadastradas
-            </h2>
-
-            <p className="text-sm text-slate-500">
-              {companies.length} empresa(s) encontrada(s)
-            </p>
+            <h2 id="company-directory-title" className="text-base font-semibold tracking-tight text-slate-900">Diretório de empresas</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Dados cadastrais, situação e data de inclusão.</p>
           </div>
+          <span className="text-xs font-medium text-slate-400">{companies.length} {companies.length === 1 ? 'registro' : 'registros'}</span>
         </div>
 
         {isLoading ? (
-          <div className="px-6 py-10 text-center text-sm text-slate-500">
-            Carregando empresas...
-          </div>
+          <SystemLoadingState label="Carregando empresas..." />
         ) : companies.length === 0 ? (
-          <div className="px-6 py-10 text-center">
-            <p className="text-sm font-medium text-slate-700">
-              Nenhuma empresa encontrada.
-            </p>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Clique em “Nova empresa” para iniciar o cadastro.
-            </p>
-          </div>
+          <SystemEmptyState
+            icon={Building2}
+            title="Nenhuma empresa cadastrada"
+            description="Adicione uma empresa para começar a organizar a plataforma."
+            action={<button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
+            >
+              <Plus className="h-4 w-4" /> Nova empresa
+            </button>}
+          />
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
+            <table className="w-full min-w-[760px] table-fixed divide-y divide-slate-100">
+              <caption className="sr-only">Empresas cadastradas na plataforma</caption>
+              <colgroup>
+                <col className="w-[25%]" />
+                <col className="w-[21%]" />
+                <col className="w-[15%]" />
+                <col className="w-[24%]" />
+                <col className="w-[15%]" />
+              </colgroup>
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Nome
                   </th>
 
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Documento
                   </th>
 
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Status
                   </th>
 
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Criada em
                   </th>
 
-                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Ações
                   </th>
                 </tr>
@@ -209,37 +240,39 @@ export function CompaniesPage() {
 
               <tbody className="divide-y divide-slate-200 bg-white">
                 {companies.map((company) => (
-                  <tr key={company.id}>
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {company.name}
-                        </p>
-
+                  <tr key={company.id} className="transition-colors hover:bg-slate-50/70">
+                    <td className="whitespace-nowrap px-5 py-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
+                          <Building2 className="h-4 w-4" />
+                        </span>
+                        <p className="truncate text-sm font-semibold text-slate-900">{company.name}</p>
                       </div>
                     </td>
 
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-700">
-                      {company.document || 'Não informado'}
+                    <td className="whitespace-nowrap px-5 py-4 font-mono text-sm text-slate-600">
+                      {company.document || <span className="font-sans text-slate-400">Não informado</span>}
                     </td>
 
-                    <td className="whitespace-nowrap px-6 py-4">
+                    <td className="whitespace-nowrap px-5 py-4">
                       {company.isActive ? (
-                        <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                           Ativa
                         </span>
                       ) : (
-                        <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
                           Inativa
                         </span>
                       )}
                     </td>
 
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-700">
+                    <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-600">
                       {formatDate(company.createdAt)}
                     </td>
 
-                    <td className="whitespace-nowrap px-6 py-4">
+                    <td className="whitespace-nowrap px-5 py-4">
                       <div className="flex justify-end">
                         <ActionsDropdown
                           items={[
@@ -269,7 +302,7 @@ export function CompaniesPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       <CreateCompanyModal
         isOpen={isCreateModalOpen}

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { apiFetch } from '../../shared/api';
 import { useAuth } from '../auth/providers';
+import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../shared/components';
 
 type Notification = { id: string; title: string; url: string; createdAt: string; readAt: string | null };
 type NotificationPage = { items: Notification[]; unreadCount: number; totalCount: number; page: number; pageSize: number };
@@ -55,11 +56,11 @@ export function NotificationBell() {
     {open && <section id="notification-panel" aria-label="Notificações" className="fixed left-4 right-4 top-20 z-50 rounded-xl border bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-96">
       <div className="flex items-center justify-between border-b p-4"><h2 className="font-semibold">Notificações</h2><button aria-label="Fechar notificações" onClick={() => setOpen(false)}><X size={18} /></button></div>
       {!!data?.unreadCount && <button disabled={busy} onClick={() => void read()} className="p-3 text-sm text-indigo-700 disabled:opacity-50">Marcar todas como lidas</button>}
-      {error && <p role="alert" className="p-3 text-sm text-red-700">{error}<button onClick={() => void load()} className="ml-2 underline">Tentar novamente</button></p>}
+      {error && <SystemNotice className="m-3">{error}<button onClick={() => void load()} className="ml-2 font-semibold underline">Tentar novamente</button></SystemNotice>}
       <ul className="max-h-80 overflow-y-auto divide-y">
         {data?.items.map(n => <li key={n.id}><button disabled={busy} onClick={() => void read(n)} className={`w-full p-4 text-left disabled:opacity-50 ${n.readAt ? 'bg-white' : 'bg-indigo-50'}`}><p className="text-sm font-medium">{!n.readAt && <span aria-label="Não lida" className="mr-2 inline-block h-2 w-2 rounded-full bg-indigo-600" />}{n.title}</p><time className="text-xs text-slate-500">{new Date(n.createdAt).toLocaleString('pt-BR')}</time></button></li>)}
-        {!data && !error && <li className="p-5 text-sm">Carregando...</li>}
-        {data && !data.items.length && <li className="p-5 text-sm text-slate-500">Nenhuma notificação.</li>}
+        {!data && !error && <li><SystemLoadingState compact label="Carregando notificações..." /></li>}
+        {data && !data.items.length && <li><SystemEmptyState compact title="Nenhuma notificação" /></li>}
       </ul>
       {data && data.totalCount > data.pageSize && <div className="flex items-center justify-between border-t p-3 text-sm"><button disabled={page === 1} onClick={() => setPage(p => p - 1)}>Anterior</button><span>Página {page}</span><button disabled={page * data.pageSize >= data.totalCount} onClick={() => setPage(p => p + 1)}>Próxima</button></div>}
     </section>}

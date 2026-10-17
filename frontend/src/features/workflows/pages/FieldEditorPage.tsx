@@ -1,3 +1,5 @@
+import { SystemLoadingState } from '../../../shared/components';
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
@@ -372,10 +374,7 @@ export const FieldEditorPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-        <p className="text-xs font-semibold text-slate-500">Carregando dados do campo...</p>
-      </div>
+      <div className="flex min-h-[60vh] items-center justify-center"><SystemLoadingState label="Carregando dados do campo..." /></div>
     );
   }
 
@@ -497,7 +496,7 @@ export const FieldEditorPage: React.FC = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-xs font-bold text-slate-700">Área Responsável</label>
-                <select
+                <NativeSelectDropdown
                   value={areaId}
                   disabled={isEditing}
                   onChange={(e) => setAreaId(e.target.value)}
@@ -508,7 +507,7 @@ export const FieldEditorPage: React.FC = () => {
                       {a.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelectDropdown>
               </div>
 
               <div>
@@ -854,7 +853,7 @@ export const FieldEditorPage: React.FC = () => {
 
               {/* 8. Seleção Única (Dropdown) */}
               {type === FieldType.Select && (
-                <select
+                <NativeSelectDropdown
                   value={previewValue}
                   onChange={(e) => setPreviewValue(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -865,7 +864,7 @@ export const FieldEditorPage: React.FC = () => {
                       {opt}
                     </option>
                   ))}
-                </select>
+                </NativeSelectDropdown>
               )}
 
               {/* 9. Múltipla Seleção */}

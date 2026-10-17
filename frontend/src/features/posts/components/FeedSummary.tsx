@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { getPosts, postImageUrl } from '../api';
 import type { Post } from '../types';
+import { SystemEmptyState } from '../../../shared/components';
 
 export function FeedSummary() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -14,20 +15,20 @@ export function FeedSummary() {
   }, []);
 
   return (
-    <section className="mt-6 rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+    <section className="rounded-2xl border border-slate-200/90 bg-white shadow-sm">
+      <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-5">
         <div>
-          <p className="text-base font-semibold text-slate-900">Feed corporativo</p>
+          <h2 className="text-lg font-bold tracking-tight text-slate-950">Feed corporativo</h2>
           <p className="text-sm text-slate-500">Comunicados e novidades recentes</p>
         </div>
 
-        <Link to="/app/feed" className="inline-flex items-center gap-1 text-sm font-semibold text-slate-700 hover:text-slate-900">
+        <Link to="/app/feed" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-800">
           Ver feed <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
       {posts.length === 0 ? (
-        <p className="px-6 py-8 text-sm text-slate-500">Nenhuma publicação recente.</p>
+        <SystemEmptyState compact title="Nenhuma publicação recente" className="border-t border-slate-100" />
       ) : (
         <div className="divide-y divide-slate-100">
           {posts.map((post) => (

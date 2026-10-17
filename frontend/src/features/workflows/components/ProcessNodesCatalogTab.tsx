@@ -5,6 +5,8 @@ import type { ProcessNode } from '../types';
 import { ProcessNodeType } from '../types';
 import * as workflowsApi from '../api';
 import { AssignNodeUsersModal } from './AssignNodeUsersModal';
+import { useSystemDialog } from '../../../shared/components';
+import { SystemEmptyState } from '../../../shared/components';
 
 interface ProcessNodesCatalogTabProps {
   areaId: string;
@@ -39,6 +41,7 @@ export const ProcessNodesCatalogTab: React.FC<ProcessNodesCatalogTabProps> = ({
   canManage,
 }) => {
   const navigate = useNavigate();
+  const { confirm, showAlert } = useSystemDialog();
   const [nodeForAssignment, setNodeForAssignment] = useState<ProcessNode | null>(null);
 
   const handleOpenCreate = () => {
@@ -50,12 +53,14 @@ export const ProcessNodesCatalogTab: React.FC<ProcessNodesCatalogTabProps> = ({
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Deseja realmente desativar o local de processo "${name}"?`)) return;
+    if (!(await confirm(`Deseja realmente desativar o local de processo "${name}"?`, {
+      title: 'Desativar local de processo', confirmLabel: 'Desativar', tone: 'danger',
+    }))) return;
     try {
       await workflowsApi.deleteNode(id);
       onRefresh();
     } catch (err: any) {
-      alert(err?.message || 'Erro ao desativar local de processo.');
+      await showAlert(err?.message || 'Erro ao desativar local de processo.', { title: 'Não foi possível desativar o local', tone: 'danger' });
     }
   };
 
@@ -98,8 +103,8 @@ export const ProcessNodesCatalogTab: React.FC<ProcessNodesCatalogTabProps> = ({
             <tbody className="divide-y divide-slate-100 text-sm">
               {nodes.length === 0 ? (
                 <tr>
-                  <td colSpan={canManage ? 6 : 5} className="py-8 text-center text-slate-400">
-                    Nenhum local de processo cadastrado nesta área até o momento.
+                  <td colSpan={canManage ? 6 : 5} className="p-0">
+                    <SystemEmptyState compact title="Nenhum local cadastrado" description="Esta área ainda não possui locais de processo." />
                   </td>
                 </tr>
               ) : (

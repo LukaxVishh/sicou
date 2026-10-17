@@ -1,6 +1,7 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
+import { SystemEmptyState, SystemLoadingState } from '../../../shared/components';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Workflow,
   Inbox,
   UserCheck,
   GitBranch,
@@ -192,30 +193,28 @@ export const WorkflowsPage: React.FC = () => {
     (currentAreaAccess?.canManage ?? false);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-[1680px] space-y-6">
       {/* Header com Seletor de Empresa e Área */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <header className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-5 xl:flex-row xl:items-end">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
-            <Workflow className="w-6 h-6" />
-          </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700">Operações e processos</p>
+            <h1 className="mt-1.5 text-3xl font-semibold tracking-tight text-slate-950">
               Módulo de Workflows & Processos
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="mt-1.5 max-w-2xl text-sm leading-5 text-slate-500">
               Gestão de fluxos por área da sede, catálogos reutilizáveis e atendimento operacional de chamados.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 xl:pb-0.5">
           {/* Seletor de Empresa para SuperAdmin */}
           {isSuperAdmin && companies.length > 0 && (
-            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+            <div className="flex min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
               <Building className="w-4 h-4 text-slate-500" />
               <span className="text-xs font-semibold text-slate-600">Empresa:</span>
-              <select
+              <NativeSelectDropdown
                 value={selectedCompanyId}
                 onChange={(e) => {
                   setSelectedCompanyId(e.target.value);
@@ -229,16 +228,16 @@ export const WorkflowsPage: React.FC = () => {
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelectDropdown>
             </div>
           )}
 
           {/* Seletor de Área da Sede */}
           {areas.length > 0 ? (
-            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+            <div className="flex min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
               <Building2 className="w-4 h-4 text-indigo-600" />
               <span className="text-xs font-semibold text-slate-600">Área:</span>
-              <select
+              <NativeSelectDropdown
                 value={selectedAreaId}
                 onChange={(e) => {
                   setSelectedAreaId(e.target.value);
@@ -255,7 +254,7 @@ export const WorkflowsPage: React.FC = () => {
                     {a.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelectDropdown>
             </div>
           ) : (
             <span className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
@@ -265,7 +264,7 @@ export const WorkflowsPage: React.FC = () => {
 
           <button
             onClick={loadAreaData}
-            className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-indigo-600"
             title="Atualizar Dados"
           >
             <RefreshCw className="w-4 h-4" />
@@ -273,13 +272,13 @@ export const WorkflowsPage: React.FC = () => {
 
           <button
             onClick={() => setIsOpenProcessModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
           >
             <Plus className="w-4 h-4" />
             Abrir Processo
           </button>
         </div>
-      </div>
+      </header>
 
       {error && (
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center gap-2">
@@ -289,10 +288,10 @@ export const WorkflowsPage: React.FC = () => {
       )}
 
       {/* Navegação de Abas do Módulo */}
-      <div className="bg-white rounded-xl border border-slate-200 p-1 flex overflow-x-auto shadow-sm">
+      <div className="flex overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
         <button
           onClick={() => setActiveTab('inbox')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
+          className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
             activeTab === 'inbox'
               ? 'bg-indigo-600 text-white shadow-sm'
               : 'text-slate-600 hover:bg-slate-50'
@@ -388,17 +387,9 @@ export const WorkflowsPage: React.FC = () => {
 
       {/* Conteúdo da Aba */}
       {loading ? (
-        <div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-slate-400 text-sm">
-          Carregando informações da área...
-        </div>
+        <div className="rounded-xl border border-slate-200 bg-white"><SystemLoadingState label="Carregando informações da área..." /></div>
       ) : !selectedAreaId && activeTab !== 'my' ? (
-        <div className="bg-white p-12 rounded-xl border border-slate-200 text-center space-y-3 shadow-sm">
-          <Building2 className="w-12 h-12 text-slate-300 mx-auto" />
-          <h3 className="text-base font-bold text-slate-700">Nenhuma Área da Sede Selecionada</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Para gerenciar árvores, locais e campos reutilizáveis, é necessário que a empresa possua áreas cadastradas na sede. Selecione outra empresa acima ou cadastre áreas no menu de Governança.
-          </p>
-        </div>
+        <SystemEmptyState icon={Building2} className="rounded-xl border border-slate-200 bg-white shadow-sm" title="Nenhuma Área da Sede Selecionada" description="Para gerenciar árvores, locais e campos reutilizáveis, é necessário que a empresa possua áreas cadastradas na sede. Selecione outra empresa acima ou cadastre áreas no menu de Governança." />
       ) : (
         <>
           {activeTab === 'inbox' && (

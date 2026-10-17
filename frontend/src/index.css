@@ -19,3 +19,11 @@ body,
 body {
   margin: 0;
 }
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"],
+button[aria-invalid="true"] {
+  border-color: #f43f5e !important;
+  box-shadow: 0 0 0 3px rgb(244 63 94 / 14%) !important;
+}

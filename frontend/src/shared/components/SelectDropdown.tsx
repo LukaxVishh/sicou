@@ -7,13 +7,16 @@ import {
   useEffect,
   useRef,
   useState,
+  type KeyboardEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { twMerge } from 'tailwind-merge';
 
 export type SelectDropdownOption = {
   value: string;
   label: string;
   description?: string;
+  disabled?: boolean;
 };
 
 type SelectDropdownProps = {
@@ -23,6 +26,11 @@ type SelectDropdownProps = {
   placeholder?: string;
   disabled?: boolean;
   ariaLabel?: string;
+  className?: string;
+  id?: string;
+  ariaDescribedby?: string;
+  ariaLabelledby?: string;
+  required?: boolean;
 };
 
 type MenuPosition = {
@@ -39,13 +47,19 @@ export function SelectDropdown({
   onChange,
   placeholder = 'Selecione',
   disabled = false,
-  ariaLabel = 'Selecionar opção',
+  ariaLabel,
+  className,
+  id,
+  ariaDescribedby,
+  ariaLabelledby,
+  required,
 }: SelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
 
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const selectedOption = options.find((option) => option.value === value);
 
@@ -103,9 +117,52 @@ export function SelectDropdown({
     setIsOpen((current) => !current);
   }
 
+  function moveFocus(direction: 'first' | 'last' | 'next' | 'previous') {
+    const enabledIndices = options
+      .map((option, index) => option.disabled ? -1 : index)
+      .filter((index) => index >= 0);
+
+    if (!enabledIndices.length) return;
+
+    const currentIndex = enabledIndices.indexOf(
+      optionRefs.current.indexOf(document.activeElement as HTMLButtonElement),
+    );
+    let targetIndex = enabledIndices[0];
+
+    if (direction === 'last') targetIndex = enabledIndices.at(-1)!;
+    if (direction === 'next' && currentIndex >= 0) {
+      targetIndex = enabledIndices[(currentIndex + 1) % enabledIndices.length];
+    }
+    if (direction === 'previous' && currentIndex >= 0) {
+      targetIndex = enabledIndices[(currentIndex - 1 + enabledIndices.length) % enabledIndices.length];
+    }
+
+    optionRefs.current[targetIndex]?.focus();
+  }
+
+  function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const direction = event.key === 'ArrowDown'
+      ? (isOpen ? 'next' : 'first')
+      : event.key === 'ArrowUp'
+        ? (isOpen ? 'previous' : 'last')
+        : undefined;
+
+    if (direction) {
+      event.preventDefault();
+      if (!isOpen) {
+        updateMenuPosition();
+        setIsOpen(true);
+        requestAnimationFrame(() => moveFocus(direction));
+      } else {
+        moveFocus(direction);
+      }
+    }
+  }
+
   function handleSelect(optionValue: string) {
     onChange(optionValue);
     handleClose();
+    buttonRef.current?.focus();
   }
 
   useEffect(() => {
@@ -126,9 +183,10 @@ export function SelectDropdown({
       handleClose();
     }
 
-    function handleKeyDown(event: KeyboardEvent) {
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
       if (event.key === 'Escape') {
         handleClose();
+        buttonRef.current?.focus();
       }
     }
 
@@ -198,16 +256,27 @@ export function SelectDropdown({
                 : 'selectDropdownDown 140ms ease-out',
           }}
           role="listbox"
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              event.preventDefault();
+              moveFocus(event.key === 'ArrowDown' ? 'next' : 'previous');
+            } else if (event.key === 'Home' || event.key === 'End') {
+              event.preventDefault();
+              moveFocus(event.key === 'Home' ? 'first' : 'last');
+            }
+          }}
         >
-          {options.map((option) => {
+          {options.map((option, index) => {
             const isSelected = option.value === value;
 
             return (
               <button
                 key={option.value}
+                ref={(element) => { optionRefs.current[index] = element; }}
                 type="button"
+                disabled={option.disabled}
                 onClick={() => handleSelect(option.value)}
-                className="flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left text-sm transition hover:bg-slate-100"
+                className="flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left text-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                 role="option"
                 aria-selected={isSelected}
               >
@@ -240,10 +309,15 @@ export function SelectDropdown({
       <button
         ref={buttonRef}
         type="button"
+        id={id}
         onClick={handleToggle}
+        onKeyDown={handleTriggerKeyDown}
         disabled={disabled}
-        className="mt-2 flex w-full items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-900 outline-none transition hover:bg-slate-50 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 disabled:cursor-not-allowed disabled:opacity-70"
+        className={twMerge('mt-2 flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-900 outline-none transition hover:bg-slate-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-70', className)}
         aria-label={ariaLabel}
+        aria-describedby={ariaDescribedby}
+        aria-labelledby={ariaLabelledby}
+        aria-required={required || undefined}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >

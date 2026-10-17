@@ -8,6 +8,7 @@ import { getPosts, postImageUrl, setPostPinned } from '../../posts/api';
 import type { Post } from '../../posts/types';
 import { useAuth } from '../../auth/providers';
 import { SystemRoles } from '../../../shared/constants/roles';
+import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 
 type CompanyFeedSectionProps = {
   companyId: string;
@@ -101,24 +102,13 @@ export function CompanyFeedSection({ companyId }: CompanyFeedSectionProps) {
       </div>
 
       {errorMessage && (
-        <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {errorMessage}
-        </div>
+        <SystemNotice className="mt-5">{errorMessage}</SystemNotice>
       )}
 
       {isLoading ? (
-        <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-          Carregando comunicados do feed...
-        </div>
+        <SystemLoadingState className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white" label="Carregando comunicados do feed..." />
       ) : posts.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-8 text-center">
-          <p className="text-sm font-semibold text-slate-700">
-            Ainda não há comunicados publicados para esta empresa.
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            Os gestores e publicadores das áreas da sede podem emitir informativos institucionais a qualquer momento.
-          </p>
-        </div>
+        <SystemEmptyState className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white" title="Ainda não há comunicados publicados para esta empresa" description="Os gestores e publicadores das áreas da sede podem emitir informativos institucionais a qualquer momento." />
       ) : (
         <div className="mt-6 space-y-4">
           {posts.map((post) => (

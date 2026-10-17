@@ -182,21 +182,24 @@ export function AdminLayout() {
         {/* Header da Sidebar */}
         <div
           className={cn(
-            'flex h-16 items-center border-b border-slate-100 shrink-0 transition-all px-4',
-            isSidebarCollapsed ? 'justify-center' : 'justify-between px-6'
+            'flex h-16 items-center border-b border-slate-100 shrink-0 transition-all px-3',
+            isSidebarCollapsed ? 'justify-center' : 'justify-between px-4'
           )}
         >
           {!isSidebarCollapsed ? (
-            <div className="min-w-0">
-              <p className="text-lg font-bold text-indigo-900 tracking-tight truncate">Sicou</p>
-              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider truncate">
-                Governança Operacional
-              </p>
-            </div>
+            <img
+              src="/logos/separadas/logo-sicou-horizontal.png"
+              alt="Sicou — Governança Operacional"
+              className="block h-auto w-32 max-w-full object-contain"
+            />
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white font-extrabold text-base shadow-sm">
-              S
-            </div>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-700">
+              <img
+                src="/logos/separadas/icone-sicou-marca-branca.png"
+                alt="Sicou"
+                className="h-7 w-7 object-contain"
+              />
+            </span>
           )}
 
           <div className="flex items-center gap-1">
@@ -368,7 +371,7 @@ export function AdminLayout() {
                             ? 'justify-center p-2.5'
                             : 'gap-3 px-3 py-2.5',
                           isActive
-                            ? 'bg-indigo-600 text-white shadow-sm'
+                            ? 'bg-gradient-to-r from-indigo-600 to-violet-500 text-white shadow-md shadow-indigo-200/70'
                             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                         )
                       }
@@ -465,7 +468,7 @@ export function AdminLayout() {
       {/* MAIN CONTENT WRAPPER */}
       <div
         className={cn(
-          'flex flex-col min-h-screen transition-all duration-300 ease-in-out',
+          'flex min-w-0 flex-col min-h-screen transition-all duration-300 ease-in-out',
           isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'
         )}
       >
@@ -481,20 +484,6 @@ export function AdminLayout() {
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Botão Desktop para Recolher / Expandir Menu Lateral */}
-            <button
-              type="button"
-              onClick={toggleSidebarCollapse}
-              className="hidden lg:flex items-center justify-center rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 transition border border-slate-200 shadow-2xs"
-              title={isSidebarCollapsed ? 'Expandir Menu Lateral' : 'Recolher Menu Lateral (Modo Espaço Amplo)'}
-            >
-              {isSidebarCollapsed ? (
-                <PanelLeftOpen className="h-4 w-4" />
-              ) : (
-                <PanelLeftClose className="h-4 w-4" />
-              )}
-            </button>
-
             <div>
               <p className="text-sm font-semibold text-slate-900">
                 {selectedAreaContext ? `Contexto: ${selectedAreaContext.name}` : 'Ambiente Corporativo'}
@@ -507,14 +496,6 @@ export function AdminLayout() {
 
           <div className="flex items-center gap-3">
             <NotificationBell />
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold text-slate-900">
-                {user?.fullName}
-              </p>
-              <p className="text-xs text-slate-500">
-                {user?.roles.join(', ')}
-              </p>
-            </div>
 
             <button
               type="button"
@@ -527,7 +508,7 @@ export function AdminLayout() {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-8">
+        <main className="min-w-0 flex-1 p-4 lg:p-8">
           <Outlet />
         </main>
       </div>

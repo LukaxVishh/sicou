@@ -1,3 +1,5 @@
+import { NativeSelectDropdown } from '../../shared/components/NativeSelectDropdown';
+import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../shared/components';
 import { useEffect, useState } from "react";
 import {
   ChevronLeft,
@@ -156,7 +158,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <label className="text-xs font-semibold text-slate-600">
             Empresa
-            <select
+            <NativeSelectDropdown
               className={input}
               value={draft.companyId}
               onChange={(e) =>
@@ -175,7 +177,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
                   {o.name}
                 </option>
               ))}
-            </select>
+            </NativeSelectDropdown>
           </label>
           <label className="text-xs font-semibold text-slate-600">
             Buscar
@@ -195,7 +197,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
           </label>
           <label className="text-xs font-semibold text-slate-600">
             {kind === "guides" ? "Publicação" : "Situação"}
-            <select
+            <NativeSelectDropdown
               className={input}
               value={draft.status}
               onChange={(e) => change("status", e.target.value)}
@@ -215,12 +217,12 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
                   {label}
                 </option>
               ))}
-            </select>
+            </NativeSelectDropdown>
           </label>
           {kind !== "guides" && (
             <label className="text-xs font-semibold text-slate-600">
               Unidade
-              <select
+              <NativeSelectDropdown
                 className={input}
                 value={draft.unitId}
                 onChange={(e) => change("unitId", e.target.value)}
@@ -231,13 +233,13 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
                     {o.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelectDropdown>
             </label>
           )}
           {kind === "users" && (
             <label className="text-xs font-semibold text-slate-600">
               Perfil
-              <select
+              <NativeSelectDropdown
                 className={input}
                 value={draft.role}
                 onChange={(e) => change("role", e.target.value)}
@@ -248,7 +250,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
                     {label}
                   </option>
                 ))}
-              </select>
+              </NativeSelectDropdown>
             </label>
           )}
           {kind === "units" && (
@@ -281,7 +283,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
             <>
               <label className="text-xs font-semibold text-slate-600">
                 Setor
-                <select
+                <NativeSelectDropdown
                   className={input}
                   value={draft.areaId}
                   onChange={(e) =>
@@ -298,11 +300,11 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
                       {o.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelectDropdown>
               </label>
               <label className="text-xs font-semibold text-slate-600">
                 Categoria
-                <select
+                <NativeSelectDropdown
                   className={input}
                   value={draft.categoryId}
                   onChange={(e) => change("categoryId", e.target.value)}
@@ -313,7 +315,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
                       {o.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelectDropdown>
               </label>
             </>
           )}
@@ -360,10 +362,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
         </div>
       </form>
       {(error || optionsError) && (
-        <p
-          role="alert"
-          className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"
-        >
+        <SystemNotice>
           {error || optionsError}
           <button
             className="ml-3 underline"
@@ -374,7 +373,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
           >
             Tentar novamente
           </button>
-        </p>
+        </SystemNotice>
       )}
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col justify-between gap-4 border-b border-slate-100 p-5 sm:p-6 lg:flex-row lg:items-center">
@@ -446,29 +445,9 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
           </fieldset>
         )}
         {loading ? (
-          <div role="status" className="space-y-3 p-6">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-14 animate-pulse rounded-xl bg-slate-100"
-              />
-            ))}
-            <span className="sr-only">Carregando relatório</span>
-          </div>
+          <SystemLoadingState label="Carregando relatório..." />
         ) : !result?.items.length ? (
-          <div className="p-14 text-center">
-            <FileText className="mx-auto mb-4 h-10 w-10 text-slate-300" />
-            <p className="font-semibold text-slate-700">
-              {error
-                ? "Não foi possível carregar"
-                : "Nenhum registro neste recorte"}
-            </p>
-            <p className="mt-2 text-sm text-slate-500">
-              {error
-                ? "Confira o aviso acima."
-                : "Tente ajustar os filtros ou consultar outro período."}
-            </p>
-          </div>
+          <SystemEmptyState icon={FileText} className="min-h-56" title={error ? 'Não foi possível carregar' : 'Nenhum registro neste recorte'} description={error ? 'Confira o aviso acima.' : 'Tente ajustar os filtros ou consultar outro período.'} />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">

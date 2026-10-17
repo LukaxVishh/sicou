@@ -189,10 +189,16 @@ Contém recursos compartilhados entre as features:
 src/shared/api/apiFetch.ts
 src/shared/components/ActionsDropdown.tsx
 src/shared/components/SelectDropdown.tsx
+src/shared/components/NativeSelectDropdown.tsx
+src/shared/components/SystemDialogProvider.tsx
+src/shared/components/SystemFormValidationProvider.tsx
+src/shared/components/SystemStates.tsx
 src/shared/constants/roles.ts
 src/shared/constants/storageKeys.ts
 src/shared/utils/cn.ts
 ```
+
+O `SystemDialogProvider`, instalado globalmente por `AppProviders`, fornece `useSystemDialog()` com `confirm()` e `showAlert()`. Use esses métodos para confirmações e avisos da aplicação; não use `window.confirm`, `window.alert` ou diálogos nativos do navegador. O `SystemFormValidationProvider` intercepta as restrições nativas de formulário, apresenta erros no diálogo do Sicou e marca o campo inválido sem alterar suas regras HTML (`required`, limites e formatos). `SystemStates.tsx` oferece `SystemNotice`, `SystemEmptyState` e `SystemLoadingState` para manter avisos, listas vazias e carregamentos consistentes entre features.
 
 ---
 
@@ -369,7 +375,9 @@ Características:
 - Suporta descrição por opção.
 - Mostra opção selecionada com ícone de check.
 - Suporta estado desabilitado.
-- Usado atualmente nos campos de empresa e unidade dos modais de usuário.
+- Usado em campos com opções customizadas e descrições. `NativeSelectDropdown` adapta seletores JSX simples ao mesmo menu customizado em todas as áreas do frontend.
+- A adaptação preserva valores, callbacks, opções desabilitadas, envio por formulário e validação de campos obrigatórios.
+- O gatilho tem altura padrão de 40px; larguras e margens explícitas do layout original são preservadas, sem margem superior adicionada por padrão.
 
 ---
 

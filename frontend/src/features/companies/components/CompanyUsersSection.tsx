@@ -1,3 +1,4 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import {
   Briefcase,
   Building2,
@@ -14,6 +15,7 @@ import { getUsers } from '../../users/api';
 import type { User, UserRole } from '../../users/types';
 import { CreateUserModal, EditUserModal } from '../../users/components';
 import { ActionsDropdown } from '../../../shared/components';
+import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 
 type CompanyUsersSectionProps = {
   companyId: string;
@@ -143,9 +145,7 @@ export function CompanyUsersSection({ companyId }: CompanyUsersSectionProps) {
       </div>
 
       {errorMessage && (
-        <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {errorMessage}
-        </div>
+        <SystemNotice className="mt-5">{errorMessage}</SystemNotice>
       )}
 
       {/* Filtros */}
@@ -162,7 +162,7 @@ export function CompanyUsersSection({ companyId }: CompanyUsersSectionProps) {
         </div>
 
         <div>
-          <select
+          <NativeSelectDropdown
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
             className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
@@ -172,24 +172,15 @@ export function CompanyUsersSection({ companyId }: CompanyUsersSectionProps) {
             <option value="HEADQUARTER_USER">Usuário da Sede</option>
             <option value="AREA_ADMIN">Administrador de Área</option>
             <option value="UNIT_USER">Usuário de Unidade / Filial</option>
-          </select>
+          </NativeSelectDropdown>
         </div>
       </div>
 
       {/* Tabela de Usuários */}
       {isLoading ? (
-        <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-          Carregando colaboradores...
-        </div>
+        <SystemLoadingState className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white" label="Carregando colaboradores..." />
       ) : filteredUsers.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-8 text-center">
-          <p className="text-sm font-semibold text-slate-700">
-            Nenhum colaborador encontrado.
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            Cadastre os administradores, gestores de sede e atendentes de filial desta empresa.
-          </p>
-        </div>
+        <SystemEmptyState className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white" title="Nenhum colaborador encontrado" description="Cadastre os administradores, gestores de sede e atendentes de filial desta empresa." />
       ) : (
         <div className="mt-6 overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">

@@ -32,6 +32,7 @@ Os documentos dos módulos complementam os registros diários com detalhes de us
 - [14/10/2026 — Página Isolada de Tramitação e Regras de Parecer](ATUALIZACOES/2026-10-14.md)
 - [15/10/2026 — Workflows, transferências, acessos e SMTP](ATUALIZACOES/2026-10-15.md)
 - [16/10/2026 — Integração da main com relatórios e importação locais](ATUALIZACOES/2026-10-16.md)
+- [17/10/2026 — Ajustes visuais do frontend](ATUALIZACOES/2026-10-17.md)
 
 ## Dados de demonstração local
 

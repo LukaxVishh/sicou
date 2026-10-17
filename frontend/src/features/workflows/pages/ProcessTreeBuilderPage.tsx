@@ -1,3 +1,5 @@
+import { SystemLoadingState } from '../../../shared/components';
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -64,6 +66,7 @@ import {
   type NodeFieldItemConfig,
 } from '../components/NodeConfigMacroModal';
 import { ProcessSimulatorModal } from '../components/ProcessSimulatorModal';
+import { useSystemDialog } from '../../../shared/components';
 
 const nodeTypes = {
   workflowNode: WorkflowCustomNode,
@@ -74,6 +77,7 @@ const edgeTypes = {
 };
 
 export const ProcessTreeBuilderPage: React.FC = () => {
+  const { confirm } = useSystemDialog();
   const { treeId } = useParams<{ treeId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -805,7 +809,9 @@ const isGuid = (val?: string | null): boolean => {
 
   // Clonar Árvore para Nova Versão
   const handleCloneToNewVersion = async () => {
-    if (!treeId || !window.confirm(`Deseja criar uma nova versão (v${versionNumber + 1}) clonando a estrutura atual desta árvore?`)) return;
+    if (!treeId || !(await confirm(`Deseja criar uma nova versão (v${versionNumber + 1}) clonando a estrutura atual desta árvore?`, {
+      title: 'Criar nova versão', confirmLabel: 'Criar versão',
+    }))) return;
     try {
       setSaving(true);
       const cloned = await workflowsApi.cloneProcessTypeVersion(treeId);
@@ -820,7 +826,9 @@ const isGuid = (val?: string | null): boolean => {
 
   // Iniciar Nova Versão do Zero
   const handleCreateNewVersionFromScratch = async () => {
-    if (!treeId || !window.confirm(`Deseja iniciar uma nova versão (v${versionNumber + 1}) do zero para este processo?`)) return;
+    if (!treeId || !(await confirm(`Deseja iniciar uma nova versão (v${versionNumber + 1}) do zero para este processo?`, {
+      title: 'Iniciar versão do zero', confirmLabel: 'Iniciar versão',
+    }))) return;
     try {
       setSaving(true);
       const newVersion = await workflowsApi.createNewVersionFromScratch(treeId);
@@ -837,9 +845,10 @@ const isGuid = (val?: string | null): boolean => {
   const handleHomologate = async () => {
     if (
       !treeId ||
-      !window.confirm(
+      !(await confirm(
         'Deseja homologar esta árvore para produção? Ela se tornará a versão oficial para abertura de chamados pela sede e unidades, e a versão homologada anterior será inativada.'
-      )
+        , { title: 'Homologar árvore para produção', confirmLabel: 'Homologar', tone: 'success' }
+      ))
     )
       return;
     try {
@@ -894,12 +903,7 @@ const isGuid = (val?: string | null): boolean => {
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-        <p className="text-xs font-semibold text-slate-500">
-          Carregando Construtor Visual de Árvore de Processo...
-        </p>
-      </div>
+      <div className="flex min-h-[60vh] items-center justify-center"><SystemLoadingState label="Carregando Construtor Visual de Árvore de Processo..." /></div>
     );
   }
 
@@ -1010,10 +1014,11 @@ const isGuid = (val?: string | null): boolean => {
           {/* Botão de Sair durante a construção */}
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               if (isDraftStatus(status)) {
-                const confirmed = window.confirm(
-                  'Deseja sair do construtor de árvore? Você poderá retornar a qualquer momento para continuar a edição do seu rascunho.'
+                const confirmed = await confirm(
+                  'Deseja sair do construtor de árvore? Você poderá retornar a qualquer momento para continuar a edição do seu rascunho.',
+                  { title: 'Sair do construtor', confirmLabel: 'Sair do construtor' },
                 );
                 if (!confirmed) return;
               }
@@ -1145,7 +1150,7 @@ const isGuid = (val?: string | null): boolean => {
           <label className="block text-[11px] font-bold text-slate-700">
             Público-Alvo com Permissão de Abertura
           </label>
-          <select
+          <NativeSelectDropdown
             value={targetAudience}
             onChange={(e) => setTargetAudience(Number(e.target.value))}
             className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
@@ -1153,14 +1158,14 @@ const isGuid = (val?: string | null): boolean => {
             <option value={ProcessAudience.All}>Ambos (Sede e Unidades)</option>
             <option value={ProcessAudience.HeadquartersOnly}>Exclusivo para Sede</option>
             <option value={ProcessAudience.UnitsOnly}>Exclusivo para Unidades / Filiais</option>
-          </select>
+          </NativeSelectDropdown>
         </div>
 
         <div>
           <label className="block text-[11px] font-bold text-slate-700">
             Área Responsável
           </label>
-          <select
+          <NativeSelectDropdown
             value={areaId}
             disabled={isEditing}
             onChange={(e) => setAreaId(e.target.value)}
@@ -1171,7 +1176,7 @@ const isGuid = (val?: string | null): boolean => {
                 {a.name}
               </option>
             ))}
-          </select>
+          </NativeSelectDropdown>
         </div>
       </div>
 

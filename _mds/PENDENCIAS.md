@@ -37,7 +37,7 @@ A regra também está no [AGENTS.md da raiz](../AGENTS.md). Ferramentas sem supo
 ## Funcionalidades ainda ausentes
 
 - [x] **RF-011 — Transferência de processos:** mover processos entre unidades e registrar unidade de origem, destino, responsável, data e horário ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
-- [ ] **RF-018 — Dashboard gerencial:** apresentar indicadores reais de processos, unidades, prazos, status e desempenho operacional.
+- [ ] **RF-018 — Dashboard gerencial:** apresentar indicadores reais de processos, unidades, prazos, status e desempenho operacional. A apresentação visual do dashboard administrativo foi aproximada da referência em [2026-10-16.md](ATUALIZACOES/2026-10-16.md); os indicadores reais continuam pendentes.
 - [ ] **RF-024 — Monitoramento de automações:** implementar agente de comunicação e acompanhamento de execuções nos servidores locais.
 - [ ] **RF-025 / RNF-017 — Logs de automações:** registrar status, data/hora, mensagens de erro e duração das execuções.
 - [ ] **RF-026 — Alertas de automações:** detectar e avisar falhas, atrasos e interrupções.

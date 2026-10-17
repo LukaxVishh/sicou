@@ -7,7 +7,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { ActionsDropdown } from '../../../shared/components';
+import { ActionsDropdown, SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import { getAccessesByCompany } from '../../access-control/api';
 import type { UserAreaAccess } from '../../access-control/types';
 import {
@@ -115,9 +115,7 @@ export function CompanyAccessControlSection({
       </div>
 
       {errorMessage && (
-        <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {errorMessage}
-        </div>
+        <SystemNotice className="mt-5">{errorMessage}</SystemNotice>
       )}
 
       {/* Busca */}
@@ -134,18 +132,9 @@ export function CompanyAccessControlSection({
 
       {/* Tabela de Acessos */}
       {isLoading ? (
-        <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-          Carregando matriz de acessos...
-        </div>
+        <SystemLoadingState className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white" label="Carregando matriz de acessos..." />
       ) : filteredAccesses.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-8 text-center">
-          <p className="text-sm font-semibold text-slate-700">
-            Nenhuma permissão configurada para esta empresa.
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            Conceda privilégios aos gestores e publicadores das áreas da sede.
-          </p>
-        </div>
+        <SystemEmptyState className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white" title="Nenhuma permissão configurada para esta empresa" description="Conceda privilégios aos gestores e publicadores das áreas da sede." />
       ) : (
         <div className="mt-6 overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">

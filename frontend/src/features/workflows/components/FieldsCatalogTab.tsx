@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router';
 import type { FieldDefinition } from '../types';
 import { FieldType } from '../types';
 import * as workflowsApi from '../api';
+import { useSystemDialog } from '../../../shared/components';
+import { SystemEmptyState } from '../../../shared/components';
 
 interface FieldsCatalogTabProps {
   areaId: string;
@@ -33,6 +35,7 @@ export const FieldsCatalogTab: React.FC<FieldsCatalogTabProps> = ({
   canManage,
 }) => {
   const navigate = useNavigate();
+  const { confirm, showAlert } = useSystemDialog();
 
   const handleOpenCreate = () => {
     navigate(`/app/workflows/fields/new?areaId=${areaId}`);
@@ -43,12 +46,14 @@ export const FieldsCatalogTab: React.FC<FieldsCatalogTabProps> = ({
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Deseja realmente desativar o campo "${name}"?`)) return;
+    if (!(await confirm(`Deseja realmente desativar o campo "${name}"?`, {
+      title: 'Desativar campo', confirmLabel: 'Desativar', tone: 'danger',
+    }))) return;
     try {
       await workflowsApi.deleteField(id);
       onRefresh();
     } catch (err: any) {
-      alert(err?.message || 'Erro ao desativar campo.');
+      await showAlert(err?.message || 'Erro ao desativar campo.', { title: 'Não foi possível desativar o campo', tone: 'danger' });
     }
   };
 
@@ -91,8 +96,8 @@ export const FieldsCatalogTab: React.FC<FieldsCatalogTabProps> = ({
             <tbody className="divide-y divide-slate-100 text-sm">
               {fields.length === 0 ? (
                 <tr>
-                  <td colSpan={canManage ? 6 : 5} className="py-8 text-center text-slate-400">
-                    Nenhum campo cadastrado nesta área até o momento.
+                  <td colSpan={canManage ? 6 : 5} className="p-0">
+                    <SystemEmptyState compact title="Nenhum campo cadastrado" description="Esta área ainda não possui campos reutilizáveis." />
                   </td>
                 </tr>
               ) : (

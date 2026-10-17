@@ -1,8 +1,9 @@
+import { NativeSelectDropdown } from '../../shared/components/NativeSelectDropdown';
+import { SystemNotice } from '../../shared/components';
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import {
-  AlertCircle,
   ArrowRight,
   Check,
   CheckCircle2,
@@ -261,7 +262,7 @@ export function ImportWorkspace({ extraction }: { extraction: ReactNode }) {
             <div className="grid gap-4 md:grid-cols-3">
               <label className="text-xs font-semibold text-slate-600">
                 O que deseja importar?
-                <select
+                <NativeSelectDropdown
                   disabled={!!busy || !options}
                   value={kind}
                   className={input}
@@ -277,11 +278,11 @@ export function ImportWorkspace({ extraction }: { extraction: ReactNode }) {
                       {labels[k]}
                     </option>
                   ))}
-                </select>
+                </NativeSelectDropdown>
               </label>
               <label className="text-xs font-semibold text-slate-600">
                 Empresa de destino
-                <select
+                <NativeSelectDropdown
                   disabled={!!busy || !options}
                   value={company}
                   className={input}
@@ -297,12 +298,12 @@ export function ImportWorkspace({ extraction }: { extraction: ReactNode }) {
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelectDropdown>
               </label>
               {needsArea && (
                 <label className="text-xs font-semibold text-slate-600">
                   Setor de destino
-                  <select
+                  <NativeSelectDropdown
                     disabled={!!busy || !company}
                     value={area}
                     className={input}
@@ -317,7 +318,7 @@ export function ImportWorkspace({ extraction }: { extraction: ReactNode }) {
                         {a.name}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelectDropdown>
                 </label>
               )}
             </div>
@@ -404,12 +405,8 @@ export function ImportWorkspace({ extraction }: { extraction: ReactNode }) {
         )}
       </div>
       {error && (
-        <div
-          role="alert"
-          className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"
-        >
-          <AlertCircle className="h-5 w-5 shrink-0" />
-          <p>
+        <SystemNotice>
+          <>
             {error}
             {!options && (
               <button
@@ -422,8 +419,8 @@ export function ImportWorkspace({ extraction }: { extraction: ReactNode }) {
                 Tentar novamente
               </button>
             )}
-          </p>
-        </div>
+          </>
+        </SystemNotice>
       )}
       {preview && (
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">

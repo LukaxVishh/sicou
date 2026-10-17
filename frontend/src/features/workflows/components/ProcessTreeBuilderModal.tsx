@@ -1,3 +1,4 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import React, { useState } from 'react';
 import { X, Trash2, ArrowRight, Check, AlertCircle, Sparkles, MoveRight } from 'lucide-react';
 import type {
@@ -259,7 +260,7 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Adicionar Local do Catálogo nesta Árvore
                 </span>
-                <select
+                <NativeSelectDropdown
                   onChange={(e) => {
                     handleAddNode(e.target.value);
                     e.target.value = '';
@@ -274,7 +275,7 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                         {n.name} ({n.code})
                       </option>
                     ))}
-                </select>
+                </NativeSelectDropdown>
               </div>
 
               <div className="space-y-3">
@@ -353,7 +354,7 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                     Defina se o campo é obrigatório especificamente neste processo e adicione regras de dependência.
                   </span>
                 </div>
-                <select
+                <NativeSelectDropdown
                   onChange={(e) => {
                     handleAddField(e.target.value);
                     e.target.value = '';
@@ -366,7 +367,7 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                       {f.name} ({f.code})
                     </option>
                   ))}
-                </select>
+                </NativeSelectDropdown>
               </div>
 
               <div className="space-y-4">
@@ -405,7 +406,7 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                             <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                               Local de Exibição
                             </label>
-                            <select
+                            <NativeSelectDropdown
                               value={fieldState.processNodeId || ''}
                               onChange={(e) => {
                                 const val = e.target.value || undefined;
@@ -426,7 +427,7 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                                   </option>
                                 );
                               })}
-                            </select>
+                            </NativeSelectDropdown>
                           </div>
 
                           <div>
@@ -506,7 +507,7 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                   Adicionar Ligação de Fluxo entre Locais
                 </span>
                 <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <select
+                  <NativeSelectDropdown
                     id="fromNodeSelect"
                     className="w-full sm:w-1/2 px-3 py-1.5 border border-slate-300 rounded-lg text-xs"
                   >
@@ -516,9 +517,9 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                         {availableNodes.find((n) => n.id === id)?.name}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelectDropdown>
                   <MoveRight className="w-4 h-4 text-slate-400 shrink-0 hidden sm:block" />
-                  <select
+                  <NativeSelectDropdown
                     id="toNodeSelect"
                     className="w-full sm:w-1/2 px-3 py-1.5 border border-slate-300 rounded-lg text-xs"
                   >
@@ -528,7 +529,7 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                         {availableNodes.find((n) => n.id === id)?.name}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelectDropdown>
                   <button
                     type="button"
                     onClick={() => {
@@ -637,7 +638,7 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                 <label className="block text-xs font-semibold text-slate-600 mb-1">
                   Público-Alvo com Permissão de Abertura *
                 </label>
-                <select
+                <NativeSelectDropdown
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(Number(e.target.value))}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
@@ -645,7 +646,7 @@ export const ProcessTreeBuilderModal: React.FC<ProcessTreeBuilderModalProps> = (
                   <option value={ProcessAudience.All}>Ambos (Sede e Unidades)</option>
                   <option value={ProcessAudience.HeadquartersOnly}>Exclusivo para Sede</option>
                   <option value={ProcessAudience.UnitsOnly}>Exclusivo para Unidades / Filiais</option>
-                </select>
+                </NativeSelectDropdown>
               </div>
 
               <div>

@@ -1,3 +1,4 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import {
   Building2,
   Edit,
@@ -12,6 +13,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ActionsDropdown } from '../../../shared/components';
+import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import { apiFetch } from '../../../shared/api';
 import { useAuth } from '../../auth/providers';
 import { SystemRoles } from '../../../shared/constants/roles';
@@ -171,32 +173,33 @@ export function UsersPage() {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Governança & Gestão de Pessoas</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">
-            Usuários & Colaboradores
-          </h1>
-          <p className="mt-1 text-xs text-slate-500">
-            Gerencie colaboradores, alocações de áreas e permissões detalhadas centralizadas no perfil de cada usuário.
-          </p>
+    <div className="mx-auto w-full max-w-[1680px] space-y-6">
+      <header className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-5 xl:flex-row xl:items-end">
+        <div className="flex items-start gap-4">
+          <div className="hidden h-14 w-1 shrink-0 rounded-full bg-indigo-500 sm:block" />
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700">Administração · Gestão de pessoas</p>
+            <h1 className="mt-1.5 text-3xl font-semibold tracking-tight text-slate-950">Usuários &amp; Colaboradores</h1>
+            <p className="mt-1.5 max-w-xl text-sm leading-5 text-slate-500">
+              Gerencie colaboradores, lotações e permissões de acesso.
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 xl:pb-0.5">
           {isSuperAdmin && companies.length > 0 && (
-            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-              <span className="text-xs font-semibold text-slate-600">Empresa:</span>
-              <select
+            <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
+              <span className="text-xs font-medium text-slate-500">Empresa</span>
+              <NativeSelectDropdown
                 value={selectedCompanyId}
                 onChange={(e) => setSelectedCompanyId(e.target.value)}
-                className="bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800"
+                className="w-36"
+                aria-label="Empresa"
               >
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
-              </select>
+              </NativeSelectDropdown>
             </div>
           )}
 
@@ -204,7 +207,7 @@ export function UsersPage() {
             type="button"
             onClick={() => void loadData({ silent: true })}
             disabled={isRefreshing || isLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition disabled:opacity-70"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-70"
           >
             <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
             Atualizar
@@ -213,38 +216,45 @@ export function UsersPage() {
           <button
             type="button"
             onClick={() => setIsCreateUserModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 shadow-sm transition"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
           >
             <UserPlus className="h-4 w-4" />
             Novo usuário
           </button>
         </div>
-      </div>
+      </header>
 
       {errorMessage && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700 shadow-sm">
-          {errorMessage}
-        </div>
+        <SystemNotice className="text-xs font-semibold shadow-sm">{errorMessage}</SystemNotice>
       )}
 
-      {/* Barra de Filtros */}
-      <div className="grid gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:grid-cols-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+      <section aria-label="Filtros de colaboradores" className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 sm:p-5">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-slate-800">Encontrar colaboradores</p>
+          <span className="text-xs text-slate-500">{isLoading ? 'Carregando lista...' : `${filteredUsers.length} resultados`}</span>
+        </div>
+        <div className="grid min-w-0 gap-3 lg:grid-cols-12">
+        <label className="min-w-0 lg:col-span-6">
+          <span className="mb-1.5 block text-xs font-medium text-slate-600">Busca</span>
+          <span className="relative block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={userSearch}
             onChange={(e) => setUserSearch(e.target.value)}
-            placeholder="Buscar por nome, e-mail ou filial..."
-            className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Nome, e-mail ou unidade"
+            className="h-11 w-full rounded-lg border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/15"
           />
-        </div>
+          </span>
+        </label>
 
-        <div>
-          <select
+        <div className="min-w-0 lg:col-span-3">
+          <span className="mb-1.5 block text-xs font-medium text-slate-600">Função</span>
+          <NativeSelectDropdown
             value={userRoleFilter}
             onChange={(e) => setUserRoleFilter(e.target.value)}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800"
+            className="w-full h-11"
+            aria-label="Filtrar por função"
           >
             <option value="">Todos os papéis e funções</option>
             <option value="SUPER_ADMIN">Super Admin</option>
@@ -252,78 +262,83 @@ export function UsersPage() {
             <option value="AREA_ADMIN">Admin da Área</option>
             <option value="HEADQUARTER_USER">Usuário da Sede</option>
             <option value="UNIT_USER">Usuário da Unidade</option>
-          </select>
+          </NativeSelectDropdown>
         </div>
 
-        <div>
-          <select
+        <div className="min-w-0 lg:col-span-3">
+          <span className="mb-1.5 block text-xs font-medium text-slate-600">Situação</span>
+          <NativeSelectDropdown
             value={userStatusFilter}
             onChange={(e) => setUserStatusFilter(e.target.value as any)}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800"
+            className="w-full h-11"
+            aria-label="Filtrar por situação"
           >
             <option value="all">Todos os status</option>
             <option value="active">Apenas Ativos</option>
             <option value="inactive">Apenas Inativos</option>
-          </select>
+          </NativeSelectDropdown>
         </div>
-      </div>
+        </div>
+      </section>
 
       {/* Tabela de Usuários */}
-      <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden">
+      <section aria-label="Diretório de usuários" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-6">
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-slate-900">Diretório da equipe</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Lotações, papéis e acessos por colaborador.</p>
+          </div>
+          {!isLoading && <span className="text-xs font-medium text-slate-400">Exibindo {filteredUsers.length} de {users.length}</span>}
+        </div>
         {isLoading ? (
-          <div className="px-6 py-12 text-center text-xs text-slate-500">
-            Carregando colaboradores...
-          </div>
+          <SystemLoadingState label="Carregando colaboradores..." />
         ) : filteredUsers.length === 0 ? (
-          <div className="px-6 py-12 text-center space-y-2">
-            <Users className="w-10 h-10 text-slate-300 mx-auto" />
-            <p className="text-sm font-bold text-slate-700">Nenhum colaborador encontrado.</p>
-            <p className="text-xs text-slate-500">Clique em “Novo usuário” para cadastrar um colaborador.</p>
-          </div>
+          <SystemEmptyState icon={Users} title="Nenhum colaborador encontrado" description="Tente ajustar os filtros ou cadastre um novo usuário." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
+            <table className="min-w-[1180px] w-full divide-y divide-slate-100">
+              <caption className="sr-only">Usuários e colaboradores cadastrados</caption>
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Colaborador
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Lotação / Unidade
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Funções Globais
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Áreas Alocadas & Permissões
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Criado em
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Ações
                   </th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredUsers.map((u) => {
                   const userAreaNames = userAreasMap.get(u.id) || [];
 
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50/70 transition">
+                    <tr key={u.id} className="transition-colors hover:bg-indigo-50/25">
                       {/* Colaborador */}
-                      <td className="whitespace-nowrap px-6 py-4">
+                      <td className="whitespace-nowrap px-5 py-4">
                         <button
                           type="button"
                           onClick={() => navigate(`/app/users/${u.id}`)}
-                          className="text-left group transition focus:outline-none"
+                          className="group text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                         >
                           <p className="flex items-center gap-2 text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                            <span aria-hidden="true" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xs font-bold text-indigo-600">{u.fullName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span>
+                            <span aria-hidden="true" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 ring-1 ring-inset ring-slate-200 group-hover:bg-indigo-100 group-hover:text-indigo-700">{u.fullName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()}</span>
                             {u.fullName}
                           </p>
                           <p className="text-xs text-slate-500">{u.email}</p>
@@ -331,7 +346,7 @@ export function UsersPage() {
                       </td>
 
                       {/* Lotação */}
-                      <td className="whitespace-nowrap px-6 py-4 text-xs text-slate-700">
+                      <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-700">
                         {u.unitName ? (
                           <span className="inline-flex items-center gap-1 font-semibold text-slate-800">
                             <Building2 className="w-3.5 h-3.5 text-slate-400" />
@@ -345,7 +360,7 @@ export function UsersPage() {
                       </td>
 
                       {/* Funções Globais */}
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-4">
                         {u.roles.length > 0 ? (
                           <div className="flex flex-wrap gap-1.5">
                             {u.roles.map((role) => (
@@ -363,7 +378,7 @@ export function UsersPage() {
                       </td>
 
                       {/* Áreas Alocadas & Permissões */}
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-4">
                         {userAreaNames.length > 0 ? (
                           <button
                             type="button"
@@ -393,25 +408,27 @@ export function UsersPage() {
                       </td>
 
                       {/* Status */}
-                      <td className="whitespace-nowrap px-6 py-4">
+                      <td className="whitespace-nowrap px-5 py-4">
                         {u.isActive ? (
-                          <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                             Ativo
                           </span>
                         ) : (
-                          <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-700 ring-1 ring-rose-200">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
                             Inativo
                           </span>
                         )}
                       </td>
 
                       {/* Criado em */}
-                      <td className="whitespace-nowrap px-6 py-4 text-xs text-slate-500">
+                      <td className="whitespace-nowrap px-5 py-4 text-xs text-slate-500">
                         {formatDate(u.createdAt)}
                       </td>
 
                       {/* Ações */}
-                      <td className="whitespace-nowrap px-6 py-4 text-right">
+                      <td className="whitespace-nowrap px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <ActionsDropdown
                             items={[
@@ -451,7 +468,7 @@ export function UsersPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Modais de Usuário */}
       <CreateUserModal

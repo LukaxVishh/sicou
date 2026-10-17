@@ -1,3 +1,4 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { X, ArrowRight, AlertCircle, FileText, Sparkles, CheckCircle2, ShieldAlert } from 'lucide-react';
@@ -191,7 +192,7 @@ export const OpenProcessModal: React.FC<OpenProcessModalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Árvore de Processo / Serviço *
                 </label>
-                <select
+                <NativeSelectDropdown
                   value={selectedFamilyId}
                   onChange={(e) => setSelectedFamilyId(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-colors"
@@ -201,7 +202,7 @@ export const OpenProcessModal: React.FC<OpenProcessModalProps> = ({
                       [{g.areaName}] {g.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelectDropdown>
               </div>
 
               {/* Seletor de Versão para Administradores */}

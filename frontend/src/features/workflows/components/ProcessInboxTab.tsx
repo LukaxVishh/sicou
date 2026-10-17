@@ -19,6 +19,7 @@ import {
 import { SelectDropdown } from '../../../shared/components/SelectDropdown';
 import type { ProcessInstanceSummary } from '../types';
 import { ProcessStatus } from '../types';
+import { SystemEmptyState } from '../../../shared/components';
 
 interface ProcessInboxTabProps {
   areaId?: string;
@@ -315,8 +316,8 @@ export const ProcessInboxTab: React.FC<ProcessInboxTabProps> = ({
             <tbody className="divide-y divide-slate-100 text-sm">
               {filteredProcesses.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400 text-xs">
-                    Nenhum processo encontrado para os filtros informados.
+                  <td colSpan={6} className="p-0">
+                    <SystemEmptyState compact title="Nenhum processo encontrado" description="Nenhum processo corresponde aos filtros informados." />
                   </td>
                 </tr>
               ) : (

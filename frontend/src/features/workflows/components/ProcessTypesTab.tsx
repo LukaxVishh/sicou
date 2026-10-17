@@ -17,6 +17,7 @@ import {
   isDraftStatus,
   isHomologatedStatus,
 } from '../types';
+import { SystemEmptyState } from '../../../shared/components';
 
 interface ProcessTypesTabProps {
   areaId: string;
@@ -166,14 +167,8 @@ export const ProcessTypesTab: React.FC<ProcessTypesTabProps> = ({
 
       {/* Listagem Limpa e Objetiva das Árvores de Processo */}
       {filteredTrees.length === 0 ? (
-        <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-semibold space-y-2">
-          <GitBranch className="h-8 w-8 mx-auto text-slate-300 stroke-[1.5]" />
-          <p>
-            {searchQuery
-              ? 'Nenhuma árvore de processo encontrada para o termo pesquisado.'
-              : 'Nenhuma árvore de processo cadastrada para esta área.'}
-          </p>
-          {canManage && !searchQuery && (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white">
+          <SystemEmptyState compact icon={GitBranch} title={searchQuery ? 'Nenhuma árvore encontrada' : 'Nenhuma árvore cadastrada'} description={searchQuery ? 'Não encontramos árvores para o termo pesquisado.' : 'Esta área ainda não possui árvores de processo.'} action={canManage && !searchQuery ? (
             <button
               onClick={handleOpenCreate}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition mt-2"
@@ -181,7 +176,7 @@ export const ProcessTypesTab: React.FC<ProcessTypesTabProps> = ({
               <Plus className="h-3.5 w-3.5" />
               Criar Primeira Árvore
             </button>
-          )}
+          ) : undefined} />
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">

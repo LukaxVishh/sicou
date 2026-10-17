@@ -1,3 +1,5 @@
+import { NativeSelectDropdown } from '../../shared/components/NativeSelectDropdown';
+import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../shared/components';
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../auth/providers";
@@ -76,20 +78,18 @@ export function ReportsPage() {
     ["SUPER_ADMIN", "COMPANY_ADMIN"].includes(role),
   );
   return (
-    <section className="mx-auto max-w-7xl space-y-6">
-      <header className="flex flex-col gap-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-8">
+    <section className="mx-auto w-full max-w-[1680px] space-y-6">
+      <header className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-5 xl:flex-row xl:items-end">
         <div className="flex items-start gap-4">
-          <span className="rounded-2xl bg-indigo-50 p-3 text-indigo-600">
-            <BarChart3 className="h-6 w-6" />
-          </span>
+          <span className="hidden h-14 w-1 shrink-0 rounded-full bg-indigo-500 sm:block" />
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-600">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700">
               Dados e documentos
             </p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="mt-1.5 text-3xl font-semibold tracking-tight text-slate-950">
               Relatórios
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
+            <p className="mt-1.5 max-w-xl text-sm leading-5 text-slate-500">
               Transforme os dados da sua equipe em informação. Filtre,
               personalize e leve os dados com você.
             </p>
@@ -276,7 +276,7 @@ function ProcessReports() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className="space-y-2 text-xs font-semibold text-slate-600">
             Empresa
-            <select
+            <NativeSelectDropdown
               value={draft.companyId}
               onChange={(e) =>
                 setDraft({
@@ -295,11 +295,11 @@ function ProcessReports() {
                   {o.name}
                 </option>
               ))}
-            </select>
+            </NativeSelectDropdown>
           </label>
           <label className="space-y-2 text-xs font-semibold text-slate-600">
             Setor
-            <select
+            <NativeSelectDropdown
               value={draft.areaId}
               onChange={(e) => setDraft({ ...draft, areaId: e.target.value })}
               className={input}
@@ -311,11 +311,11 @@ function ProcessReports() {
                     {o.name}
                   </option>
                 ))}
-            </select>
+            </NativeSelectDropdown>
           </label>
           <label className="space-y-2 text-xs font-semibold text-slate-600">
             Unidade
-            <select
+            <NativeSelectDropdown
               value={draft.unitId}
               onChange={(e) => setDraft({ ...draft, unitId: e.target.value })}
               className={input}
@@ -327,11 +327,11 @@ function ProcessReports() {
                     {o.name}
                   </option>
                 ))}
-            </select>
+            </NativeSelectDropdown>
           </label>
           <label className="space-y-2 text-xs font-semibold text-slate-600">
             Status
-            <select
+            <NativeSelectDropdown
               value={draft.status}
               onChange={(e) => setDraft({ ...draft, status: e.target.value })}
               className={input}
@@ -342,7 +342,7 @@ function ProcessReports() {
                   {label}
                 </option>
               ))}
-            </select>
+            </NativeSelectDropdown>
           </label>
           <label className="space-y-2 text-xs font-semibold text-slate-600">
             Data inicial
@@ -369,7 +369,7 @@ function ProcessReports() {
           </label>
           <label className="space-y-2 text-xs font-semibold text-slate-600">
             Responsável
-            <select
+            <NativeSelectDropdown
               value={draft.responsibleUserId}
               onChange={(e) =>
                 setDraft({ ...draft, responsibleUserId: e.target.value })
@@ -384,7 +384,7 @@ function ProcessReports() {
                     {o.name}
                   </option>
                 ))}
-            </select>
+            </NativeSelectDropdown>
           </label>
           <div className="flex items-end gap-2">
             <button disabled={loading} className={primary}>
@@ -408,10 +408,7 @@ function ProcessReports() {
         </div>
       </form>
       {error && (
-        <p
-          role="alert"
-          className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
-        >
+        <SystemNotice>
           {error}
           <button
             onClick={() => {
@@ -422,7 +419,7 @@ function ProcessReports() {
           >
             Tentar novamente
           </button>
-        </p>
+        </SystemNotice>
       )}
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:p-6 xl:flex-row xl:items-center xl:justify-between">
@@ -493,29 +490,9 @@ function ProcessReports() {
           </fieldset>
         )}
         {loading ? (
-          <div role="status" className="space-y-3 p-6">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-14 animate-pulse rounded-xl bg-slate-100"
-              />
-            ))}
-            <span className="sr-only">Carregando relatório</span>
-          </div>
+          <SystemLoadingState label="Carregando relatório..." />
         ) : !result?.items.length ? (
-          <div className="px-6 py-16 text-center">
-            <FileText className="mx-auto h-10 w-10 text-slate-300" />
-            <h3 className="mt-4 font-semibold text-slate-700">
-              {error
-                ? "Relatório indisponível"
-                : "Nenhum processo neste recorte"}
-            </h3>
-            <p className="mt-2 text-sm text-slate-500">
-              {error
-                ? "Confira a mensagem acima e tente novamente."
-                : "Ajuste os filtros ou consulte outro período."}
-            </p>
-          </div>
+          <SystemEmptyState icon={FileText} className="min-h-56" title={error ? 'Relatório indisponível' : 'Nenhum processo neste recorte'} description={error ? 'Confira a mensagem acima e tente novamente.' : 'Ajuste os filtros ou consulte outro período.'} />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -656,15 +633,11 @@ function ProcessReports() {
               O usuário deve poder tratar processos deste setor. A alteração
               fica registrada no histórico.
             </p>
-            {assignmentError && (
-              <p role="alert" className="mt-3 text-sm text-red-700">
-                {assignmentError}
-              </p>
-            )}
+            {assignmentError && <SystemNotice className="mt-3">{assignmentError}</SystemNotice>}
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <label className="flex-1">
                 <span className="sr-only">Responsável pelo processo</span>
-                <select
+                <NativeSelectDropdown
                   disabled={loadingAssignment || saving}
                   className={input}
                   value={responsible}
@@ -679,7 +652,7 @@ function ProcessReports() {
                       {o.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelectDropdown>
               </label>
               <button
                 disabled={saving || loadingAssignment || !!assignmentError}
@@ -769,14 +742,7 @@ function DocumentPanel() {
           {busy ? "Processando documento..." : "Extrair conteúdo"}
         </button>
       </div>
-      {error && (
-        <p
-          role="alert"
-          className="rounded-2xl bg-red-50 p-4 text-sm text-red-700"
-        >
-          {error}
-        </p>
-      )}
+      {error && <SystemNotice>{error}</SystemNotice>}
       {result && (
         <div className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">

@@ -1,3 +1,4 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import {
   Edit,
   Plus,
@@ -10,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../auth/providers';
 import { SystemRoles } from '../../../shared/constants/roles';
 import { ActionsDropdown } from '../../../shared/components';
+import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import { getCompanies } from '../../companies/api';
 import { getAreasByCompanyId } from '../../areas/api';
 import type { Company } from '../../companies/types';
@@ -154,24 +156,27 @@ export function AccessControlPage() {
   });
 
   return (
-    <div>
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Governança e Segurança</p>
-          <h1 className="mt-2 text-2xl font-bold text-slate-900">
+    <section className="mx-auto w-full max-w-[1680px] space-y-6">
+      <header className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-5 xl:flex-row xl:items-end">
+        <div className="flex items-start gap-4">
+          <span className="hidden h-14 w-1 shrink-0 rounded-full bg-indigo-500 sm:block" />
+          <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700">Governança e segurança</p>
+          <h1 className="mt-1.5 text-3xl font-semibold tracking-tight text-slate-950">
             Controle de Permissões Granulares
           </h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-1.5 max-w-2xl text-sm leading-5 text-slate-500">
             Gerencie os privilégios e acessos por área da sede e unidade de atendimento.
           </p>
+          </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 xl:pb-0.5">
           <button
             type="button"
             onClick={() => void loadAccesses({ silent: true })}
             disabled={isRefreshing || isLoading || !selectedCompanyId}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-70"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-70"
           >
             <RefreshCcw className="h-4 w-4" />
             Atualizar
@@ -181,31 +186,29 @@ export function AccessControlPage() {
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
             disabled={!selectedCompanyId}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-70"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-70"
           >
             <Plus className="h-4 w-4" />
             Novo acesso
           </button>
         </div>
-      </div>
+      </header>
 
       {errorMessage && (
-        <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {errorMessage}
-        </div>
+        <SystemNotice>{errorMessage}</SystemNotice>
       )}
 
       {/* Barra de Filtros */}
-      <div className="mt-6 grid gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:grid-cols-3">
+      <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3">
         {isSuperAdmin && (
           <div>
             <label className="block text-xs font-semibold uppercase text-slate-500">
               Empresa
             </label>
-            <select
+            <NativeSelectDropdown
               value={selectedCompanyId}
               onChange={(e) => setSelectedCompanyId(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+              className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="">Selecione uma empresa</option>
               {companies.map((c) => (
@@ -213,7 +216,7 @@ export function AccessControlPage() {
                   {c.name}
                 </option>
               ))}
-            </select>
+            </NativeSelectDropdown>
           </div>
         )}
 
@@ -221,10 +224,10 @@ export function AccessControlPage() {
           <label className="block text-xs font-semibold uppercase text-slate-500">
             Área da Sede
           </label>
-          <select
+          <NativeSelectDropdown
             value={selectedAreaFilter}
             onChange={(e) => setSelectedAreaFilter(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+            className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
           >
             <option value="">Todas as áreas</option>
             {areas.map((a) => (
@@ -232,7 +235,7 @@ export function AccessControlPage() {
                 {a.name}
               </option>
             ))}
-          </select>
+          </NativeSelectDropdown>
         </div>
 
         <div>
@@ -246,14 +249,14 @@ export function AccessControlPage() {
               value={searchUser}
               onChange={(e) => setSearchUser(e.target.value)}
               placeholder="Nome, e-mail ou filial..."
-              className="block w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 outline-none focus:border-slate-900"
+              className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
         </div>
       </div>
 
       {/* Tabela de Permissões */}
-      <div className="mt-6 rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-4">
           <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
             <ShieldCheck className="h-5 w-5" />
@@ -269,22 +272,13 @@ export function AccessControlPage() {
         </div>
 
         {isLoading ? (
-          <div className="px-6 py-12 text-center text-sm text-slate-500">
-            Carregando permissões...
-          </div>
+          <SystemLoadingState label="Carregando permissões..." />
         ) : filteredAccesses.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-sm font-semibold text-slate-700">
-              Nenhuma permissão encontrada.
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Clique em “Novo acesso” para conceder permissões a um usuário.
-            </p>
-          </div>
+          <SystemEmptyState title="Nenhuma permissão encontrada" description="Clique em “Novo acesso” para conceder permissões a um usuário." />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
+            <thead className="bg-slate-50/80">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Colaborador
@@ -416,6 +410,6 @@ export function AccessControlPage() {
         onClose={handleCloseDeleteModal}
         onDeleted={() => void loadAccesses({ silent: true })}
       />
-    </div>
+    </section>
   );
 }

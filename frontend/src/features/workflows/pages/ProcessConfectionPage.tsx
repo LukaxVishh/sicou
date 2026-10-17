@@ -1,3 +1,5 @@
+import { SystemLoadingState } from '../../../shared/components';
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import {
@@ -248,10 +250,7 @@ export const ProcessConfectionPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-3">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-semibold text-slate-600">Carregando formulário do processo...</p>
-      </div>
+      <div className="flex min-h-[60vh] items-center justify-center"><SystemLoadingState label="Carregando formulário do processo..." /></div>
     );
   }
 
@@ -503,7 +502,7 @@ export const ProcessConfectionPage: React.FC = () => {
 
                       {/* Renderização de acordo com o Tipo do Campo */}
                       {isSelect ? (
-                        <select
+                        <NativeSelectDropdown
                           disabled={isDisabled}
                           value={formValues[field.fieldDefinitionId] || ''}
                           onChange={(e) => handleFieldChange(field.fieldDefinitionId, e.target.value)}
@@ -537,7 +536,7 @@ export const ProcessConfectionPage: React.FC = () => {
                               <option value="Não">Não</option>
                             </>
                           )}
-                        </select>
+                        </NativeSelectDropdown>
                       ) : isTextArea ? (
                         <textarea
                           rows={3}

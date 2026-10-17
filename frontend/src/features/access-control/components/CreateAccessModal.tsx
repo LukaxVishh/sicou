@@ -1,3 +1,4 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import { X } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../../auth/providers';
@@ -230,7 +231,7 @@ export function CreateAccessModal({
               <label className="block text-sm font-semibold text-slate-700">
                 Empresa *
               </label>
-              <select
+              <NativeSelectDropdown
                 value={selectedCompanyId}
                 onChange={(e) => setSelectedCompanyId(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
@@ -242,7 +243,7 @@ export function CreateAccessModal({
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelectDropdown>
             </div>
           )}
 
@@ -251,7 +252,7 @@ export function CreateAccessModal({
               <label className="block text-sm font-semibold text-slate-700">
                 Usuário *
               </label>
-              <select
+              <NativeSelectDropdown
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
@@ -264,14 +265,14 @@ export function CreateAccessModal({
                     {u.fullName} ({u.email})
                   </option>
                 ))}
-              </select>
+              </NativeSelectDropdown>
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-slate-700">
                 Área da sede *
               </label>
-              <select
+              <NativeSelectDropdown
                 value={selectedAreaId}
                 onChange={(e) => setSelectedAreaId(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
@@ -284,7 +285,7 @@ export function CreateAccessModal({
                     {a.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelectDropdown>
             </div>
           </div>
 
@@ -292,7 +293,7 @@ export function CreateAccessModal({
             <label className="block text-sm font-semibold text-slate-700">
               Unidade (Opcional / Escopo de filial)
             </label>
-            <select
+            <NativeSelectDropdown
               value={selectedUnitId}
               onChange={(e) => setSelectedUnitId(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
@@ -304,7 +305,7 @@ export function CreateAccessModal({
                   {u.name} {u.code ? `(${u.code})` : ''}
                 </option>
               ))}
-            </select>
+            </NativeSelectDropdown>
             <p className="mt-1 text-xs text-slate-500">
               Deixe em branco caso a permissão deva se aplicar a nível de sede ou sem restrição de unidade.
             </p>

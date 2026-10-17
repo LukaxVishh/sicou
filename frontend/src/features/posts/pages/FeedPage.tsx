@@ -1,3 +1,4 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import { Building2, ImagePlus, LoaderCircle, Pencil, Pin, Plus, RefreshCcw, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router';
@@ -9,6 +10,8 @@ import { getAccessesByUser } from '../../access-control/api';
 import type { UserAreaAccess } from '../../access-control/types';
 import { useAuth } from '../../auth/providers';
 import { SystemRoles } from '../../../shared/constants/roles';
+import { useSystemDialog } from '../../../shared/components';
+import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import { createPost, deletePost, getPosts, postImageUrl, setPostPinned, updatePost } from '../api';
 import type { Post, PostFormData } from '../types';
 
@@ -30,6 +33,7 @@ function formatDate(value: string) {
 }
 
 export function FeedPage() {
+  const { confirm } = useSystemDialog();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialAreaParam = searchParams.get('areaId') || '';
@@ -237,7 +241,11 @@ export function FeedPage() {
   }
 
   async function remove(post: Post) {
-    if (!window.confirm(`Excluir “${post.title}”?`)) return;
+    if (!(await confirm(`Excluir “${post.title}”?`, {
+      title: 'Excluir publicação',
+      confirmLabel: 'Excluir',
+      tone: 'danger',
+    }))) return;
 
     try {
       await deletePost(post.id);
@@ -268,22 +276,22 @@ export function FeedPage() {
   const canEdit = (post: Post) => post.authorId === user?.id || canModeratePost(post);
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <header className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-5 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Comunicação Interna</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">Feed Corporativo & Informativos</h1>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700">Comunicação interna</p>
+          <h1 className="mt-1.5 text-3xl font-semibold tracking-tight text-slate-950">Feed Corporativo & Informativos</h1>
+          <p className="mt-1.5 max-w-xl text-sm leading-5 text-slate-500">
             Acompanhe os comunicados e novidades publicados pelas áreas da sede.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:pb-0.5">
           <button
             type="button"
             onClick={() => void loadPosts()}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
           >
             <RefreshCcw className="h-4 w-4" /> Atualizar
           </button>
@@ -292,20 +300,20 @@ export function FeedPage() {
             <button
               type="button"
               onClick={openComposer}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 shadow-sm transition-colors"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
             >
               <Plus className="h-4 w-4" /> Nova publicação
             </button>
           )}
         </div>
-      </div>
+      </header>
 
       {/* Filtros de Empresa e Área */}
-      <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         {isSuperAdmin && companies.length > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-600">Empresa:</span>
-            <select
+            <NativeSelectDropdown
               value={selectedCompanyId}
               onChange={(e) => {
                 setSelectedCompanyId(e.target.value);
@@ -316,14 +324,14 @@ export function FeedPage() {
               {companies.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-            </select>
+            </NativeSelectDropdown>
           </div>
         )}
 
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-indigo-600" />
-          <span className="text-xs font-semibold text-slate-600">Filtrar por Área:</span>
-          <select
+          <span className="whitespace-nowrap text-xs font-semibold text-slate-600">Filtrar por Área:</span>
+          <NativeSelectDropdown
             value={selectedAreaId}
             onChange={(e) => {
               setSelectedAreaId(e.target.value);
@@ -333,38 +341,35 @@ export function FeedPage() {
                 setSearchParams({});
               }
             }}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm"
+            className="w-72 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm"
           >
             <option value="">Todas as áreas (Geral)</option>
             {areas.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
-          </select>
+          </NativeSelectDropdown>
         </div>
       </div>
 
       {errorMessage && !isComposerOpen && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">{errorMessage}</div>
+        <SystemNotice className="shadow-sm">{errorMessage}</SystemNotice>
       )}
 
       {/* Lista de Posts */}
       <div className="space-y-4">
         {isLoading && posts.length === 0 && (
-          <div className="py-12 text-center text-sm text-slate-500 bg-white rounded-2xl border border-slate-200">
-            Carregando publicações...
-          </div>
+          <SystemLoadingState className="rounded-2xl border border-slate-200 bg-white" label="Carregando publicações..." />
         )}
 
         {!isLoading && posts.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center shadow-sm">
-            <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <p className="font-bold text-slate-700">Ainda não há publicações nesta visualização.</p>
-            <p className="mt-1 text-xs text-slate-500">
-              {canPublishInCurrentContext
-                ? 'Você pode ser a primeira pessoa a compartilhar um comunicado nesta área.'
-                : 'Quando a equipe da área publicar novidades, elas aparecerão aqui.'}
-            </p>
-          </div>
+          <SystemEmptyState
+            icon={Building2}
+            title="Ainda não há publicações nesta visualização."
+            description={canPublishInCurrentContext
+              ? 'Você pode ser a primeira pessoa a compartilhar um comunicado nesta área.'
+              : 'Quando a equipe da área publicar novidades, elas aparecerão aqui.'}
+            className="rounded-2xl border border-dashed border-slate-300 bg-white shadow-sm"
+          />
         )}
 
         {posts.map((post) => (

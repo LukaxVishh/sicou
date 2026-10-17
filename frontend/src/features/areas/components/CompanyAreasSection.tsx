@@ -1,6 +1,7 @@
 import { Edit, Layers3, Plus, RefreshCcw, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { ActionsDropdown } from '../../../shared/components';
+import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import { getAreasByCompanyId } from '../api';
 import type { AreaModuleCode, CompanyArea } from '../types';
 import { CreateAreaModal } from './CreateAreaModal';
@@ -160,25 +161,13 @@ export function CompanyAreasSection({ companyId }: CompanyAreasSectionProps) {
       </div>
 
       {errorMessage && (
-        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMessage}
-        </div>
+        <SystemNotice className="mt-5">{errorMessage}</SystemNotice>
       )}
 
       {isLoading ? (
-        <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-          Carregando áreas...
-        </div>
+        <SystemLoadingState className="mt-6 rounded-xl border border-slate-200 bg-white" label="Carregando áreas..." />
       ) : areas.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-6 text-center">
-          <p className="text-sm font-medium text-slate-700">
-            Nenhuma área encontrada.
-          </p>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Clique em “Nova área” para iniciar o cadastro.
-          </p>
-        </div>
+        <SystemEmptyState className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white" compact title="Nenhuma área encontrada" description="Clique em “Nova área” para iniciar o cadastro." />
       ) : (
         <div className="mt-6 overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">

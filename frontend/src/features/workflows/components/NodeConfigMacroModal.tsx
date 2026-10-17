@@ -1,3 +1,4 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import React, { useState, useMemo } from 'react';
 import {
   X,
@@ -795,7 +796,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       1. Campo Motivador (Gatilho) <span className="text-rose-500">*</span>
                     </label>
-                    <select
+                    <NativeSelectDropdown
                       value={newRuleSourceId}
                       onChange={(e) => {
                         setNewRuleSourceId(e.target.value);
@@ -812,7 +813,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                           </option>
                         );
                       })}
-                    </select>
+                    </NativeSelectDropdown>
                   </div>
 
                   {/* 2. Condição / Operador */}
@@ -820,7 +821,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       2. Condição / Comparação <span className="text-rose-500">*</span>
                     </label>
-                    <select
+                    <NativeSelectDropdown
                       value={newRuleOperator}
                       onChange={(e) =>
                         setNewRuleOperator(e.target.value as FieldConditionRule['operator'])
@@ -832,7 +833,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                           {opLabel}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelectDropdown>
                   </div>
 
                   {/* 3. Valor Esperado */}
@@ -848,7 +849,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                         className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs text-slate-500 font-mono"
                       />
                     ) : sourceFieldOptions.length > 0 ? (
-                      <select
+                      <NativeSelectDropdown
                         value={newRuleExpectedValue}
                         onChange={(e) => setNewRuleExpectedValue(e.target.value)}
                         className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500"
@@ -859,7 +860,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                             {opt}
                           </option>
                         ))}
-                      </select>
+                      </NativeSelectDropdown>
                     ) : (
                       <input
                         type="text"
@@ -878,7 +879,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       4. Ação / Efeito nos Campos Alvo <span className="text-rose-500">*</span>
                     </label>
-                    <select
+                    <NativeSelectDropdown
                       value={newRuleAction}
                       onChange={(e) =>
                         setNewRuleAction(e.target.value as FieldConditionRule['action'])
@@ -890,7 +891,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                           {actItem.label}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelectDropdown>
                   </div>
 
                   {/* 5. Valor a Atribuir (Apenas se ação for SetValue) */}
@@ -1093,7 +1094,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Vínculo com Local do Catálogo
                   </label>
-                  <select
+                  <NativeSelectDropdown
                     value={processNodeId}
                     onChange={(e) => handleCatalogNodeChange(e.target.value)}
                     className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500"
@@ -1104,7 +1105,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                         {cn.name} ({cn.code})
                       </option>
                     ))}
-                  </select>
+                  </NativeSelectDropdown>
                 </div>
 
                 <div>
@@ -1141,7 +1142,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Natureza da Etapa
                   </label>
-                  <select
+                  <NativeSelectDropdown
                     value={nodeType}
                     onChange={(e) => setNodeType(Number(e.target.value))}
                     className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500"
@@ -1151,7 +1152,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                     <option value={ProcessNodeType.EndApproved}>Deferido (Verde - Arquivamento Aprovado)</option>
                     <option value={ProcessNodeType.EndRejected}>Indeferido (Vermelho - Arquivamento Reprovado)</option>
                     <option value={ProcessNodeType.EndArchived}>Arquivamento Geral</option>
-                  </select>
+                  </NativeSelectDropdown>
                 </div>
               </div>
 
@@ -1325,7 +1326,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                         </label>
 
                         {def?.type === FieldType.Select ? (
-                          <select
+                          <NativeSelectDropdown
                             disabled={isDisabled}
                             value={currentValue}
                             onChange={(e) =>
@@ -1341,7 +1342,7 @@ export const NodeConfigMacroModal: React.FC<NodeConfigMacroModalProps> = ({
                             <option value="Não">Não</option>
                             <option value="Aprovado">Aprovado</option>
                             <option value="Reprovado">Reprovado</option>
-                          </select>
+                          </NativeSelectDropdown>
                         ) : (
                           <input
                             type="text"

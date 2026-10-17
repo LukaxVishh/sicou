@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../../features/auth/providers';
+import { SystemLoadingState } from '../../shared/components';
 
 export function ProtectedRoute() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -7,8 +8,8 @@ export function ProtectedRoute() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-600">
-        Carregando sessão...
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <SystemLoadingState label="Carregando sessão..." />
       </div>
     );
   }

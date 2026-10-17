@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AuthProvider } from '../../features/auth/providers';
+import { SystemDialogProvider, SystemFormValidationProvider } from '../../shared/components';
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -7,8 +8,12 @@ type AppProvidersProps = {
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <AuthProvider>
-      {children}
-    </AuthProvider>
+    <SystemDialogProvider>
+      <SystemFormValidationProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </SystemFormValidationProvider>
+    </SystemDialogProvider>
   );
 }

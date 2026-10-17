@@ -1,3 +1,4 @@
+import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDropdown';
 import {
   AlertCircle,
   ArrowLeft,
@@ -37,6 +38,7 @@ import {
 import type { UserAreaAccess } from '../../access-control/types';
 import * as workflowsApi from '../../workflows/api';
 import type { ProcessNode } from '../../workflows/types';
+import { useSystemDialog } from '../../../shared/components';
 
 const roleOptions: Array<{
   value: UserRole;
@@ -85,6 +87,7 @@ function formatDate(value?: string | null) {
 }
 
 export function UserDetailsPage() {
+  const { confirm } = useSystemDialog();
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
@@ -374,11 +377,10 @@ export function UserDetailsPage() {
 
   // 4. Remover / Inativar Vínculo de Área
   const handleDeleteAccess = async (accessId: string, areaName: string) => {
-    if (
-      !window.confirm(
-        `Tem certeza que deseja revogar o vínculo e todas as permissões do colaborador na área "${areaName}"?`,
-      )
-    ) {
+    if (!(await confirm(
+      `Tem certeza que deseja revogar o vínculo e todas as permissões do colaborador na área "${areaName}"?`,
+      { title: 'Revogar acesso à área', confirmLabel: 'Revogar acesso', tone: 'danger' },
+    ))) {
       return;
     }
 
@@ -696,7 +698,7 @@ export function UserDetailsPage() {
                 <div>
                   <label className="block text-xs font-bold text-slate-700">Empresa Vinculada</label>
                   {isSuperAdmin ? (
-                    <select
+                    <NativeSelectDropdown
                       value={companyId}
                       onChange={(e) => handleCompanyChange(e.target.value)}
                       className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
@@ -707,7 +709,7 @@ export function UserDetailsPage() {
                           {c.name}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelectDropdown>
                   ) : (
                     <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-700">
                       <Building2 className="h-4 w-4 text-slate-400" />
@@ -721,7 +723,7 @@ export function UserDetailsPage() {
                   <label className="block text-xs font-bold text-slate-700">
                     Unidade de Lotação
                   </label>
-                  <select
+                  <NativeSelectDropdown
                     value={unitId}
                     onChange={(e) => setUnitId(e.target.value)}
                     className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
@@ -732,7 +734,7 @@ export function UserDetailsPage() {
                         {u.name} {u.code ? `(${u.code})` : ''}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelectDropdown>
                 </div>
               </div>
 
@@ -891,7 +893,7 @@ export function UserDetailsPage() {
                   <label className="block text-xs font-bold text-slate-700">
                     Área da Sede <span className="text-rose-500">*</span>
                   </label>
-                  <select
+                  <NativeSelectDropdown
                     required
                     value={newAreaId}
                     onChange={(e) => setNewAreaId(e.target.value)}
@@ -903,14 +905,14 @@ export function UserDetailsPage() {
                         {area.name} {area.description ? `— ${area.description}` : ''}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelectDropdown>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700">
                     Restringir à Unidade (Opcional)
                   </label>
-                  <select
+                  <NativeSelectDropdown
                     value={newUnitId}
                     onChange={(e) => setNewUnitId(e.target.value)}
                     className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
@@ -921,7 +923,7 @@ export function UserDetailsPage() {
                         {u.name}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelectDropdown>
                 </div>
 
                 {/* Flags de Permissão */}
