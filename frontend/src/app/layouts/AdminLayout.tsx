@@ -16,17 +16,33 @@ import {
   PanelLeftOpen,
   KeyRound,
   BarChart3,
+  Plus,
+  Globe,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { useState, useEffect, useCallback } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router';
 import { SystemRoles } from '../../shared/constants/roles';
 import { cn } from '../../shared/utils';
 import { useAuth } from '../../features/auth/providers';
 import { getAreasByCompanyId } from '../../features/areas/api';
 import { getCompanies } from '../../features/companies/api';
 import type { CompanyArea } from '../../features/areas/types';
+import type { Company } from '../../features/companies/types';
 import { NotificationBell } from '../../features/notifications/NotificationBell';
+import { SelectDropdown } from '../../shared/components';
 
+export type AdminOutletContextType = {
+  activeCompanyId: string;
+  selectedCompanyId: string;
+  setSelectedCompanyId: (companyId: string) => void;
+  isSuperAdmin: boolean;
+  isCompanyAdmin: boolean;
+  companies: Company[];
+};
+
+export function useAdminViewContext() {
+  return useOutletContext<AdminOutletContextType>();
+}
 
 export function AdminLayout() {
   const { user, signOut } = useAuth();
@@ -56,33 +72,97 @@ export function AdminLayout() {
   };
 
   const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
+
+  // Lista de empresas para alternância de visualização do Super Admin
+  const [companies, setCompanies] = useState<Company[]>([]);
+  // Empresa ativa para visualização do Super Admin (inicia vazia na Visão Global, recuperando de sessionStorage se houver)
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(() => {
+    try {
+      return sessionStorage.getItem('sicou_superadmin_selected_company') || '';
+    } catch {
+      return '';
+    }
+  });
+
+  // ID da empresa ativa no contexto do layout: para CompanyAdmin é sempre a sua empresa; para SuperAdmin é a selecionada
+  const activeCompanyId = isCompanyAdmin ? (user?.companyId ?? '') : selectedCompanyId;
+
+  // Carrega a lista de empresas ativas caso seja Super Admin
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    let isMounted = true;
+    getCompanies()
+      .then((data) => {
+        if (isMounted) {
+          setCompanies(data.filter((c) => c.isActive));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [isSuperAdmin]);
 
   // Áreas da Empresa e Contexto de Navegação
   const [areas, setAreas] = useState<CompanyArea[]>([]);
   const [selectedAreaContext, setSelectedAreaContext] = useState<CompanyArea | null>(null);
 
-  // Carrega as áreas da empresa
-  useEffect(() => {
-    async function loadCompanyAreas() {
-      try {
-        let companyId = user?.companyId;
-        if (!companyId && isSuperAdmin) {
-          const companies = await getCompanies();
-          const activeCompany = companies.find((c) => c.isActive);
-          companyId = activeCompany?.id;
-        }
-
-        if (companyId) {
-          const data = await getAreasByCompanyId(companyId);
-          setAreas(data.filter((a) => a.isActive));
-        }
-      } catch {
-        setAreas([]);
-      }
+  // Carrega as áreas da empresa ativa (se houver uma selecionada ou vínculo direto)
+  const loadCompanyAreas = useCallback(async () => {
+    if (!activeCompanyId) {
+      setAreas([]);
+      return;
     }
+    try {
+      const data = await getAreasByCompanyId(activeCompanyId);
+      setAreas(data.filter((a) => a.isActive));
+    } catch {
+      setAreas([]);
+    }
+  }, [activeCompanyId]);
 
-    loadCompanyAreas();
-  }, [user?.companyId, isSuperAdmin]);
+  useEffect(() => {
+    void loadCompanyAreas();
+  }, [loadCompanyAreas]);
+
+  const handleSuperAdminChangeCompany = useCallback((companyId: string) => {
+    setSelectedCompanyId(companyId);
+    try {
+      if (companyId) {
+        sessionStorage.setItem('sicou_superadmin_selected_company', companyId);
+      } else {
+        sessionStorage.removeItem('sicou_superadmin_selected_company');
+      }
+    } catch {}
+    if (!companyId) {
+      setSelectedAreaContext(null);
+    }
+    window.dispatchEvent(new CustomEvent('sicou:superadmin-company-changed', { detail: { companyId } }));
+  }, []);
+
+  // Escuta eventos do sistema para atualização dinâmica de áreas ou troca de empresa ativa
+  useEffect(() => {
+    const handleAreasUpdated = () => {
+      void loadCompanyAreas();
+    };
+
+    const handleSetSuperAdminCompany = (e: Event) => {
+      const customEvent = e as CustomEvent<{ companyId?: string }>;
+      if (isSuperAdmin) {
+        const nextId = customEvent.detail?.companyId || '';
+        handleSuperAdminChangeCompany(nextId);
+      }
+    };
+
+    window.addEventListener('sicou:areas-updated', handleAreasUpdated);
+    window.addEventListener('sicou:set-superadmin-company', handleSetSuperAdminCompany);
+
+    return () => {
+      window.removeEventListener('sicou:areas-updated', handleAreasUpdated);
+      window.removeEventListener('sicou:set-superadmin-company', handleSetSuperAdminCompany);
+    };
+  }, [loadCompanyAreas, isSuperAdmin, handleSuperAdminChangeCompany]);
 
   // Sincroniza o contexto da área com o parâmetro areaId da URL
   useEffect(() => {
@@ -96,30 +176,12 @@ export function AdminLayout() {
     } else if (!areaId && ['/app/home', '/app/dashboard', '/app/companies', '/app/users'].includes(location.pathname)) {
       setSelectedAreaContext(null);
     }
-  }, [location.search, location.pathname, areas]);
+  }, [location.search, location.pathname, areas, selectedAreaContext]);
 
-  // Itens de Navegação Global
+  const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
+
+  // Itens de Navegação Global priorizando Dashboard para Administradores
   const navigationItems = [
-    {
-      label: 'Relatórios', path: '/app/reports', icon: BarChart3,
-      roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin, SystemRoles.AreaAdmin, SystemRoles.HeadquarterUser, SystemRoles.UnitUser],
-    },
-    {
-      label: 'Recuperação de senha', path: '/app/password-recovery', icon: KeyRound,
-      roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin],
-    },
-    {
-      label: 'Página Inicial',
-      path: '/app/home',
-      icon: Home,
-      roles: [
-        SystemRoles.SuperAdmin,
-        SystemRoles.CompanyAdmin,
-        SystemRoles.AreaAdmin,
-        SystemRoles.HeadquarterUser,
-        SystemRoles.UnitUser,
-      ],
-    },
     {
       label: 'Dashboard',
       path: '/app/dashboard',
@@ -130,11 +192,12 @@ export function AdminLayout() {
       ],
     },
     {
-      label: 'Empresas',
-      path: '/app/companies',
+      label: isCompanyAdmin ? 'Minha Empresa' : 'Empresas',
+      path: isCompanyAdmin && user?.companyId ? `/app/companies/${user.companyId}` : '/app/companies',
       icon: Building2,
       roles: [
         SystemRoles.SuperAdmin,
+        SystemRoles.CompanyAdmin,
       ],
     },
     {
@@ -144,6 +207,30 @@ export function AdminLayout() {
       roles: [
         SystemRoles.SuperAdmin,
         SystemRoles.CompanyAdmin,
+      ],
+    },
+    {
+      label: 'Relatórios',
+      path: '/app/reports',
+      icon: BarChart3,
+      roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin, SystemRoles.AreaAdmin, SystemRoles.HeadquarterUser, SystemRoles.UnitUser],
+    },
+    {
+      label: 'Recuperação de senha',
+      path: '/app/password-recovery',
+      icon: KeyRound,
+      roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin],
+    },
+    {
+      label: isSuperAdmin ? 'Área Operacional' : 'Página Inicial',
+      path: '/app/home',
+      icon: Home,
+      roles: [
+        SystemRoles.SuperAdmin,
+        SystemRoles.CompanyAdmin,
+        SystemRoles.AreaAdmin,
+        SystemRoles.HeadquarterUser,
+        SystemRoles.UnitUser,
       ],
     },
   ];
@@ -161,13 +248,21 @@ export function AdminLayout() {
 
   const handleExitAreaContext = () => {
     setSelectedAreaContext(null);
-    navigate('/app/home');
+    navigate(isSuperAdmin || isCompanyAdmin ? '/app/dashboard' : '/app/home');
   };
 
   const handleNavigateAreaModule = (targetPath: string) => {
     setIsSidebarOpen(false);
     navigate(targetPath);
   };
+
+  const companyDropdownOptions = [
+    { value: '', label: '🌐 Visão Global (Todas as Empresas)' },
+    ...companies.map((comp) => ({
+      value: comp.id,
+      label: `🏢 ${comp.name}`,
+    })),
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -187,19 +282,31 @@ export function AdminLayout() {
           )}
         >
           {!isSidebarCollapsed ? (
-            <img
-              src="/logos/separadas/logo-sicou-horizontal.png"
-              alt="Sicou — Governança Operacional"
-              className="block h-auto w-32 max-w-full object-contain"
-            />
-          ) : (
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-700">
+            <NavLink
+              to={isSuperAdmin || isCompanyAdmin ? '/app/dashboard' : '/app/home'}
+              className="flex items-center focus:outline-none"
+              title="Sicou — Painel Principal"
+            >
               <img
-                src="/logos/separadas/icone-sicou-marca-branca.png"
-                alt="Sicou"
-                className="h-7 w-7 object-contain"
+                src="/logos/separadas/logo-sicou-horizontal.png"
+                alt="Sicou — Governança Operacional"
+                className="block h-auto w-32 max-w-full object-contain"
               />
-            </span>
+            </NavLink>
+          ) : (
+            <NavLink
+              to={isSuperAdmin || isCompanyAdmin ? '/app/dashboard' : '/app/home'}
+              className="flex items-center focus:outline-none"
+              title="Sicou — Painel Principal"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-700">
+                <img
+                  src="/logos/separadas/icone-sicou-marca-branca.png"
+                  alt="Sicou"
+                  className="h-7 w-7 object-contain"
+                />
+              </span>
+            </NavLink>
           )}
 
           <div className="flex items-center gap-1">
@@ -284,62 +391,98 @@ export function AdminLayout() {
 
               {/* Lista dos Módulos da Área */}
               <div className="space-y-1">
-                {selectedAreaContext.modules.some(module => module.code === 'Guide' && module.enabled) && <button
-                  onClick={() => handleNavigateAreaModule(`/app/guide?areaId=${selectedAreaContext.id}`)}
-                  className={cn('w-full flex items-center rounded-xl text-xs font-semibold transition-all',
-                    isSidebarCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2.5',
-                    location.pathname === '/app/guide' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-100 hover:text-indigo-600')}
-                  title="Orientador"
-                ><div className="flex items-center gap-2.5"><BookOpen className="w-4 h-4 shrink-0" />{!isSidebarCollapsed && <span>Orientador</span>}</div>
-                  {!isSidebarCollapsed && <ChevronRight className="w-3.5 h-3.5 opacity-60 shrink-0" />}
-                </button>}
                 {!isSidebarCollapsed && (
-                  <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                     Módulos desta Área
                   </p>
                 )}
 
-                {/* 1. Workflows & Processos da Área */}
-                <button
-                  onClick={() => handleNavigateAreaModule(`/app/workflows?areaId=${selectedAreaContext.id}`)}
-                  className={cn(
-                    'w-full flex items-center rounded-xl text-xs font-semibold transition-all',
-                    isSidebarCollapsed
-                      ? 'justify-center p-2.5'
-                      : 'justify-between px-3 py-2.5',
-                    location.pathname === '/app/workflows' && location.search.includes(selectedAreaContext.id)
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-slate-100 hover:text-indigo-600'
-                  )}
-                  title="Workflows & Processos"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Workflow className="w-4 h-4 shrink-0" />
-                    {!isSidebarCollapsed && <span>Workflows & Processos</span>}
-                  </div>
-                  {!isSidebarCollapsed && <ChevronRight className="w-3.5 h-3.5 opacity-60 shrink-0" />}
-                </button>
+                {/* Orientador Operacional */}
+                {selectedAreaContext.modules.find((m) => m.name === 'Orientador' && m.enabled) && (
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateAreaModule(`/app/guide?areaId=${selectedAreaContext.id}`)}
+                    className={cn(
+                      'w-full flex items-center rounded-xl text-xs font-semibold transition-all',
+                      isSidebarCollapsed
+                        ? 'justify-center p-2.5'
+                        : 'justify-between px-3 py-2.5',
+                      location.pathname === '/app/guide' && location.search.includes(selectedAreaContext.id)
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-700 hover:bg-slate-100 hover:text-indigo-600'
+                    )}
+                    title="Orientador Operacional"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <BookOpen className="w-4 h-4 shrink-0" />
+                      {!isSidebarCollapsed && <span>Orientador</span>}
+                    </div>
+                    {!isSidebarCollapsed && <ChevronRight className="w-3.5 h-3.5 opacity-60 shrink-0" />}
+                  </button>
+                )}
 
-                {/* 2. Feed & Comunicados da Área */}
-                <button
-                  onClick={() => handleNavigateAreaModule(`/app/feed?areaId=${selectedAreaContext.id}`)}
-                  className={cn(
-                    'w-full flex items-center rounded-xl text-xs font-semibold transition-all',
-                    isSidebarCollapsed
-                      ? 'justify-center p-2.5'
-                      : 'justify-between px-3 py-2.5',
-                    location.pathname === '/app/feed' && location.search.includes(selectedAreaContext.id)
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-slate-100 hover:text-indigo-600'
-                  )}
-                  title="Comunicados & Feed"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Newspaper className="w-4 h-4 shrink-0" />
-                    {!isSidebarCollapsed && <span>Comunicados & Feed</span>}
+                {/* Workflows & Processos */}
+                {selectedAreaContext.modules.find((m) => m.name === 'Workflows' && m.enabled) && (
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateAreaModule(`/app/workflows?areaId=${selectedAreaContext.id}`)}
+                    className={cn(
+                      'w-full flex items-center rounded-xl text-xs font-semibold transition-all',
+                      isSidebarCollapsed
+                        ? 'justify-center p-2.5'
+                        : 'justify-between px-3 py-2.5',
+                      location.pathname.startsWith('/app/workflows') && location.search.includes(selectedAreaContext.id)
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-700 hover:bg-slate-100 hover:text-indigo-600'
+                    )}
+                    title="Workflows & Processos"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Workflow className="w-4 h-4 shrink-0" />
+                      {!isSidebarCollapsed && <span>Workflows & Processos</span>}
+                    </div>
+                    {!isSidebarCollapsed && <ChevronRight className="w-3.5 h-3.5 opacity-60 shrink-0" />}
+                  </button>
+                )}
+
+                {/* Comunicados & Feed */}
+                {selectedAreaContext.modules.find((m) => m.name === 'Feed' && m.enabled) && (
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateAreaModule(`/app/feed?areaId=${selectedAreaContext.id}`)}
+                    className={cn(
+                      'w-full flex items-center rounded-xl text-xs font-semibold transition-all',
+                      isSidebarCollapsed
+                        ? 'justify-center p-2.5'
+                        : 'justify-between px-3 py-2.5',
+                      location.pathname === '/app/feed' && location.search.includes(selectedAreaContext.id)
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-700 hover:bg-slate-100 hover:text-indigo-600'
+                    )}
+                    title="Comunicados & Feed"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Newspaper className="w-4 h-4 shrink-0" />
+                      {!isSidebarCollapsed && <span>Comunicados & Feed</span>}
+                    </div>
+                    {!isSidebarCollapsed && <ChevronRight className="w-3.5 h-3.5 opacity-60 shrink-0" />}
+                  </button>
+                )}
+
+                {/* Estado quando nenhum módulo está habilitado */}
+                {!selectedAreaContext.modules.some((m) => m.enabled) && !isSidebarCollapsed && (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-3 text-center">
+                    <p className="text-xs text-slate-400 italic">Nenhum módulo ativo nesta área.</p>
+                    {(isSuperAdmin || isCompanyAdmin) && (
+                      <NavLink
+                        to={`/app/companies/${selectedAreaContext.companyId}?tab=areas`}
+                        className="mt-1.5 inline-block text-[11px] font-semibold text-indigo-600 hover:underline"
+                      >
+                        Ativar módulos
+                      </NavLink>
+                    )}
                   </div>
-                  {!isSidebarCollapsed && <ChevronRight className="w-3.5 h-3.5 opacity-60 shrink-0" />}
-                </button>
+                )}
               </div>
             </div>
           ) : (
@@ -383,17 +526,28 @@ export function AdminLayout() {
                 })}
               </nav>
 
-              {/* Seção Áreas da Empresa */}
-              {areas.length > 0 && (
+              {/* Seção Áreas da Empresa (quando há uma empresa ativa selecionada ou vinculada) */}
+              {activeCompanyId ? (
                 <div className="pt-3 border-t border-slate-100 space-y-2">
                   {!isSidebarCollapsed ? (
                     <div className="px-3 flex items-center justify-between">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                         Áreas da Sede
                       </p>
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-100 text-slate-600">
-                        {areas.length}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-100 text-slate-600">
+                          {areas.length}
+                        </span>
+                        {(isSuperAdmin || isCompanyAdmin) && (
+                          <NavLink
+                            to={`/app/companies/${activeCompanyId}?tab=areas`}
+                            title="Gerenciar e adicionar áreas"
+                            className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </NavLink>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="flex justify-center pb-1">
@@ -401,34 +555,48 @@ export function AdminLayout() {
                     </div>
                   )}
 
-                  <div className="space-y-1">
-                    {areas.map((area) => (
-                      <button
-                        key={area.id}
-                        type="button"
-                        onClick={() => handleSelectArea(area)}
-                        className={cn(
-                          'w-full flex items-center rounded-xl text-xs font-medium text-slate-700 hover:text-indigo-700 hover:bg-indigo-50/80 transition-all group border border-transparent hover:border-indigo-100',
-                          isSidebarCollapsed
-                            ? 'justify-center p-2'
-                            : 'justify-between px-3 py-2 text-left'
-                        )}
-                        title={`Navegar nos módulos de ${area.name}`}
-                      >
-                        <div className="flex items-center gap-2.5 truncate">
-                          <span className="p-1 rounded-md bg-slate-100 text-slate-500 group-hover:bg-indigo-600 group-hover:text-white transition-colors shrink-0">
-                            <FolderTree className="w-3.5 h-3.5" />
-                          </span>
-                          {!isSidebarCollapsed && <span className="truncate">{area.name}</span>}
-                        </div>
-                        {!isSidebarCollapsed && (
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                  {areas.length === 0 ? (
+                    !isSidebarCollapsed && (
+                      <div className="px-3 pt-1">
+                        <NavLink
+                          to={`/app/companies/${activeCompanyId}?tab=areas`}
+                          className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/60 p-2.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100/70 transition"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Criar primeira área</span>
+                        </NavLink>
+                      </div>
+                    )
+                  ) : (
+                    <div className="space-y-1">
+                      {areas.map((area) => (
+                        <button
+                          key={area.id}
+                          type="button"
+                          onClick={() => handleSelectArea(area)}
+                          className={cn(
+                            'w-full flex items-center rounded-xl text-xs font-medium text-slate-700 hover:text-indigo-700 hover:bg-indigo-50/80 transition-all group border border-transparent hover:border-indigo-100',
+                            isSidebarCollapsed
+                              ? 'justify-center p-2'
+                              : 'justify-between px-3 py-2 text-left'
+                          )}
+                          title={`Navegar nos módulos de ${area.name}`}
+                        >
+                          <div className="flex items-center gap-2.5 truncate">
+                            <span className="p-1 rounded-md bg-slate-100 text-slate-500 group-hover:bg-indigo-600 group-hover:text-white transition-colors shrink-0">
+                              <FolderTree className="w-3.5 h-3.5" />
+                            </span>
+                            {!isSidebarCollapsed && <span className="truncate">{area.name}</span>}
+                          </div>
+                          {!isSidebarCollapsed && (
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+              ) : null}
             </>
           )}
         </div>
@@ -486,15 +654,56 @@ export function AdminLayout() {
 
             <div>
               <p className="text-sm font-semibold text-slate-900">
-                {selectedAreaContext ? `Contexto: ${selectedAreaContext.name}` : 'Ambiente Corporativo'}
+                {selectedAreaContext
+                  ? `Contexto: ${selectedAreaContext.name}`
+                  : isSuperAdmin && selectedCompany
+                  ? `Ambiente: ${selectedCompany.name}`
+                  : 'Ambiente Corporativo'}
               </p>
               <p className="text-xs text-slate-500">
-                {selectedAreaContext ? 'Navegando nos módulos específicos da área' : 'Sicou Governança Operacional'}
+                {selectedAreaContext
+                  ? 'Navegando nos módulos específicos da área'
+                  : isSuperAdmin && selectedCompany
+                  ? 'Visualizando estrutura e áreas desta empresa específica'
+                  : isSuperAdmin
+                  ? 'Visão Global — Todas as empresas cadastradas'
+                  : 'Sicou Governança Operacional'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Seletor de Ambiente / Empresa para Super Admin com Componente Padronizado */}
+            {isSuperAdmin && (
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-1 shadow-2xs">
+                  <Globe className="h-4 w-4 text-indigo-600 shrink-0" />
+                  <span className="hidden text-xs font-semibold text-slate-600 xl:inline">
+                    Visualização:
+                  </span>
+                  <div className="w-48 sm:w-60">
+                    <SelectDropdown
+                      value={selectedCompanyId}
+                      options={companyDropdownOptions}
+                      onChange={(val) => handleSuperAdminChangeCompany(val)}
+                      placeholder="Selecione o ambiente"
+                      ariaLabel="Selecionar ambiente da empresa"
+                    />
+                  </div>
+                  {selectedCompanyId && (
+                    <button
+                      type="button"
+                      onClick={() => handleSuperAdminChangeCompany('')}
+                      title="Retornar para Visão Global (Todas as Empresas)"
+                      className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             <NotificationBell />
 
             <button
@@ -509,7 +718,16 @@ export function AdminLayout() {
         </header>
 
         <main className="min-w-0 flex-1 p-4 lg:p-8">
-          <Outlet />
+          <Outlet
+            context={{
+              activeCompanyId,
+              selectedCompanyId,
+              setSelectedCompanyId: handleSuperAdminChangeCompany,
+              isSuperAdmin,
+              isCompanyAdmin,
+              companies,
+            }}
+          />
         </main>
       </div>
     </div>

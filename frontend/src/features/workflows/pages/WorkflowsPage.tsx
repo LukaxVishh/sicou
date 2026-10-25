@@ -16,6 +16,7 @@ import {
 import { useSearchParams } from 'react-router';
 import { useAuth } from '../../auth/providers';
 import { SystemRoles } from '../../../shared/constants/roles';
+import { useAdminViewContext } from '../../../app/layouts/AdminLayout';
 import { getCompanies } from '../../companies/api';
 import type { Company } from '../../companies/types';
 import { getAreasByCompanyId } from '../../areas/api';
@@ -44,6 +45,7 @@ export const WorkflowsPage: React.FC = () => {
 
   const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
   const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
+  const adminContext = useAdminViewContext();
 
   const [activeTab, setActiveTab] = useState<'inbox' | 'my' | 'trees' | 'nodes' | 'fields'>('inbox');
 
@@ -87,6 +89,12 @@ export const WorkflowsPage: React.FC = () => {
       setSelectedCompanyId(user.companyId);
     }
   }, [isSuperAdmin, user?.companyId]);
+
+  useEffect(() => {
+    if (isSuperAdmin && adminContext?.selectedCompanyId !== undefined) {
+      setSelectedCompanyId(adminContext.selectedCompanyId);
+    }
+  }, [isSuperAdmin, adminContext?.selectedCompanyId]);
 
   // 2. Carrega acessos granulares do usuário
   useEffect(() => {

@@ -14,6 +14,7 @@ import { useSystemDialog } from '../../../shared/components';
 import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import { createPost, deletePost, getPosts, postImageUrl, setPostPinned, updatePost } from '../api';
 import type { Post, PostFormData } from '../types';
+import { useAdminViewContext } from '../../../app/layouts/AdminLayout';
 
 const initialForm = {
   title: '',
@@ -41,6 +42,7 @@ export function FeedPage() {
   const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
   const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
   const canModerateCompany = isSuperAdmin || isCompanyAdmin;
+  const adminContext = useAdminViewContext();
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -83,6 +85,12 @@ export function FeedPage() {
       setSelectedCompanyId(user.companyId);
     }
   }, [isSuperAdmin, user?.companyId]);
+
+  useEffect(() => {
+    if (isSuperAdmin && adminContext?.selectedCompanyId !== undefined) {
+      setSelectedCompanyId(adminContext.selectedCompanyId);
+    }
+  }, [isSuperAdmin, adminContext?.selectedCompanyId]);
 
   // 3. Carregar Acessos do Usuário
   useEffect(() => {
@@ -341,7 +349,7 @@ export function FeedPage() {
                 setSearchParams({});
               }
             }}
-            className="w-72 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm"
+            className="w-64"
           >
             <option value="">Todas as áreas (Geral)</option>
             {areas.map((a) => (

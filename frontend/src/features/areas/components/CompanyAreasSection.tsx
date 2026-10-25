@@ -62,6 +62,11 @@ export function CompanyAreasSection({ companyId }: CompanyAreasSectionProps) {
     }
   }, [companyId]);
 
+  const handleAreaChange = useCallback(() => {
+    void loadAreas({ silent: true });
+    window.dispatchEvent(new CustomEvent('sicou:areas-updated'));
+  }, [loadAreas]);
+
   function handleOpenEditModal(area: CompanyArea) {
     setSelectedArea(area);
     setIsEditModalOpen(true);
@@ -129,7 +134,7 @@ export function CompanyAreasSection({ companyId }: CompanyAreasSectionProps) {
 
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
-              Áreas
+              Áreas da Sede
             </h2>
 
             <p className="text-sm text-slate-500">
@@ -152,7 +157,7 @@ export function CompanyAreasSection({ companyId }: CompanyAreasSectionProps) {
           <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-600/15 transition hover:bg-indigo-700"
           >
             <Plus className="h-4 w-4" />
             Nova área
@@ -287,21 +292,21 @@ export function CompanyAreasSection({ companyId }: CompanyAreasSectionProps) {
         companyId={companyId}
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreated={() => void loadAreas({ silent: true })}
+        onCreated={handleAreaChange}
       />
 
       <EditAreaModal
         area={selectedArea}
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
-        onUpdated={() => void loadAreas({ silent: true })}
+        onUpdated={handleAreaChange}
       />
 
       <DeleteAreaModal
         area={selectedArea}
         isOpen={isDeleteModalOpen}
         onClose={handleCloseDeleteModal}
-        onDeleted={() => void loadAreas({ silent: true })}
+        onDeleted={handleAreaChange}
       />
     </div>
   );

@@ -1,6 +1,9 @@
 import { BadgeCheck, Ban, Building2, Edit, Eye, Plus, RefreshCcw, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { ActionsDropdown, SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
+import { useAuth } from '../../auth/providers';
+import { SystemRoles } from '../../../shared/constants/roles';
 import {
   CreateCompanyModal,
   DeleteCompanyModal,
@@ -17,6 +20,10 @@ function formatDate(value: string) {
 }
 
 export function CompaniesPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,6 +32,13 @@ export function CompaniesPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Redireciona administrador de empresa diretamente para os detalhes da sua empresa
+  useEffect(() => {
+    if (user && !isSuperAdmin && user.companyId) {
+      navigate(`/app/companies/${user.companyId}`, { replace: true });
+    }
+  }, [user, isSuperAdmin, navigate]);
 
   const loadCompanies = useCallback(async (options?: { silent?: boolean }) => {
     try {
@@ -134,14 +148,16 @@ export function CompaniesPage() {
             Atualizar
           </button>
 
-          <button
-            type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm shadow-indigo-600/15 transition hover:bg-indigo-700"
-          >
-            <Plus className="h-4 w-4" />
-            Nova empresa
-          </button>
+          {isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm shadow-indigo-600/15 transition hover:bg-indigo-700"
+            >
+              <Plus className="h-4 w-4" />
+              Nova empresa
+            </button>
+          )}
         </div>
       </header>
 
@@ -195,13 +211,15 @@ export function CompaniesPage() {
             icon={Building2}
             title="Nenhuma empresa cadastrada"
             description="Adicione uma empresa para começar a organizar a plataforma."
-            action={<button
-              type="button"
-              onClick={() => setIsCreateModalOpen(true)}
-              className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
-            >
-              <Plus className="h-4 w-4" /> Nova empresa
-            </button>}
+            action={isSuperAdmin ? (
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
+              >
+                <Plus className="h-4 w-4" /> Nova empresa
+              </button>
+            ) : undefined}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -281,17 +299,21 @@ export function CompaniesPage() {
                               to: `/app/companies/${company.id}`,
                               icon: <Eye className="h-4 w-4" />,
                             },
-                            {
-                              label: 'Editar',
-                              onClick: () => handleOpenEditModal(company),
-                              icon: <Edit className="h-4 w-4" />,
-                            },
-                            {
-                              label: 'Inativar',
-                              onClick: () => handleOpenDeleteModal(company),
-                              icon: <Trash2 className="h-4 w-4" />,
-                              variant: 'danger',
-                            },
+                            ...(isSuperAdmin
+                              ? [
+                                  {
+                                    label: 'Editar',
+                                    onClick: () => handleOpenEditModal(company),
+                                    icon: <Edit className="h-4 w-4" />,
+                                  },
+                                  {
+                                    label: 'Inativar',
+                                    onClick: () => handleOpenDeleteModal(company),
+                                    icon: <Trash2 className="h-4 w-4" />,
+                                    variant: 'danger' as const,
+                                  },
+                                ]
+                              : []),
                           ]}
                         />
                       </div>
@@ -304,25 +326,29 @@ export function CompaniesPage() {
         )}
       </section>
 
-      <CreateCompanyModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreated={() => void loadCompanies({ silent: true })}
-      />
+      {isSuperAdmin && (
+        <>
+          <CreateCompanyModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onCreated={() => void loadCompanies({ silent: true })}
+          />
 
-      <EditCompanyModal
-        company={selectedCompany}
-        isOpen={isEditModalOpen}
-        onClose={handleCloseEditModal}
-        onUpdated={() => void loadCompanies({ silent: true })}
-      />
+          <EditCompanyModal
+            company={selectedCompany}
+            isOpen={isEditModalOpen}
+            onClose={handleCloseEditModal}
+            onUpdated={() => void loadCompanies({ silent: true })}
+          />
 
-      <DeleteCompanyModal
-        company={selectedCompany}
-        isOpen={isDeleteModalOpen}
-        onClose={handleCloseDeleteModal}
-        onDeleted={() => void loadCompanies({ silent: true })}
-      />
+          <DeleteCompanyModal
+            company={selectedCompany}
+            isOpen={isDeleteModalOpen}
+            onClose={handleCloseDeleteModal}
+            onDeleted={() => void loadCompanies({ silent: true })}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   BookOpen,
+  Building2,
   FileText,
   Layers3,
   LayoutDashboard,
@@ -10,7 +11,9 @@ import {
   Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useAuth } from '../../auth/providers';
+import { SystemRoles } from '../../../shared/constants/roles';
 import { CompanyAreasSection } from '../../areas';
 import { CompanyUnitsSection } from '../../units/components';
 import { getCompanyById } from '../api';
@@ -52,10 +55,18 @@ function formatDate(value?: string | null) {
 }
 
 export function CompanyDetailsPage() {
+  const { user } = useAuth();
   const { companyId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+
+  const validTabs: TabId[] = ['overview', 'areas', 'units', 'users', 'access-control', 'feed', 'guide'];
+  const tabParam = searchParams.get('tab') as TabId | null;
+  const initialTab: TabId = tabParam && validTabs.includes(tabParam) ? tabParam : 'overview';
+
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [company, setCompany] = useState<Company | null>(null);
   const [units, setUnits] = useState<Unit[]>([]);
   const [areas, setAreas] = useState<CompanyArea[]>([]);
@@ -66,6 +77,23 @@ export function CompanyDetailsPage() {
   const [isLoading, setIsLoading] = useState(Boolean(companyId));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sincroniza aba com parâmetro de URL
+  useEffect(() => {
+    const currentTab = searchParams.get('tab') as TabId | null;
+    if (currentTab && validTabs.includes(currentTab) && currentTab !== activeTab) {
+      setActiveTab(currentTab);
+    }
+  }, [searchParams, activeTab]);
+
+  const handleSelectTab = (tabId: TabId) => {
+    setActiveTab(tabId);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tabId);
+      return next;
+    });
+  };
 
   const loadAllCompanyData = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -125,11 +153,11 @@ export function CompanyDetailsPage() {
         <p className="text-sm font-medium text-red-600">Empresa não informada.</p>
         <button
           type="button"
-          onClick={() => navigate('/app/companies')}
+          onClick={() => navigate(isSuperAdmin ? '/app/companies' : '/app/dashboard')}
           className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
         >
           <ArrowLeft className="h-4 w-4" />
-          Voltar para empresas
+          {isSuperAdmin ? 'Voltar para empresas' : 'Voltar ao Dashboard'}
         </button>
       </div>
     );
@@ -149,11 +177,11 @@ export function CompanyDetailsPage() {
         <SystemNotice>{errorMessage ?? 'Empresa não encontrada.'}</SystemNotice>
         <button
           type="button"
-          onClick={() => navigate('/app/companies')}
+          onClick={() => navigate(isSuperAdmin ? '/app/companies' : '/app/dashboard')}
           className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
         >
           <ArrowLeft className="h-4 w-4" />
-          Voltar para empresas
+          {isSuperAdmin ? 'Voltar para empresas' : 'Voltar ao Dashboard'}
         </button>
       </div>
     );
@@ -184,13 +212,23 @@ export function CompanyDetailsPage() {
       {/* Top Header */}
       <header className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-5 xl:flex-row xl:items-end">
         <div>
-          <Link
-            to="/app/companies"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-indigo-700"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar para lista de empresas
-          </Link>
+          {isSuperAdmin ? (
+            <Link
+              to="/app/companies"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-indigo-700"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar para lista de empresas
+            </Link>
+          ) : (
+            <Link
+              to="/app/dashboard"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-indigo-700"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar ao Dashboard
+            </Link>
+          )}
 
           <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700">
             Painel de Governança 360°
@@ -214,7 +252,26 @@ export function CompanyDetailsPage() {
           </p>
         </div>
 
-        <div className="flex gap-2 xl:pb-0.5">
+        <div className="flex flex-wrap items-center gap-2 xl:pb-0.5">
+          {/* Botão de alternar visualização no menu lateral para Super Admin */}
+          {isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent('sicou:set-superadmin-company', {
+                    detail: { companyId: company.id },
+                  }),
+                );
+              }}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-100"
+              title="Ativar o ambiente desta empresa no menu lateral"
+            >
+              <Building2 className="h-4 w-4" />
+              Ativar no menu lateral
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => void loadAllCompanyData({ silent: true })}
@@ -238,14 +295,14 @@ export function CompanyDetailsPage() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleSelectTab(tab.id)}
                 className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
                   isActive
                     ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200/60'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-700'
                 }`}
               >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                 <span>{tab.label}</span>
                 {typeof tab.count === 'number' && (
                   <span
@@ -272,7 +329,7 @@ export function CompanyDetailsPage() {
             users={users}
             accesses={accesses}
             posts={posts}
-            onSelectTab={(tabId) => setActiveTab(tabId as TabId)}
+            onSelectTab={(tabId) => handleSelectTab(tabId as TabId)}
           />
         )}
 

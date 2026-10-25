@@ -201,21 +201,35 @@ export const ProcessTreeBuilderPage: React.FC = () => {
   // Handler para remover aresta/conexão manualmente (via botão na aresta)
   const handleDeleteEdge = useCallback(
     (edgeIdToDelete: string) => {
+      if (isHomologatedStatus(status)) {
+        setFeedback({
+          type: 'error',
+          text: 'Árvore homologada: a exclusão de conexões não é permitida.',
+        });
+        return;
+      }
       setEdges((currentEdges) => currentEdges.filter((e) => e.id !== edgeIdToDelete));
       setFeedback({ type: 'success', text: 'Conexão entre etapas removida com sucesso.' });
     },
-    [setEdges]
+    [setEdges, status]
   );
 
   // Handler disparado ao deletar aresta selecionada via tecla Delete/Backspace
   const onEdgesDelete = useCallback((deletedEdges: Edge[]) => {
+    if (isHomologatedStatus(status)) {
+      setFeedback({
+        type: 'error',
+        text: 'Árvore homologada: a exclusão de conexões não é permitida.',
+      });
+      return;
+    }
     if (deletedEdges.length > 0) {
       setFeedback({
         type: 'success',
         text: `${deletedEdges.length === 1 ? 'Conexão removida' : `${deletedEdges.length} conexões removidas`} com sucesso.`,
       });
     }
-  }, []);
+  }, [status]);
 
   // Handler para adicionar filho conectado a um nó (corrige arestas duplicadas e StrictMode)
   const handleAddChildToNode = useCallback(
@@ -252,6 +266,7 @@ export const ProcessTreeBuilderPage: React.FC = () => {
       setEdges((currentEdges) => {
         const edgeId = `e_${parentNodeId}_${childId}`;
         if (currentEdges.some((e) => e.id === edgeId)) return currentEdges;
+        const isHomologated = isHomologatedStatus(status);
         return [
           ...currentEdges,
           {
@@ -259,17 +274,18 @@ export const ProcessTreeBuilderPage: React.FC = () => {
             source: parentNodeId,
             target: childId,
             type: 'workflowEdge',
-            animated: true,
+            animated: !isHomologated,
             markerEnd: { type: MarkerType.ArrowClosed, color: '#4f46e5' },
             style: { stroke: '#4f46e5', strokeWidth: 2 },
             data: {
-              onDeleteEdge: handleDeleteEdge,
+              onDeleteEdge: !isHomologated ? handleDeleteEdge : undefined,
+              isHomologated,
             },
           },
         ];
       });
     },
-    [handleOpenConfigureNode, handleDeleteNode, handleDeleteEdge, setNodes, setEdges]
+    [handleOpenConfigureNode, handleDeleteNode, handleDeleteEdge, setNodes, setEdges, status]
   );
 
   // Inicializar Árvore Nova ou Carregar Existente (uma única vez por ID/sessão)
@@ -371,17 +387,20 @@ export const ProcessTreeBuilderPage: React.FC = () => {
             };
           });
 
+          const isTreeHomologated = isHomologatedStatus(pt.status);
+
           // Construir Arestas de Transição do React Flow com tipo interativo workflowEdge
           const flowEdges: Edge[] = pt.transitions.map((t) => ({
             id: `e_${t.fromNodeId}_${t.toNodeId}`,
             source: t.fromNodeId,
             target: t.toNodeId,
             type: 'workflowEdge',
-            animated: true,
+            animated: !isTreeHomologated,
             markerEnd: { type: MarkerType.ArrowClosed, color: '#4f46e5' },
             style: { stroke: '#4f46e5', strokeWidth: 2 },
             data: {
-              onDeleteEdge: handleDeleteEdge,
+              onDeleteEdge: !isTreeHomologated ? handleDeleteEdge : undefined,
+              isHomologated: isTreeHomologated,
             },
           }));
 
@@ -452,6 +471,13 @@ export const ProcessTreeBuilderPage: React.FC = () => {
   // Conexão manual entre nós arrastando handles
   const onConnect = useCallback(
     (params: Connection) => {
+      if (isHomologatedStatus(status)) {
+        setFeedback({
+          type: 'error',
+          text: 'Esta árvore está homologada. Novas conexões não podem ser criadas.',
+        });
+        return;
+      }
       if (!params.source || !params.target || params.source === params.target) return;
       const edgeId = `e_${params.source}_${params.target}`;
       setEdges((eds) => {
@@ -468,13 +494,14 @@ export const ProcessTreeBuilderPage: React.FC = () => {
             style: { stroke: '#4f46e5', strokeWidth: 2 },
             data: {
               onDeleteEdge: handleDeleteEdge,
+              isHomologated: false,
             },
           },
           eds
         );
       });
     },
-    [setEdges, handleDeleteEdge]
+    [setEdges, handleDeleteEdge, status]
   );
 
   // Adicionar Nó Avulso a partir da Toolbar
@@ -857,6 +884,18 @@ const isGuid = (val?: string | null): boolean => {
       await handleSaveTree(false);
       await workflowsApi.homologateProcessType(treeId);
       setStatus(ProcessTypeStatus.Homologated);
+      // Atualiza imediatamente as conexões na tela para refletir status homologado (remove botões X e desativa animações)
+      setEdges((currentEdges) =>
+        currentEdges.map((e) => ({
+          ...e,
+          animated: false,
+          data: {
+            ...e.data,
+            isHomologated: true,
+            onDeleteEdge: undefined,
+          },
+        }))
+      );
       setFeedback({
         type: 'success',
         text: 'Árvore homologada com sucesso para produção com o layout espacial dos nós persistido!',
@@ -1191,7 +1230,7 @@ const isGuid = (val?: string | null): boolean => {
           onEdgesChange={onEdgesChange}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
-          deleteKeyCode={['Backspace', 'Delete']}
+          deleteKeyCode={isHomologatedStatus(status) ? null : ['Backspace', 'Delete']}
           onConnect={onConnect}
           fitView
           minZoom={0.2}

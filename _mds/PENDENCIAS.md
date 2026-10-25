@@ -26,7 +26,7 @@ A regra também está no [AGENTS.md da raiz](../AGENTS.md). Ferramentas sem supo
 
 - [ ] **RF-008 / RNF-006 — Segregação por unidade:** garantir que todos os fluxos respeitem a unidade atual do usuário, inclusive após transferência e nas exceções por autoria.
 - [ ] **RF-012 — Escalonamento para a sede:** definir critérios de encaminhamento por tipo de processo, criticidade, aprovação centralizada e solicitação manual autorizada.
-- [ ] **RF-013 — Workflows completos:** incluir responsáveis por etapa e prazos. *(Atribuição de responsáveis por etapa/local de processo e bloqueio universal de manipulação entregues em [2026-10-14.md](ATUALIZACOES/2026-10-14.md); persistência de layout espacial, categorização por cores, exclusão de arestas e árvore homologada de Contratação RH entregues em [2026-10-15.md](ATUALIZACOES/2026-10-15.md); controle de prazos por etapa pendente).*
+- [ ] **RF-013 — Workflows completos:** incluir responsáveis por etapa e prazos. *(Atribuição de responsáveis por etapa/local de processo e bloqueio universal de manipulação entregues em [2026-10-14.md](ATUALIZACOES/2026-10-14.md); persistência de layout espacial, categorização por cores e árvore homologada de Contratação RH entregues em [2026-10-15.md](ATUALIZACOES/2026-10-15.md); conexões anguladas ortogonais, indicador direcional de fluxo e gestão de exclusão por estado entregues em [2026-10-17.md](ATUALIZACOES/2026-10-17.md); controle de prazos por etapa pendente).*
 - [x] **RF-014 — Validação da execução:** validar campos obrigatórios, campos pertencentes à árvore/etapa, regras condicionais e transições no backend ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
 - [x] **RF-015 — Estados de aprovação e rejeição:** operações e transições automáticas que atribuem estados terminais de aprovação (Approved), rejeição (Rejected) e finalização (Finished) ao atingir nós terminais, com apresentação destacada na interface e bloqueio de novas mutações ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
 - [ ] **RF-016 / RNF-007 — Auditoria administrativa:** registrar alterações de usuários, setores, unidades e permissões com responsável, data/hora e dados relevantes da mudança.
@@ -37,7 +37,7 @@ A regra também está no [AGENTS.md da raiz](../AGENTS.md). Ferramentas sem supo
 ## Funcionalidades ainda ausentes
 
 - [x] **RF-011 — Transferência de processos:** mover processos entre unidades e registrar unidade de origem, destino, responsável, data e horário ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
-- [ ] **RF-018 — Dashboard gerencial:** apresentar indicadores reais de processos, unidades, prazos, status e desempenho operacional. A apresentação visual do dashboard administrativo foi aproximada da referência em [2026-10-16.md](ATUALIZACOES/2026-10-16.md); os indicadores reais continuam pendentes.
+- [x] **RF-018 — Dashboard gerencial:** painel gerencial da plataforma Sicou e das empresas com indicadores reais multi-empresariais de adesão, colaboradores, unidades, áreas ativas e utilização estrutural ([2026-10-25.md](ATUALIZACOES/2026-10-25.md)).
 - [ ] **RF-024 — Monitoramento de automações:** implementar agente de comunicação e acompanhamento de execuções nos servidores locais.
 - [ ] **RF-025 / RNF-017 — Logs de automações:** registrar status, data/hora, mensagens de erro e duração das execuções.
 - [ ] **RF-026 — Alertas de automações:** detectar e avisar falhas, atrasos e interrupções.
@@ -74,6 +74,7 @@ A regra também está no [AGENTS.md da raiz](../AGENTS.md). Ferramentas sem supo
 - [x] Ciclo de vida e encerramento de processos com estados finais (Deferido, Indeferido, Concluído) e cancelamento administrativo com justificativa e bloqueio de tramitação ([15/10/2026](ATUALIZACOES/2026-10-15.md)).
 - [x] Reformulação de UI/UX de árvores de decisão: página dedicada de detalhes (`/app/workflows/trees/:id`), histórico unificado de versões, ações rápidas, modais flutuantes centralizados e remoção total de drawers laterais ([15/10/2026](ATUALIZACOES/2026-10-15.md)).
 - [x] Transferência de processos entre unidades com trilha de auditoria (`FromUnit` -> `ToUnit`), localizador avançado de processos com filtros combinados (código, unidade, status, solicitante e período de abertura), validação de campos obrigatórios por etapa na API/UI e provisionamento homologado da árvore "Contratação de Novo Colaborador" na área de Recursos Humanos ([15/10/2026](ATUALIZACOES/2026-10-15.md)).
+- [x] Gestão de áreas da sede por Administrador de Empresa (criar, editar, inativar e atribuir módulos) e seletor corporativo no layout/sidebar para Super Admin com padrão em Visão Global ([25/10/2026](ATUALIZACOES/2026-10-25.md)).
 
 Os avisos existentes ainda precisam dos complementos de prazo, aprovação e automações descritos acima. Os **51 testes HTTP aprovados** na sessão anterior validam cenários específicos de recuperação, notificações e Orientador; não certificam todos os requisitos do apêndice.
 
