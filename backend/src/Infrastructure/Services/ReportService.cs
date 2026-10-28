@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Sicou.Application.Interfaces.Auth;
@@ -56,6 +58,7 @@ public partial class ReportService(ApplicationDbContext db, UserManager<Applicat
         if (filter.EndDate == DateOnly.MaxValue) throw new ArgumentException("Data final fora do intervalo permitido.");
         if (filter.Status.HasValue && !Enum.IsDefined(filter.Status.Value)) throw new ArgumentException("Status inválido.");
         if (filter.UnassignedOnly && filter.ResponsibleUserId.HasValue) throw new ArgumentException("Escolha um responsável ou sem responsável.");
+        if (filter.Movement is not (null or "" or "moved" or "notMoved")) throw new ArgumentException("Filtro de tramitação inválido.");
         if (filter.CompanyId.HasValue && !await scope.Areas.AnyAsync(a => a.CompanyId == filter.CompanyId, ct))
             throw new UnauthorizedAccessException("Empresa fora do seu escopo de relatórios.");
         if (filter.AreaId.HasValue && !await scope.Areas.AnyAsync(a => a.Id == filter.AreaId && (!filter.CompanyId.HasValue || a.CompanyId == filter.CompanyId), ct))
@@ -76,6 +79,13 @@ public partial class ReportService(ApplicationDbContext db, UserManager<Applicat
         if (filter.Status.HasValue) query = query.Where(p => p.Status == filter.Status);
         if (filter.ResponsibleUserId.HasValue) query = query.Where(p => p.ResponsibleUserId == filter.ResponsibleUserId);
         if (filter.UnassignedOnly) query = query.Where(p => p.ResponsibleUserId == null);
+        // Tramitado = qualquer movimentação além do protocolo (avanço que sai da confecção) e de comentários.
+        if (filter.Movement == "moved") query = query.Where(p => db.ProcessHistories.Any(h => h.ProcessInstanceId == p.Id && h.IsActive
+                && (h.Action == ProcessActionType.Return || h.Action == ProcessActionType.Restart || h.Action == ProcessActionType.Transfer
+                || h.Action == ProcessActionType.Cancel || (h.Action == ProcessActionType.Advance && h.FromNode != null && h.FromNode.NodeType != ProcessNodeType.StartConfection))));
+        if (filter.Movement == "notMoved") query = query.Where(p => !db.ProcessHistories.Any(h => h.ProcessInstanceId == p.Id && h.IsActive
+                && (h.Action == ProcessActionType.Return || h.Action == ProcessActionType.Restart || h.Action == ProcessActionType.Transfer
+                || h.Action == ProcessActionType.Cancel || (h.Action == ProcessActionType.Advance && h.FromNode != null && h.FromNode.NodeType != ProcessNodeType.StartConfection))));
         if (filter.StartDate.HasValue)
         {
             var start = filter.StartDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
@@ -103,7 +113,7 @@ public partial class ReportService(ApplicationDbContext db, UserManager<Applicat
         return new(companies, areas, units, responsible);
     }
 
-    private async Task<List<ReportRow>> RowsAsync(IQueryable<ProcessInstance> query, Scope scope, CancellationToken ct)
+    private async Task<List<ReportRow>> RowsAsync(IQueryable<ProcessInstance> query, Scope scope, bool includeForm, CancellationToken ct)
     {
         var data = await (from p in query
             join u in db.Users on p.ResponsibleUserId equals (Guid?)u.Id into assigned
@@ -112,13 +122,155 @@ public partial class ReportService(ApplicationDbContext db, UserManager<Applicat
                 Unit = p.OriginUnit == null ? "Sede" : p.OriginUnit.Name, ProcessType = p.ProcessType.Name,
                 p.Status, p.ResponsibleUserId, Responsible = u == null ? "Sem responsável" : u.FullName,
                 p.CreatedByUserName, p.CreatedAt, p.UpdatedAt,
+                CurrentStage = p.CurrentNode.Name,
+                CurrentUnit = p.CurrentUnitName ?? (p.CurrentUnit != null ? p.CurrentUnit.Name : null),
+                p.OpenedByUserName, p.OpenedAt,
                 CanAssign = scope.Admin || db.UserAreaAccesses.Any(x => x.UserId == current.UserId && x.IsActive
                     && x.CompanyId == p.CompanyId && x.AreaId == p.AreaId && x.UnitId == scope.Actor.UnitId
                     && (x.CanManage || x.CanManageWorkflows)) }).ToListAsync(ct);
-        return data.Select(p => new ReportRow(p.Id, p.CompanyId, p.AreaId, p.OriginUnitId, p.ProcessNumber, p.Title ?? "", p.Company, p.Area, p.Unit,
-            p.ProcessType, StatusLabel(p.Status), p.ResponsibleUserId, p.Responsible, p.CreatedByUserName ?? "",
-            p.CreatedAt, p.UpdatedAt, p.CanAssign)).ToList();
+        var ids = data.Select(p => p.Id).ToArray();
+        var history = ids.Length == 0 ? new List<HistoryEntry>() : await db.ProcessHistories.AsNoTracking()
+            .Where(h => h.IsActive && ids.Contains(h.ProcessInstanceId))
+            .OrderBy(h => h.CreatedAt).ThenBy(h => h.Id)
+            .Select(h => new HistoryEntry(h.ProcessInstanceId, h.CreatedAt, h.Action, h.FromNodeId, h.ToNodeId,
+                h.FromNode == null ? null : (ProcessNodeType?)h.FromNode.NodeType,
+                h.ToNode == null ? null : h.ToNode.Name, h.ToUnitName, h.UserFullName, h.Observations))
+            .ToListAsync(ct);
+        var historyByProcess = history.ToLookup(h => h.ProcessId);
+        var forms = new Dictionary<Guid, string>();
+        if (includeForm && ids.Length > 0)
+        {
+            var values = await (from v in db.ProcessFieldValues.AsNoTracking()
+                join p in db.ProcessInstances on v.ProcessInstanceId equals p.Id
+                where v.IsActive && ids.Contains(v.ProcessInstanceId) && v.Value != null && v.Value != ""
+                select new { v.ProcessInstanceId, v.FieldDefinition.Name, v.FieldDefinition.Type, v.Value,
+                    Order = db.ProcessTypeFields.Where(f => f.ProcessTypeId == p.ProcessTypeId && f.FieldDefinitionId == v.FieldDefinitionId)
+                        .Select(f => (int?)f.DisplayOrder).Min() ?? int.MaxValue }).ToListAsync(ct);
+            foreach (var group in values.GroupBy(v => v.ProcessInstanceId))
+                forms[group.Key] = Truncate(string.Join(" | ", group.OrderBy(v => v.Order).ThenBy(v => v.Name)
+                    .Select(v => $"{v.Name}: {FieldText(v.Type, v.Value!)}")), 4000);
+        }
+        var now = DateTime.UtcNow;
+        return data.Select(p =>
+        {
+            var tracking = Track(historyByProcess[p.Id].ToList(), p.Status, p.Unit, p.OpenedAt ?? p.CreatedAt, p.UpdatedAt, now);
+            return new ReportRow(p.Id, p.CompanyId, p.AreaId, p.OriginUnitId, p.ProcessNumber, p.Title ?? "", p.Company, p.Area, p.Unit,
+                p.ProcessType, StatusLabel(p.Status), p.ResponsibleUserId, p.Responsible, p.CreatedByUserName ?? "",
+                p.CreatedAt, p.UpdatedAt, p.CanAssign)
+            {
+                CurrentStage = p.CurrentStage,
+                CurrentUnit = p.CurrentUnit ?? p.Unit,
+                OpenedBy = p.OpenedByUserName ?? "",
+                OpenedAt = p.OpenedAt,
+                ClosedAt = tracking.ClosedAt,
+                DaysOpen = tracking.DaysOpen,
+                DaysInStage = tracking.DaysInStage,
+                Movements = tracking.Advances + tracking.Returns + tracking.Transfers + tracking.Cancels,
+                Advances = tracking.Advances,
+                Returns = tracking.Returns,
+                Transfers = tracking.Transfers,
+                Comments = tracking.Comments,
+                LastMovementAt = tracking.LastMovement?.At,
+                LastMovementAction = tracking.LastMovementLabel,
+                LastMovementBy = tracking.LastMovement?.User ?? "",
+                LastObservation = Truncate(tracking.LastObservation, 1000),
+                StagePath = Truncate(tracking.StagePath, 2000),
+                UnitPath = Truncate(tracking.UnitPath, 1000),
+                Participants = tracking.Participants,
+                FormData = forms.GetValueOrDefault(p.Id, ""),
+            };
+        }).ToList();
     }
+
+    private record HistoryEntry(Guid ProcessId, DateTime At, ProcessActionType Action, Guid? FromNodeId, Guid? ToNodeId,
+        ProcessNodeType? FromNodeType, string? ToNode, string? ToUnit, string? User, string? Observations);
+
+    private record Tracking(int Advances, int Returns, int Transfers, int Cancels, int Comments, HistoryEntry? LastMovement,
+        string LastMovementLabel, string LastObservation, DateTime? ClosedAt, int? DaysOpen, int? DaysInStage,
+        string StagePath, string UnitPath, string Participants);
+
+    private static bool IsTerminal(ProcessStatus status) => status is ProcessStatus.Approved or ProcessStatus.Rejected
+        or ProcessStatus.Finished or ProcessStatus.AdministrativeCancellation;
+
+    /// <summary>
+    /// Consolida o histórico de um processo (em ordem cronológica). O primeiro avanço a partir da confecção
+    /// (ou sem etapa de origem) é o protocolo e não conta como tramitação.
+    /// </summary>
+    private static Tracking Track(IReadOnlyList<HistoryEntry> entries, ProcessStatus status, string originUnit,
+        DateTime openedAt, DateTime? updatedAt, DateTime now)
+    {
+        int advances = 0, returns = 0, transfers = 0, cancels = 0, comments = 0;
+        var protocolSeen = false;
+        HistoryEntry? last = null;
+        var lastLabel = "";
+        var lastObservation = "";
+        DateTime? stageSince = null;
+        Guid? currentNode = null;
+        var stages = new List<string>();
+        var units = new List<string> { originUnit };
+        var participants = new List<string>();
+        foreach (var h in entries)
+        {
+            var label = ActionLabel(h.Action);
+            if (h.Action == ProcessActionType.Advance && !protocolSeen && (h.FromNodeId == null || h.FromNodeType == ProcessNodeType.StartConfection))
+            {
+                protocolSeen = true;
+                label = h.FromNodeId == null ? "Abertura" : "Protocolo";
+            }
+            else switch (h.Action)
+            {
+                case ProcessActionType.Advance: advances++; break;
+                case ProcessActionType.Return or ProcessActionType.Restart: returns++; break;
+                case ProcessActionType.Transfer: transfers++; break;
+                case ProcessActionType.Cancel: cancels++; break;
+                default: comments++; break;
+            }
+            if (h.Action != ProcessActionType.Comment) { last = h; lastLabel = label; }
+            if (!string.IsNullOrWhiteSpace(h.Observations)) lastObservation = h.Observations.Trim();
+            if (h.ToNodeId.HasValue && h.ToNodeId != currentNode)
+            {
+                currentNode = h.ToNodeId;
+                stageSince = h.At;
+                if (!string.IsNullOrEmpty(h.ToNode) && (stages.Count == 0 || stages[^1] != h.ToNode)) stages.Add(h.ToNode);
+            }
+            if (h.Action == ProcessActionType.Transfer && !string.IsNullOrWhiteSpace(h.ToUnit) && units[^1] != h.ToUnit) units.Add(h.ToUnit);
+            if (!string.IsNullOrWhiteSpace(h.User) && !participants.Contains(h.User)) participants.Add(h.User);
+        }
+        DateTime? closedAt = IsTerminal(status) ? last?.At ?? updatedAt : null;
+        int? Days(DateTime? from, DateTime to) => from.HasValue ? Math.Max(0, (int)Math.Floor((to - from.Value).TotalDays)) : null;
+        var daysOpen = status == ProcessStatus.Draft ? null : Days(openedAt, closedAt ?? now);
+        var daysInStage = closedAt.HasValue || status == ProcessStatus.Draft ? null : Days(stageSince, now);
+        return new(advances, returns, transfers, cancels, comments, last, lastLabel, lastObservation, closedAt, daysOpen, daysInStage,
+            string.Join(" → ", stages), string.Join(" → ", units), string.Join(", ", participants));
+    }
+
+    private static string Truncate(string text, int max) => text.Length <= max ? text : text[..(max - 1)] + "…";
+
+    /// <summary>Valor do formulário em texto legível; anexos não expõem o caminho armazenado.</summary>
+    private static string FieldText(FieldType type, string value)
+    {
+        value = value.Trim();
+        switch (type)
+        {
+            case FieldType.Boolean:
+                return value.Equals("true", StringComparison.OrdinalIgnoreCase) ? "Sim"
+                    : value.Equals("false", StringComparison.OrdinalIgnoreCase) ? "Não" : value;
+            case FieldType.FileAttachment:
+                return "anexo enviado";
+            case FieldType.MultiSelect when value.StartsWith('['):
+                try { return string.Join(", ", JsonSerializer.Deserialize<string[]>(value) ?? []); }
+                catch (JsonException) { return value; }
+            case FieldType.Date when DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date):
+                return date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+            default:
+                return string.Join(' ', value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        }
+    }
+
+    public static string ActionLabel(ProcessActionType action) => action switch {
+        ProcessActionType.Advance => "Avanço", ProcessActionType.Return => "Devolução", ProcessActionType.Restart => "Reinício",
+        ProcessActionType.Comment => "Comentário", ProcessActionType.Cancel => "Cancelamento", ProcessActionType.Transfer => "Transferência",
+        _ => action.ToString() };
 
     public async Task<ReportResult> GetAsync(ReportFilter filter, CancellationToken ct)
     {
@@ -128,7 +280,7 @@ public partial class ReportService(ApplicationDbContext db, UserManager<Applicat
         var query = await FilterAsync(scope, filter, ct);
         var total = await query.CountAsync(ct);
         var rows = await RowsAsync(query.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id)
-            .Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize), scope, ct);
+            .Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize), scope, true, ct);
         return new(rows, total, filter.Page, filter.PageSize);
     }
 
@@ -137,7 +289,8 @@ public partial class ReportService(ApplicationDbContext db, UserManager<Applicat
         if (format is not ("csv" or "xlsx" or "pdf")) throw new ArgumentException("Formato inválido. Use PDF, XLSX ou CSV.");
         var scope = await ScopeAsync();
         var query = await FilterAsync(scope, filter, ct);
-        var rows = await RowsAsync(query.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id).Take(5001), scope, ct);
+        var includeForm = filter.Columns?.Split(',', StringSplitOptions.TrimEntries).Contains("formData") == true;
+        var rows = await RowsAsync(query.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id).Take(5001), scope, includeForm, ct);
         if (rows.Count > 5000) throw new ArgumentException("A exportação permite até 5.000 processos. Refine os filtros.");
         return ReportExporter.Export(rows, filter, format);
     }

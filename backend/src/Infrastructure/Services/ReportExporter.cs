@@ -19,7 +19,18 @@ public static class ReportExporter
         new("unit", "Unidade", r => r.Unit), new("processType", "Tipo de processo", r => r.ProcessType),
         new("status", "Status", r => r.Status), new("responsible", "Responsável", r => r.Responsible),
         new("createdBy", "Solicitante", r => r.CreatedBy), new("createdAt", "Criado em (UTC)", r => r.CreatedAt),
-        new("updatedAt", "Atualizado em (UTC)", r => r.UpdatedAt) ];
+        new("updatedAt", "Atualizado em (UTC)", r => r.UpdatedAt),
+        // Tramitação
+        new("currentStage", "Etapa atual", r => r.CurrentStage), new("currentUnit", "Unidade atual", r => r.CurrentUnit),
+        new("openedBy", "Protocolado por", r => r.OpenedBy), new("openedAt", "Protocolado em (UTC)", r => r.OpenedAt),
+        new("closedAt", "Encerrado em (UTC)", r => r.ClosedAt), new("daysOpen", "Dias em tramitação", r => r.DaysOpen),
+        new("daysInStage", "Dias na etapa atual", r => r.DaysInStage), new("movements", "Movimentações", r => r.Movements),
+        new("advances", "Avanços", r => r.Advances), new("returns", "Devoluções/reinícios", r => r.Returns),
+        new("transfers", "Transferências", r => r.Transfers), new("comments", "Comentários", r => r.Comments),
+        new("lastMovementAt", "Última movimentação (UTC)", r => r.LastMovementAt), new("lastMovementAction", "Última ação", r => r.LastMovementAction),
+        new("lastMovementBy", "Última ação por", r => r.LastMovementBy), new("lastObservation", "Última observação", r => r.LastObservation),
+        new("stagePath", "Caminho das etapas", r => r.StagePath), new("unitPath", "Caminho das unidades", r => r.UnitPath),
+        new("participants", "Participantes", r => r.Participants), new("formData", "Dados do formulário", r => r.FormData) ];
 
     public static ReportFile Export(IReadOnlyList<ReportRow> rows, ReportFilter filter, string format)
     {
@@ -51,8 +62,11 @@ public static class ReportExporter
             _ => throw new ArgumentException("Formato não suportado.") };
     }
 
-    private static string Text(object? value) => value is DateTime date
-        ? date.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture) : value?.ToString() ?? "";
+    private static readonly NumberFormatInfo DecimalComma = new() { NumberDecimalSeparator = ",", NumberGroupSeparator = "" };
+    private static string Text(object? value) => value switch {
+        DateTime date => date.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture),
+        double number => number.ToString("0.#", DecimalComma), // vírgula decimal sem depender de ICU no container
+        _ => value?.ToString() ?? "" };
 
     // Spreadsheets may execute formulas even when CSV fields are quoted.
     private static string SafeCsv(string text) => text.TrimStart() is var trimmed && trimmed.Length > 0
@@ -88,6 +102,7 @@ public static class ReportExporter
                 if (value is DateTime date) { cell.Value = DateTime.SpecifyKind(date, DateTimeKind.Unspecified); cell.Style.DateFormat.Format = "dd/mm/yyyy hh:mm"; }
                 else if (value is int number) cell.Value = number;
                 else if (value is long count) cell.Value = count;
+                else if (value is double real) { cell.Value = real; cell.Style.NumberFormat.Format = "0.0"; }
                 else cell.Value = Text(value); // Text is never assigned to FormulaA1.
             }
         var header = sheet.Range(1, 1, 1, columns.Length);
@@ -113,7 +128,8 @@ public static class ReportExporter
         var font = builder.AddTrueTypeFont(fontBytes.ToArray());
         const double pageWidth = 842, pageHeight = 595, margin = 30, fontSize = 8;
         var weights = columns.Select(c => c.Key switch {
-            "summary" => 3.0, "email" or "url" or "title" => 2.0,
+            "summary" or "formData" or "stagePath" or "observations" or "lastObservation" => 3.0,
+            "email" or "url" or "title" or "unitPath" or "participants" => 2.0,
             "company" or "name" or "roles" or "createdAt" or "updatedAt" => 1.6,
             "state" => 0.6, _ => 1.0 }).ToArray();
         var widths = weights.Select(w => (pageWidth - 2 * margin) * w / weights.Sum()).ToArray();

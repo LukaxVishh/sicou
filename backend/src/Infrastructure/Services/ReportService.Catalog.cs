@@ -15,6 +15,15 @@ public partial class ReportService
     private static readonly ReportColumn[] GuideColumns = [new("title", "Orientação"), new("company", "Empresa"), new("area", "Setor"),
         new("category", "Categoria"), new("status", "Publicação"), new("fileName", "Anexo"), new("url", "Link"), new("summary", "Resumo"),
         new("createdAt", "Criado em (UTC)", "date"), new("updatedAt", "Atualizado em (UTC)", "date")];
+    private static readonly ReportColumn[] MovementColumns = [new("date", "Data (UTC)", "date"), new("number", "Processo"), new("title", "Título"),
+        new("company", "Empresa"), new("area", "Setor"), new("processType", "Tipo de processo"), new("originUnit", "Unidade de origem"),
+        new("action", "Ação"), new("fromStage", "Etapa anterior"), new("toStage", "Etapa seguinte"),
+        new("fromUnit", "Unidade anterior"), new("toUnit", "Unidade seguinte"), new("user", "Realizado por"),
+        new("observations", "Observações"), new("hoursSinceLast", "Horas desde a anterior", "number"),
+        new("status", "Status atual do processo"), new("currentStage", "Etapa atual do processo")];
+    private static readonly Dictionary<string, ProcessActionType> MovementActions = new() {
+        ["advance"] = ProcessActionType.Advance, ["return"] = ProcessActionType.Return, ["restart"] = ProcessActionType.Restart,
+        ["transfer"] = ProcessActionType.Transfer, ["cancel"] = ProcessActionType.Cancel, ["comment"] = ProcessActionType.Comment };
     private static readonly Dictionary<string, string> RoleLabels = new() {
         [SystemRoles.SuperAdmin] = "Super Admin", [SystemRoles.CompanyAdmin] = "Admin da Empresa", [SystemRoles.AreaAdmin] = "Gestor de Área",
         [SystemRoles.HeadquarterUser] = "Usuário da Sede", [SystemRoles.UnitUser] = "Usuário da Unidade" };
@@ -51,21 +60,22 @@ public partial class ReportService
             join a in guideAreas on c.AreaId equals a.Id
             where c.IsActive && visibleItems.Any(i => i.CategoryId == c.Id)
             orderby c.Name select new ReportOption(c.Id, c.Name, a.CompanyId, c.AreaId)).ToListAsync(ct);
-        return new(scope.Admin ? ["units", "users", "guides"] : ["guides"], companies, areas, units, categories);
+        return new(scope.Admin ? ["units", "users", "guides", "movements"] : ["guides", "movements"], companies, areas, units, categories);
     }
 
     private static (DateTime? Start, DateTime? End) ValidateCatalog(string kind, CatalogReportFilter filter)
     {
-        if (kind is not ("units" or "users" or "guides")) throw new ArgumentException("Tipo de relatório inválido.");
+        if (kind is not ("units" or "users" or "guides" or "movements")) throw new ArgumentException("Tipo de relatório inválido.");
         if (filter.PageSize is < 1 or > 100 || filter.Page < 1 || filter.Page > int.MaxValue / filter.PageSize)
             throw new ArgumentException("Paginação inválida.");
         if (filter.StartDate > filter.EndDate || filter.EndDate == DateOnly.MaxValue) throw new ArgumentException("Período inválido.");
-        if (kind != "guides" && (filter.AreaId.HasValue || filter.CategoryId.HasValue)) throw new ArgumentException("Setor e categoria são filtros de orientações.");
+        if (kind != "guides" && filter.CategoryId.HasValue) throw new ArgumentException("Categoria é um filtro de orientações.");
+        if (kind is not ("guides" or "movements") && filter.AreaId.HasValue) throw new ArgumentException("Setor é um filtro de orientações e tramitações.");
         if (kind != "users" && !string.IsNullOrWhiteSpace(filter.Role)) throw new ArgumentException("Perfil é um filtro de usuários.");
         if (kind != "units" && (!string.IsNullOrWhiteSpace(filter.City) || !string.IsNullOrWhiteSpace(filter.State))) throw new ArgumentException("Cidade e UF são filtros de unidades.");
         if (kind == "guides" && filter.UnitId.HasValue) throw new ArgumentException("Unidade não se aplica às orientações.");
         if (!string.IsNullOrEmpty(filter.Role) && !RoleLabels.ContainsKey(filter.Role)) throw new ArgumentException("Perfil inválido.");
-        var statuses = kind == "guides" ? new[] { "published", "draft" } : new[] { "active", "inactive" };
+        var statuses = kind switch { "guides" => new[] { "published", "draft" }, "movements" => MovementActions.Keys.ToArray(), _ => new[] { "active", "inactive" } };
         if (!string.IsNullOrEmpty(filter.Status) && !statuses.Contains(filter.Status)) throw new ArgumentException("Situação inválida para este relatório.");
         return (filter.StartDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
             filter.EndDate?.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
@@ -75,7 +85,7 @@ public partial class ReportService
     {
         var dates = ValidateCatalog(kind, filter);
         var scope = await ScopeAsync();
-        if (kind != "guides" && !scope.Admin) throw new UnauthorizedAccessException("Relatórios de unidades e usuários são restritos a administradores.");
+        if ((kind is "units" or "users") && !scope.Admin) throw new UnauthorizedAccessException("Relatórios de unidades e usuários são restritos a administradores.");
         var companyQuery = db.Companies.AsNoTracking().Where(c => c.IsActive && (scope.Super || c.Id == scope.Actor.CompanyId));
         if (filter.CompanyId.HasValue && !await companyQuery.AnyAsync(c => c.Id == filter.CompanyId, ct)) throw new UnauthorizedAccessException("Empresa fora do seu escopo.");
         if (filter.UnitId.HasValue && !await db.Units.AnyAsync(u => u.Id == filter.UnitId && companyQuery.Any(c => c.Id == u.CompanyId)
@@ -131,6 +141,48 @@ public partial class ReportService
                 ["roles"] = string.Join(", ", roles.Where(r => r.UserId == u.Id).Select(r => RoleLabels.GetValueOrDefault(r.Name ?? "", r.Name ?? "")).Order()),
                 ["status"] = u.IsActive ? "Ativo" : "Inativo", ["createdAt"] = u.CreatedAt })));
         }
+        else if (kind == "movements")
+        {
+            columns = MovementColumns;
+            if (filter.CompanyId.HasValue && !await scope.Areas.AnyAsync(a => a.CompanyId == filter.CompanyId, ct))
+                throw new UnauthorizedAccessException("Empresa fora do seu escopo de relatórios.");
+            if (filter.AreaId.HasValue && !await scope.Areas.AnyAsync(a => a.Id == filter.AreaId && (!filter.CompanyId.HasValue || a.CompanyId == filter.CompanyId), ct))
+                throw new UnauthorizedAccessException("Setor fora do seu escopo de relatórios.");
+            if (filter.UnitId.HasValue && !scope.Admin && scope.Actor.UnitId.HasValue && filter.UnitId != scope.Actor.UnitId)
+                throw new UnauthorizedAccessException("Unidade fora do seu escopo de relatórios.");
+            var processes = Processes(scope);
+            if (filter.CompanyId.HasValue) processes = processes.Where(p => p.CompanyId == filter.CompanyId);
+            if (filter.AreaId.HasValue) processes = processes.Where(p => p.AreaId == filter.AreaId);
+            var query = db.ProcessHistories.AsNoTracking().Where(h => h.IsActive && processes.Any(p => p.Id == h.ProcessInstanceId));
+            if (filter.UnitId.HasValue) query = query.Where(h => h.ProcessInstance.OriginUnitId == filter.UnitId
+                || h.FromUnitId == filter.UnitId || h.ToUnitId == filter.UnitId);
+            if (!string.IsNullOrEmpty(filter.Status)) { var action = MovementActions[filter.Status]; query = query.Where(h => h.Action == action); }
+            if (dates.Start.HasValue) query = query.Where(h => h.CreatedAt >= dates.Start);
+            if (dates.End.HasValue) query = query.Where(h => h.CreatedAt < dates.End);
+            if (!string.IsNullOrEmpty(search)) query = query.Where(h => h.ProcessInstance.ProcessNumber.ToLower().Contains(search)
+                || (h.ProcessInstance.Title != null && h.ProcessInstance.Title.ToLower().Contains(search))
+                || (h.UserFullName != null && h.UserFullName.ToLower().Contains(search))
+                || (h.Observations != null && h.Observations.ToLower().Contains(search)));
+            total = await query.CountAsync(ct);
+            var rows = await query.OrderByDescending(h => h.CreatedAt).ThenBy(h => h.Id).Skip(skip).Take(take).Select(h => new {
+                h.Id, h.CreatedAt, h.Action, h.FromNodeId, h.ToNodeId, h.FromUnitName, h.ToUnitName, h.UserFullName, h.Observations,
+                Number = h.ProcessInstance.ProcessNumber, h.ProcessInstance.Title, Company = h.ProcessInstance.Company.Name,
+                Area = h.ProcessInstance.Area.Name, ProcessType = h.ProcessInstance.ProcessType.Name,
+                OriginUnit = h.ProcessInstance.OriginUnit == null ? "Sede" : h.ProcessInstance.OriginUnit.Name,
+                FromStage = h.FromNode == null ? null : h.FromNode.Name, ToStage = h.ToNode == null ? null : h.ToNode.Name,
+                h.ProcessInstance.Status, CurrentStage = h.ProcessInstance.CurrentNode.Name,
+                Previous = db.ProcessHistories.Where(x => x.ProcessInstanceId == h.ProcessInstanceId && x.IsActive && x.CreatedAt < h.CreatedAt)
+                    .Max(x => (DateTime?)x.CreatedAt) }).ToListAsync(ct);
+            items.AddRange(rows.Select(h => new CatalogReportRow(h.Id, new Dictionary<string, object?> {
+                ["date"] = h.CreatedAt, ["number"] = h.Number, ["title"] = h.Title, ["company"] = h.Company, ["area"] = h.Area,
+                ["processType"] = h.ProcessType, ["originUnit"] = h.OriginUnit, ["action"] = ActionLabel(h.Action),
+                ["fromStage"] = h.FromStage, ["toStage"] = h.ToStage,
+                ["fromUnit"] = h.Action == ProcessActionType.Transfer ? h.FromUnitName : null,
+                ["toUnit"] = h.Action == ProcessActionType.Transfer ? h.ToUnitName : null,
+                ["user"] = h.UserFullName, ["observations"] = h.Observations,
+                ["hoursSinceLast"] = h.Previous.HasValue ? (object?)Math.Round((h.CreatedAt - h.Previous.Value).TotalHours, 1) : null,
+                ["status"] = StatusLabel(h.Status), ["currentStage"] = h.CurrentStage })));
+        }
         else
         {
             columns = GuideColumns;
@@ -168,7 +220,9 @@ public partial class ReportService
     {
         if (format is not ("pdf" or "xlsx" or "csv")) throw new ArgumentException("Formato inválido.");
         var result = await GetCatalogAsync(kind, filter, true, ct);
-        var title = kind switch { "units" => "Relatório de unidades", "users" => "Relatório de usuários", _ => "Relatório de orientações" };
-        return ReportExporter.ExportData(result.Items, result.Columns.ToArray(), filter.Columns, format, kind, title, filter.StartDate, filter.EndDate);
+        var title = kind switch { "units" => "Relatório de unidades", "users" => "Relatório de usuários",
+            "movements" => "Relatório de tramitações", _ => "Relatório de orientações" };
+        return ReportExporter.ExportData(result.Items, result.Columns.ToArray(), filter.Columns, format,
+            kind == "movements" ? "tramitacoes" : kind, title, filter.StartDate, filter.EndDate);
     }
 }

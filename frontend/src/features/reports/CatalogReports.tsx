@@ -17,6 +17,7 @@ import {
   exportCatalog,
   getCatalog,
   getCatalogOptions,
+  getOptions,
 } from "./api";
 import type {
   CatalogFilters,
@@ -24,6 +25,7 @@ import type {
   CatalogOptions,
   CatalogResult,
   Option,
+  ReportOptions,
 } from "./api";
 
 const input =
@@ -32,11 +34,33 @@ const button =
   "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50";
 const primary =
   "inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50";
-const names = { units: "Unidades", users: "Usuários", guides: "Orientações" };
-const descriptions = {
+const names: Record<CatalogKind, string> = {
+  units: "Unidades",
+  users: "Usuários",
+  guides: "Orientações",
+  movements: "Tramitações",
+};
+const descriptions: Record<CatalogKind, string> = {
   units: "Localização, situação e distribuição da equipe por unidade.",
   users: "Perfis, vínculos e situação dos usuários da empresa.",
   guides: "Publicações, categorias e anexos da base de conhecimento.",
+  movements:
+    "Cada movimentação dos processos: quem fez, quando, de qual etapa/unidade para qual e com que observação.",
+};
+const movementActions = [
+  ["advance", "Avanço"],
+  ["return", "Devolução"],
+  ["restart", "Reinício"],
+  ["transfer", "Transferência"],
+  ["cancel", "Cancelamento"],
+  ["comment", "Comentário"],
+];
+/** Colunas fora da tabela por padrão (continuam disponíveis no seletor e na exportação). */
+const hiddenByDefault: Record<CatalogKind, string[]> = {
+  units: [],
+  users: [],
+  guides: ["summary", "url", "updatedAt"],
+  movements: ["company", "processType", "originUnit", "status", "currentStage"],
 };
 const roles = [
   ["SUPER_ADMIN", "Super Admin"],
@@ -69,6 +93,23 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
   const [selected, setSelected] = useState<string[] | null>(null);
   const [showColumns, setShowColumns] = useState(false);
   const [exporting, setExporting] = useState("");
+  const [processOptions, setProcessOptions] = useState<ReportOptions | null>(
+    null,
+  );
+  const movements = kind === "movements";
+  useEffect(() => {
+    if (!movements) return;
+    const controller = new AbortController();
+    // Tramitações usam o escopo de processos (setores/unidades com workflow), não o do Orientador.
+    getOptions(controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) setProcessOptions(data);
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) setOptionsError(errorMessage(err));
+      });
+    return () => controller.abort();
+  }, [movements, version]);
   useEffect(() => {
     const controller = new AbortController();
     getCatalogOptions(controller.signal)
@@ -100,7 +141,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
   const visibleKeys =
     selected ??
     result?.columns
-      .filter((c) => !["summary", "url", "updatedAt"].includes(c.key))
+      .filter((c) => !hiddenByDefault[kind].includes(c.key))
       .map((c) => c.key) ??
     [];
   const columns =
@@ -109,6 +150,9 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
     (items ?? []).filter(
       (o) => !draft.companyId || o.companyId === draft.companyId,
     );
+  const companies = movements ? processOptions?.companies : options?.companies;
+  const areaChoices = choices(movements ? processOptions?.areas : options?.areas);
+  const unitChoices = choices(movements ? processOptions?.units : options?.units);
   const categories = choices(options?.categories).filter(
     (o) => !draft.areaId || o.areaId === draft.areaId,
   );
@@ -153,7 +197,9 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
             </h2>
             <p className="mt-1 text-sm text-slate-500">{descriptions[kind]}</p>
           </div>
-          <span className="text-xs text-slate-400">Datas de criação · UTC</span>
+          <span className="text-xs text-slate-400">
+            {movements ? "Data da movimentação · UTC" : "Datas de criação · UTC"}
+          </span>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <label className="text-xs font-semibold text-slate-600">
@@ -172,7 +218,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
               }
             >
               <option value="">Todas as permitidas</option>
-              {options?.companies.map((o) => (
+              {companies?.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name}
                 </option>
@@ -189,14 +235,16 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
                   ? "Nome ou e-mail"
                   : kind === "units"
                     ? "Nome ou código"
-                    : "Título ou conteúdo"
+                    : movements
+                      ? "Processo, título, usuário ou observação"
+                      : "Título ou conteúdo"
               }
               value={draft.search}
               onChange={(e) => change("search", e.target.value)}
             />
           </label>
           <label className="text-xs font-semibold text-slate-600">
-            {kind === "guides" ? "Publicação" : "Situação"}
+            {kind === "guides" ? "Publicação" : movements ? "Ação" : "Situação"}
             <NativeSelectDropdown
               className={input}
               value={draft.status}
@@ -208,7 +256,9 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
                     ["published", "Publicadas"],
                     ["draft", "Rascunhos permitidos"],
                   ]
-                : [
+                : movements
+                  ? movementActions
+                  : [
                     ["active", "Ativos"],
                     ["inactive", "Inativos"],
                   ]
@@ -228,7 +278,7 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
                 onChange={(e) => change("unitId", e.target.value)}
               >
                 <option value="">Todas</option>
-                {choices(options?.units).map((o) => (
+                {unitChoices.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.name}
                   </option>
@@ -278,6 +328,23 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
                 />
               </label>
             </>
+          )}
+          {movements && (
+            <label className="text-xs font-semibold text-slate-600">
+              Setor
+              <NativeSelectDropdown
+                className={input}
+                value={draft.areaId}
+                onChange={(e) => change("areaId", e.target.value)}
+              >
+                <option value="">Todos os permitidos</option>
+                {areaChoices.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </NativeSelectDropdown>
+            </label>
           )}
           {kind === "guides" && (
             <>
@@ -502,6 +569,8 @@ export function CatalogReports({ kind }: { kind: CatalogKind }) {
             PDF: até 1.000 registros · XLSX/CSV: até 5.000.
             {kind === "guides" &&
               " Resumos limitados a 500 caracteres; arquivos anexos não são incluídos."}
+            {movements &&
+              " Unidade filtra por origem do processo ou por transferências de/para ela."}
           </p>
           <div className="flex items-center gap-3">
             <button

@@ -13,6 +13,8 @@ public class ReportFilter
     public bool UnassignedOnly { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
+    /// <summary>"moved" = somente processos tramitados; "notMoved" = ainda sem tramitação após o protocolo.</summary>
+    [StringLength(20)] public string? Movement { get; set; }
     [Range(1, int.MaxValue)] public int Page { get; set; } = 1;
     [Range(1, 100)] public int PageSize { get; set; } = 25;
     public string? Columns { get; set; }
@@ -23,7 +25,30 @@ public record ReportOptions(IReadOnlyList<ReportOption> Companies, IReadOnlyList
     IReadOnlyList<ReportOption> Units, IReadOnlyList<ReportOption> Responsibles);
 public record ReportRow(Guid Id, Guid CompanyId, Guid AreaId, Guid? OriginUnitId, string Number, string Title, string Company, string Area, string Unit,
     string ProcessType, string Status, Guid? ResponsibleUserId, string Responsible, string CreatedBy,
-    DateTime CreatedAt, DateTime? UpdatedAt, bool CanAssign);
+    DateTime CreatedAt, DateTime? UpdatedAt, bool CanAssign)
+{
+    // Dados de tramitação, calculados a partir de ProcessHistory (init para manter o construtor posicional compatível).
+    public string CurrentStage { get; init; } = "";
+    public string CurrentUnit { get; init; } = "";
+    public string OpenedBy { get; init; } = "";
+    public DateTime? OpenedAt { get; init; }
+    public DateTime? ClosedAt { get; init; }
+    public int? DaysOpen { get; init; }
+    public int? DaysInStage { get; init; }
+    public int Movements { get; init; }
+    public int Advances { get; init; }
+    public int Returns { get; init; }
+    public int Transfers { get; init; }
+    public int Comments { get; init; }
+    public DateTime? LastMovementAt { get; init; }
+    public string LastMovementAction { get; init; } = "";
+    public string LastMovementBy { get; init; } = "";
+    public string LastObservation { get; init; } = "";
+    public string StagePath { get; init; } = "";
+    public string UnitPath { get; init; } = "";
+    public string Participants { get; init; } = "";
+    public string FormData { get; init; } = "";
+}
 public record ReportResult(IReadOnlyList<ReportRow> Items, int Total, int Page, int PageSize);
 public record ReportFile(byte[] Content, string ContentType, string FileName);
 public record AssignResponsibleRequest(Guid? UserId);
