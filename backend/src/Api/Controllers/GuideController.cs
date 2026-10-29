@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sicou.Application.Interfaces.Services;
 using Sicou.Application.Requests.Guide;
+using Sicou.Infrastructure.Services;
 
 namespace Sicou.Api.Controllers;
 
@@ -10,6 +11,21 @@ namespace Sicou.Api.Controllers;
 [Route("api/areas/{areaId:guid}/guide")]
 public class GuideController(IGuideService service) : ControllerBase
 {
+    private static readonly SemaphoreSlim PreviewCapacity = new(2);
+
+    /// <summary>Prévia de DOCX/XLSX/CSV (texto e tabelas) com a mesma autorização do download.</summary>
+    [HttpGet("items/{id:guid}/preview")]
+    public async Task<IActionResult> Preview(Guid areaId, Guid id,
+        [FromServices] DocumentProcessingService processor, CancellationToken ct)
+    {
+        var file = await service.GetFileAsync(areaId, id);
+        Response.Headers["Cache-Control"] = "no-store";
+        if (!await PreviewCapacity.WaitAsync(0, ct))
+            return StatusCode(429, new { message = "Prévia ocupada. Tente novamente em instantes." });
+        try { return Ok(processor.Process(file.Data, file.FileName, ct)); }
+        finally { PreviewCapacity.Release(); }
+    }
+
     [HttpGet("/api/guide/areas")]
     public async Task<IActionResult> Areas() => Ok(await service.GetAreasAsync());
 

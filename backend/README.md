@@ -1444,6 +1444,8 @@ Este README foi reescrito com base na estrutura e no código atual do `backend.z
 
 Consulte [ORIENTADOR.md](ORIENTADOR.md) para uso, endpoints, migração e execução da bateria Python.
 
+**Prévia de anexos.** `GET /api/areas/{areaId}/guide/items/{id}/preview` usa a mesma autorização do download (`GetFileAsync`) e retorna o resultado de `DocumentProcessingService` (texto, tabelas e avisos) para DOCX/XLSX/CSV, com `Cache-Control: no-store`. São até duas prévias simultâneas por instância; as excedentes recebem 429. No frontend, o anexo abre primeiro em pré-visualização (PDF e imagens via Blob autenticado; DOCX/XLSX/CSV via esta rota), e o download é opcional, pelo botão "Baixar". Se o navegador não tiver visualizador de PDF, a interface mostra um aviso em vez de deixar o iframe baixar o arquivo.
+
 ### Recuperação de senha e notificações
 
 Recuperação administrativa com senha temporária, troca obrigatória e notificações no sistema por empresa/área. Consulte [RECUPERACAO_E_NOTIFICACOES.md](RECUPERACAO_E_NOTIFICACOES.md).

@@ -4,9 +4,12 @@ import { randomBytes } from 'node:crypto';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 
-const base = 'http://localhost:5175';
+// SICOU_SEED_TARGET=docker aponta para o Compose (API 8080, banco sicou-dev via docker exec).
+const docker = process.env.SICOU_SEED_TARGET === 'docker';
+const base = docker ? 'http://localhost:8080' : 'http://localhost:5175';
 const psql = process.env.SICOU_SEED_PSQL || 'C:/Program Files/PostgreSQL/17/bin/psql.exe';
-const credentialPath = '.cache/large-demo-credentials.json';
+const database = docker ? 'sicou-dev' : 'guide_test';
+const credentialPath = docker ? '.cache/large-demo-docker-credentials.json' : '.cache/large-demo-credentials.json';
 const quantity = Number(process.env.SICOU_SEED_PER_AREA || 600);
 assert.ok(Number.isInteger(quantity) && quantity >= 6 && quantity <= 2000, 'Use 6 a 2.000 processos por setor.');
 await mkdir('.cache', { recursive: true });
@@ -17,8 +20,13 @@ try { previous = parse(await readFile(credentialPath, 'utf8')); } catch (err) { 
 const password = previous?.password || process.env.SICOU_SEED_PASSWORD || 'Demo!' + randomBytes(8).toString('hex') + 'Aa1';
 const accounts = previous?.accounts || [];
 let token;
+function psqlRun(args, input) {
+  return docker
+    ? execFileSync('docker', ['exec', '-i', 'Sicou-DB', 'psql', '-U', 'postgres', '-d', database, '-v', 'ON_ERROR_STOP=1', ...args], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024, input })
+    : execFileSync(psql, ['-h', '127.0.0.1', '-p', '55439', '-U', 'guide_test', '-d', database, '-v', 'ON_ERROR_STOP=1', ...args], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024, input });
+}
 function sql(query) {
-  return execFileSync(psql, ['-h', '127.0.0.1', '-p', '55439', '-U', 'guide_test', '-d', 'guide_test', '-v', 'ON_ERROR_STOP=1', '-At', '-c', query], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 }).trim();
+  return psqlRun(['-At', '-c', query]).trim();
 }
 async function api(path, body, method = body ? 'POST' : 'GET', auth = token) {
   const response = await fetch(base + '/api/' + path, { method, headers: { 'Content-Type': 'application/json', ...(auth ? { Authorization: 'Bearer ' + auth } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
@@ -28,7 +36,7 @@ async function api(path, body, method = body ? 'POST' : 'GET', auth = token) {
 const session = await api('auth/login', superCredentials, 'POST', null);
 assert.ok(session.user.roles.includes('SUPER_ADMIN'));
 token = session.accessToken;
-assert.equal(sql('SELECT current_database()'), 'guide_test');
+assert.equal(sql('SELECT current_database()'), database);
 assert.equal(sql(`SELECT count(*) FROM users WHERE "Id"='${session.user.id}'::uuid`), '1', 'A API deve apontar para o mesmo banco local.');
 const existingCompanies = await api('companies');
 const allUsers = await api('users');
@@ -177,7 +185,21 @@ SELECT json_build_object('processos_demo',(SELECT count(*) FROM process_instance
  'campos_demo',(SELECT count(*) FROM process_field_values f JOIN process_instances p ON p."Id"=f."ProcessInstanceId" WHERE p."ProcessNumber" LIKE 'DEMO26-%'));
 `;
 await writeFile('.cache/large-demo-seed.sql', statement);
-console.log(execFileSync(psql, ['-h','127.0.0.1','-p','55439','-U','guide_test','-d','guide_test','-v','ON_ERROR_STOP=1','-f','.cache/large-demo-seed.sql'], { encoding:'utf8', maxBuffer: 4*1024*1024 }));
+console.log(psqlRun(['-f', '-'], statement));
+// Informativos do feed: um geral por empresa e um por setor, criados uma única vez.
+async function ensurePost(fields) {
+  if (sql(`SELECT count(*) FROM posts WHERE "Title"='${fields.title.replaceAll("'", "''")}'`) !== '0') return;
+  const form = new FormData();
+  form.append('companyId', fields.companyId); form.append('title', fields.title); form.append('content', fields.content);
+  if (fields.areaId) form.append('areaId', fields.areaId);
+  const response = await fetch(base + '/api/posts', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
+  if (!response.ok) throw new Error(`POST posts: HTTP ${response.status} ${await response.text()}`);
+}
+for (const companyId of [...new Set(contexts.map(c => c.company))]) {
+  await ensurePost({ companyId, title: `Comunicado geral · Demonstração ${companyId.slice(0, 4)}`, content: 'Informativo fictício de demonstração para testar o feed. Não representa comunicação real.' });
+  for (const c of contexts.filter(x => x.company === companyId))
+    await ensurePost({ companyId, areaId: c.area, title: `${c.sector}: novidades do setor · Demonstração ${companyId.slice(0, 4)}`, content: `Informativo fictício do setor ${c.sector}.\n\n• Novo procedimento publicado no Orientador.\n• Prazos de atendimento revisados.` });
+}
 for (const account of accounts.filter(a => a.role === 'COMPANY_ADMIN')) {
   const auth = await api('auth/login', { email: account.email, password }, 'POST', null);
   const report = await api('reports/processes', null, 'GET', auth.accessToken);

@@ -1,7 +1,8 @@
 import { NativeSelectDropdown } from '../../shared/components/NativeSelectDropdown';
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, Download, ExternalLink, FolderOpen, Home, Link2, Paperclip, Plus, Search } from 'lucide-react';
-import { downloadGuideFile, getGuide, mutateGuide, uploadGuideFile, type GuideCategory, type GuideData, type GuideItem } from './api';
+import { ArrowLeft, ChevronDown, ChevronRight, ExternalLink, Eye, FolderOpen, Home, Link2, Paperclip, Plus, Search } from 'lucide-react';
+import { getGuide, mutateGuide, uploadGuideFile, type GuideCategory, type GuideData, type GuideItem } from './api';
+import { GuideFilePreview } from './GuideFilePreview';
 import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../shared/components';
 import { cn } from '../../shared/utils';
 
@@ -29,6 +30,7 @@ export function GuideWorkspace({ areaId }: { areaId: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [confirmation, setConfirmation] = useState<{ path: string; label: string } | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [preview, setPreview] = useState<GuideItem | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [viewKey, setViewKey] = useState(0);
   const leaveTimer = useRef<number | undefined>(undefined);
@@ -94,6 +96,7 @@ export function GuideWorkspace({ areaId }: { areaId: string }) {
   const rootCategories = data?.categories.filter(c => data.canManage || countIn(c.id) > 0) ?? [];
   return <section className="space-y-4" aria-label="Orientações da área" aria-busy={busy}>
     {error && <SystemNotice>{error}</SystemNotice>}
+    {preview && <GuideFilePreview areaId={areaId} item={preview} onClose={() => setPreview(null)} />}
     {!data && !error && <SystemLoadingState label="Carregando orientações..." />}
     {data && <>
       <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
@@ -166,7 +169,7 @@ export function GuideWorkspace({ areaId }: { areaId: string }) {
                   <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">{item.content}</p>
                   {(item.fileName || (item.url && /^https?:\/\//i.test(item.url))) && <div className="mt-4 flex flex-wrap gap-3">
                     {item.url && /^https?:\/\//i.test(item.url) && <a className={button} href={item.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} className="mr-2 inline" />Abrir link</a>}
-                    {item.fileName && <button className={button} disabled={busy} onClick={() => void run(() => downloadGuideFile(areaId, item), false)}><Download size={14} className="mr-2 inline" />{item.fileName}</button>}
+                    {item.fileName && <button className={button} disabled={busy} title={`Visualizar ${item.fileName}`} onClick={() => setPreview(item)}><Eye size={14} className="mr-2 inline" />{item.fileName}</button>}
                   </div>}
                   {data.canManage && <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3"><button className={button} disabled={busy} onClick={() => { setItemForm({ ...item, url: item.url ?? '' }); setCategoryForm(null); setFile(null); }}>Editar</button><button className={button} disabled={busy || itemForm?.id === item.id} onClick={() => void run(async () => {
                     await mutateGuide(areaId, `items/${item.id}`, 'PUT', { ...item, isPublished: !item.isPublished });

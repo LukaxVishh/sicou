@@ -23,12 +23,19 @@ export async function uploadGuideFile(areaId: string, id: string, file: File) {
   body.append('file', file);
   return apiFetch<void>(`${guidePath(areaId)}/items/${id}/file`, { method: 'POST', body });
 }
-export async function downloadGuideFile(areaId: string, item: GuideItem) {
-  const response = await fetch(`${env.apiBaseUrl}${guidePath(areaId)}/items/${item.id}/file`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem(storageKeys.accessToken) ?? ''}` },
+export type GuideDocument = { text: string; tables: { name: string; rows: string[][] }[]; warnings: string[] };
+export const previewGuideFile = (areaId: string, id: string) =>
+  apiFetch<GuideDocument>(`${guidePath(areaId)}/items/${id}/preview`);
+/** Arquivo autenticado como Blob, para exibir no navegador sem baixar. */
+export async function getGuideFile(areaId: string, id: string, type: string, signal?: AbortSignal) {
+  const response = await fetch(`${env.apiBaseUrl}${guidePath(areaId)}/items/${id}/file`, {
+    headers: { Authorization: `Bearer ${localStorage.getItem(storageKeys.accessToken) ?? ''}` }, signal,
   });
-  if (!response.ok) throw new Error('Não foi possível baixar o arquivo. Verifique sua sessão e permissão.');
-  const url = URL.createObjectURL(await response.blob());
+  if (!response.ok) throw new Error('Não foi possível abrir o arquivo. Verifique sua sessão e permissão.');
+  return new Blob([await response.arrayBuffer()], { type });
+}
+export async function downloadGuideFile(areaId: string, item: GuideItem) {
+  const url = URL.createObjectURL(await getGuideFile(areaId, item.id, 'application/octet-stream'));
   const link = document.createElement('a');
   link.href = url;
   link.download = item.fileName ?? 'arquivo';

@@ -62,12 +62,20 @@ const statuses = [
   ["Finished", "Concluído"],
   ["AdministrativeCancellation", "Cancelado administrativamente"],
 ];
-const date = (value: string) =>
-  new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(value));
+const dateOnly = (value: string) =>
+  new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeZone: "UTC" }).format(new Date(value));
+const timeOnly = (value: string) =>
+  new Intl.DateTimeFormat("pt-BR", { timeStyle: "short", timeZone: "UTC" }).format(new Date(value));
+const statusStyles: Record<string, string> = {
+  Rascunho: "bg-slate-100 text-slate-600 ring-slate-200",
+  "Em análise": "bg-sky-50 text-sky-700 ring-sky-200",
+  Devolvido: "bg-amber-50 text-amber-700 ring-amber-200",
+  Aprovado: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  Concluído: "bg-teal-50 text-teal-700 ring-teal-200",
+  Rejeitado: "bg-rose-50 text-rose-700 ring-rose-200",
+  "Cancelado administrativamente": "bg-slate-100 text-slate-500 ring-slate-200",
+};
+const longTextKeys = ["stagePath", "formData", "lastObservation"];
 const message = (err: unknown) =>
   err instanceof Error ? err.message : "Não foi possível concluir a operação.";
 
@@ -459,7 +467,7 @@ function ProcessReports() {
             <p aria-live="polite" className="mt-1 text-sm text-slate-500">
               {loading
                 ? "Consultando dados..."
-                : `${result?.total ?? 0} processos · ${filteredBy ? filteredBy + " filtros aplicados" : "todo o período"}`}
+                : `${(result?.total ?? 0).toLocaleString("pt-BR")} processos · ${filteredBy ? filteredBy + " filtros aplicados" : "todo o período"} · datas em UTC`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -570,70 +578,81 @@ function ProcessReports() {
               <caption className="sr-only">
                 Relatório de processos com filtros aplicados
               </caption>
-              <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500">
                 <tr>
                   {displayed.map((c) => (
                     <th
                       scope="col"
                       key={c.key}
-                      className="whitespace-nowrap px-5 py-4 font-semibold"
+                      className={`whitespace-nowrap px-4 py-3 font-semibold ${numericKeys.includes(c.key) ? "text-right" : ""} ${c.key === "number" ? "sticky left-0 z-10 bg-slate-50 shadow-[1px_0_0_#e2e8f0]" : ""}`}
                     >
-                      {c.label}
+                      {c.label.replace(" (UTC)", "")}
                     </th>
                   ))}
-                  <th scope="col" className="px-5 py-4">
+                  <th scope="col" className="px-4 py-3">
                     Ações
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {result.items.map((row) => (
-                  <tr key={row.id} className="transition hover:bg-slate-50/70">
+                  <tr key={row.id} className="group transition hover:bg-slate-50">
                     {displayed.map((c) => (
                       <td
                         key={c.key}
-                        className="max-w-xs px-5 py-4 text-slate-600"
+                        className={`px-4 py-3 align-middle text-slate-600 ${c.key === "number" ? "sticky left-0 z-10 bg-white shadow-[1px_0_0_#f1f5f9] group-hover:bg-slate-50" : ""} ${numericKeys.includes(c.key) ? "text-right" : ""}`}
                       >
                         {c.key === "status" ? (
                           <span
-                            className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${["Aprovado", "Concluído"].includes(String(row.status ?? "")) ? "bg-emerald-50 text-emerald-700" : row.status === "Rejeitado" ? "bg-rose-50 text-rose-700" : "bg-indigo-50 text-indigo-700"}`}
+                            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyles[String(row.status ?? "")] ?? "bg-indigo-50 text-indigo-700 ring-indigo-200"}`}
                           >
+                            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
                             {row.status}
                           </span>
                         ) : c.key === "number" ? (
                           <Link
-                            className="font-semibold text-indigo-600 hover:underline"
+                            className="whitespace-nowrap font-mono text-xs font-semibold text-indigo-600 hover:underline"
                             to={`/app/workflows/processes/${row.id}/confection`}
                           >
                             {row.number}
                           </Link>
                         ) : c.key.endsWith("At") ? (
-                          <span className="whitespace-nowrap">
-                            {row[c.key] ? date(String(row[c.key])) : "—"}
-                          </span>
+                          row[c.key] ? (
+                            <span className="block whitespace-nowrap leading-tight">
+                              <span className="text-slate-700">{dateOnly(String(row[c.key]))}</span>
+                              <span className="block text-xs text-slate-400">{timeOnly(String(row[c.key]))}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )
                         ) : numericKeys.includes(c.key) ? (
-                          <span className="tabular-nums">
-                            {row[c.key] ?? "—"}
-                          </span>
+                          row[c.key] == null ? (
+                            <span className="text-slate-300">—</span>
+                          ) : (
+                            <span className="whitespace-nowrap tabular-nums text-slate-700">
+                              {row[c.key]}
+                              {c.key.startsWith("days") && (
+                                <span className="ml-1 text-xs text-slate-400">{Number(row[c.key]) === 1 ? "dia" : "dias"}</span>
+                              )}
+                            </span>
+                          )
                         ) : (
                           <span
                             className={
-                              ["stagePath", "formData", "lastObservation"].includes(c.key)
+                              longTextKeys.includes(c.key)
                                 ? "line-clamp-4 block min-w-64 break-words"
-                                : "break-words"
+                                : c.key === "title"
+                                  ? "line-clamp-2 block min-w-56 max-w-xs font-medium text-slate-800"
+                                  : "block max-w-[13rem] truncate"
                             }
-                            title={
-                              ["stagePath", "formData", "lastObservation"].includes(c.key)
-                                ? String(row[c.key] ?? "")
-                                : undefined
-                            }
+                            title={row[c.key] ? String(row[c.key]) : undefined}
                           >
-                            {row[c.key] || "—"}
+                            {row[c.key] || <span className="text-slate-300">—</span>}
                           </span>
                         )}
                       </td>
                     ))}
-                    <td className="px-5 py-4">
+                    <td className="px-4 py-3">
                       {row.canAssign ? (
                         <button
                           onClick={() => {
