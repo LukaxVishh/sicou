@@ -59,6 +59,7 @@ A regra também está no [AGENTS.md da raiz](../AGENTS.md). Ferramentas sem supo
 - [ ] **RNF-010 — Desempenho:** medir e comprovar que 95% das requisições principais respondem em até dois segundos, sob condições de uso definidas.
 - [ ] **RNF-011 — Disponibilidade:** implementar monitoramento e comprovar disponibilidade mínima de 99% de segunda a sexta-feira, das 8h às 18h.
 - [ ] **RNF-019 — Restauração:** registrar evidência de recuperação dos dados a partir do backup.
+- [ ] Homologar visualmente a navegação em blocos animada do Orientador com dados reais ([27/10/2026](ATUALIZACOES/2026-10-27.md)).
 
 ## Entregas recentes já realizadas
 

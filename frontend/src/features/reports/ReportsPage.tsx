@@ -22,6 +22,7 @@ import {
   X,
   Building2,
   BookOpen,
+  Route,
 } from "lucide-react";
 import {
   assignResponsible,
@@ -33,6 +34,7 @@ import {
   getOptions,
   getReport,
   processDocument,
+  trackingKeys,
 } from "./api";
 import type {
   ColumnKey,
@@ -60,12 +62,20 @@ const statuses = [
   ["Finished", "Concluído"],
   ["AdministrativeCancellation", "Cancelado administrativamente"],
 ];
-const date = (value: string) =>
-  new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(value));
+const dateOnly = (value: string) =>
+  new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeZone: "UTC" }).format(new Date(value));
+const timeOnly = (value: string) =>
+  new Intl.DateTimeFormat("pt-BR", { timeStyle: "short", timeZone: "UTC" }).format(new Date(value));
+const statusStyles: Record<string, string> = {
+  Rascunho: "bg-slate-100 text-slate-600 ring-slate-200",
+  "Em análise": "bg-sky-50 text-sky-700 ring-sky-200",
+  Devolvido: "bg-amber-50 text-amber-700 ring-amber-200",
+  Aprovado: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  Concluído: "bg-teal-50 text-teal-700 ring-teal-200",
+  Rejeitado: "bg-rose-50 text-rose-700 ring-rose-200",
+  "Cancelado administrativamente": "bg-slate-100 text-slate-500 ring-slate-200",
+};
+const longTextKeys = ["stagePath", "formData", "lastObservation"];
 const message = (err: unknown) =>
   err instanceof Error ? err.message : "Não foi possível concluir a operação.";
 
@@ -109,10 +119,11 @@ export function ReportsPage() {
           [
             { key: "units", label: "Unidades", icon: Building2 },
             { key: "users", label: "Usuários", icon: Users },
+            { key: "movements", label: "Tramitações", icon: Route },
             { key: "guides", label: "Orientações", icon: BookOpen },
           ] as const
         )
-          .filter((item) => isAdmin || item.key === "guides")
+          .filter((item) => isAdmin || item.key === "guides" || item.key === "movements")
           .map((item) => (
             <button
               key={item.key}
@@ -144,19 +155,33 @@ export function ReportsPage() {
   );
 }
 
+const defaultColumns: ColumnKey[] = [
+  "number",
+  "title",
+  "area",
+  "unit",
+  "status",
+  "currentStage",
+  "responsible",
+  "daysOpen",
+  "lastMovementAt",
+  "createdAt",
+];
+const numericKeys: ColumnKey[] = [
+  "daysOpen",
+  "daysInStage",
+  "movements",
+  "advances",
+  "returns",
+  "transfers",
+  "comments",
+];
+
 function ProcessReports() {
   const [options, setOptions] = useState<ReportOptions | null>(null);
   const [draft, setDraft] = useState<Filters>(emptyFilters);
   const [applied, setApplied] = useState<Filters>(emptyFilters);
-  const [selected, setSelected] = useState<ColumnKey[]>([
-    "number",
-    "title",
-    "area",
-    "unit",
-    "status",
-    "responsible",
-    "createdAt",
-  ]);
+  const [selected, setSelected] = useState<ColumnKey[]>(defaultColumns);
   const [showColumns, setShowColumns] = useState(false);
   const [result, setResult] = useState<ReportResult | null>(null);
   const [page, setPage] = useState(1);
@@ -386,6 +411,18 @@ function ProcessReports() {
                 ))}
             </NativeSelectDropdown>
           </label>
+          <label className="space-y-2 text-xs font-semibold text-slate-600">
+            Tramitação
+            <NativeSelectDropdown
+              value={draft.movement}
+              onChange={(e) => setDraft({ ...draft, movement: e.target.value })}
+              className={input}
+            >
+              <option value="">Todos os processos</option>
+              <option value="moved">Somente tramitados</option>
+              <option value="notMoved">Sem tramitação após o protocolo</option>
+            </NativeSelectDropdown>
+          </label>
           <div className="flex items-end gap-2">
             <button disabled={loading} className={primary}>
               <Search className="h-4 w-4" />
@@ -430,7 +467,7 @@ function ProcessReports() {
             <p aria-live="polite" className="mt-1 text-sm text-slate-500">
               {loading
                 ? "Consultando dados..."
-                : `${result?.total ?? 0} processos · ${filteredBy ? filteredBy + " filtros aplicados" : "todo o período"}`}
+                : `${(result?.total ?? 0).toLocaleString("pt-BR")} processos · ${filteredBy ? filteredBy + " filtros aplicados" : "todo o período"} · datas em UTC`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -460,11 +497,50 @@ function ProcessReports() {
           </div>
         </div>
         {showColumns && (
-          <fieldset className="flex flex-wrap gap-x-5 gap-y-3 border-b border-slate-100 bg-slate-50/60 p-5">
+          <fieldset className="space-y-4 border-b border-slate-100 bg-slate-50/60 p-5">
             <legend className="sr-only">
               Colunas do relatório e da exportação
             </legend>
-            {columns.map((column) => (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={secondary}
+                onClick={() => setSelected(columns.map((c) => c.key))}
+              >
+                Máximo de informação
+              </button>
+              <button
+                type="button"
+                className={secondary}
+                onClick={() =>
+                  setSelected((prev) => [
+                    ...prev.filter((k) => !trackingKeys.includes(k)),
+                    ...trackingKeys,
+                  ])
+                }
+              >
+                Incluir tramitação
+              </button>
+              <button
+                type="button"
+                className={secondary}
+                onClick={() => setSelected(defaultColumns)}
+              >
+                Padrão
+              </button>
+            </div>
+            {(
+              [
+                ["Processo", columns.filter((c) => !trackingKeys.includes(c.key))],
+                ["Tramitação", columns.filter((c) => trackingKeys.includes(c.key))],
+              ] as const
+            ).map(([groupLabel, groupColumns]) => (
+            <div key={groupLabel}>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+              {groupLabel}
+            </p>
+            <div className="flex flex-wrap gap-x-5 gap-y-3">
+            {groupColumns.map((column) => (
               <label
                 key={column.key}
                 className="flex items-center gap-2 text-sm text-slate-600"
@@ -487,6 +563,9 @@ function ProcessReports() {
                 {column.label}
               </label>
             ))}
+            </div>
+            </div>
+            ))}
           </fieldset>
         )}
         {loading ? (
@@ -499,55 +578,81 @@ function ProcessReports() {
               <caption className="sr-only">
                 Relatório de processos com filtros aplicados
               </caption>
-              <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500">
                 <tr>
                   {displayed.map((c) => (
                     <th
                       scope="col"
                       key={c.key}
-                      className="whitespace-nowrap px-5 py-4 font-semibold"
+                      className={`whitespace-nowrap px-4 py-3 font-semibold ${numericKeys.includes(c.key) ? "text-right" : ""} ${c.key === "number" ? "sticky left-0 z-10 bg-slate-50 shadow-[1px_0_0_#e2e8f0]" : ""}`}
                     >
-                      {c.label}
+                      {c.label.replace(" (UTC)", "")}
                     </th>
                   ))}
-                  <th scope="col" className="px-5 py-4">
+                  <th scope="col" className="px-4 py-3">
                     Ações
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {result.items.map((row) => (
-                  <tr key={row.id} className="transition hover:bg-slate-50/70">
+                  <tr key={row.id} className="group transition hover:bg-slate-50">
                     {displayed.map((c) => (
                       <td
                         key={c.key}
-                        className="max-w-xs px-5 py-4 text-slate-600"
+                        className={`px-4 py-3 align-middle text-slate-600 ${c.key === "number" ? "sticky left-0 z-10 bg-white shadow-[1px_0_0_#f1f5f9] group-hover:bg-slate-50" : ""} ${numericKeys.includes(c.key) ? "text-right" : ""}`}
                       >
                         {c.key === "status" ? (
                           <span
-                            className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${["Aprovado", "Concluído"].includes(row.status || "") ? "bg-emerald-50 text-emerald-700" : row.status === "Rejeitado" ? "bg-rose-50 text-rose-700" : "bg-indigo-50 text-indigo-700"}`}
+                            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statusStyles[String(row.status ?? "")] ?? "bg-indigo-50 text-indigo-700 ring-indigo-200"}`}
                           >
+                            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
                             {row.status}
                           </span>
                         ) : c.key === "number" ? (
                           <Link
-                            className="font-semibold text-indigo-600 hover:underline"
+                            className="whitespace-nowrap font-mono text-xs font-semibold text-indigo-600 hover:underline"
                             to={`/app/workflows/processes/${row.id}/confection`}
                           >
                             {row.number}
                           </Link>
                         ) : c.key.endsWith("At") ? (
-                          <span className="whitespace-nowrap">
-                            {row[c.key] ? date(row[c.key]!) : "—"}
-                          </span>
+                          row[c.key] ? (
+                            <span className="block whitespace-nowrap leading-tight">
+                              <span className="text-slate-700">{dateOnly(String(row[c.key]))}</span>
+                              <span className="block text-xs text-slate-400">{timeOnly(String(row[c.key]))}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )
+                        ) : numericKeys.includes(c.key) ? (
+                          row[c.key] == null ? (
+                            <span className="text-slate-300">—</span>
+                          ) : (
+                            <span className="whitespace-nowrap tabular-nums text-slate-700">
+                              {row[c.key]}
+                              {c.key.startsWith("days") && (
+                                <span className="ml-1 text-xs text-slate-400">{Number(row[c.key]) === 1 ? "dia" : "dias"}</span>
+                              )}
+                            </span>
+                          )
                         ) : (
-                          <span className="break-words">
-                            {row[c.key] || "—"}
+                          <span
+                            className={
+                              longTextKeys.includes(c.key)
+                                ? "line-clamp-4 block min-w-64 break-words"
+                                : c.key === "title"
+                                  ? "line-clamp-2 block min-w-56 max-w-xs font-medium text-slate-800"
+                                  : "block max-w-[13rem] truncate"
+                            }
+                            title={row[c.key] ? String(row[c.key]) : undefined}
+                          >
+                            {row[c.key] || <span className="text-slate-300">—</span>}
                           </span>
                         )}
                       </td>
                     ))}
-                    <td className="px-5 py-4">
+                    <td className="px-4 py-3">
                       {row.canAssign ? (
                         <button
                           onClick={() => {
@@ -574,7 +679,8 @@ function ProcessReports() {
         )}
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4">
           <p className="text-xs text-slate-500">
-            Exportação: até 1.000 processos em PDF ou 5.000 em XLSX/CSV.
+            Exportação: até 1.000 processos em PDF ou 5.000 em XLSX/CSV. Com
+            muitas colunas, prefira XLSX: o PDF fica apertado.
           </p>
           <div className="flex items-center gap-3">
             <button

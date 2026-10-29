@@ -20,6 +20,7 @@ export type Filters = {
   responsibleUserId: string;
   startDate: string;
   endDate: string;
+  movement: string;
 };
 export const emptyFilters: Filters = {
   companyId: "",
@@ -29,6 +30,7 @@ export const emptyFilters: Filters = {
   responsibleUserId: "",
   startDate: "",
   endDate: "",
+  movement: "",
 };
 export const columns = [
   { key: "number", label: "Número" },
@@ -42,9 +44,32 @@ export const columns = [
   { key: "createdBy", label: "Solicitante" },
   { key: "createdAt", label: "Criado em (UTC)" },
   { key: "updatedAt", label: "Atualizado em (UTC)" },
-] as const;
+  { key: "currentStage", label: "Etapa atual", group: "tracking" },
+  { key: "currentUnit", label: "Unidade atual", group: "tracking" },
+  { key: "openedBy", label: "Protocolado por", group: "tracking" },
+  { key: "openedAt", label: "Protocolado em (UTC)", group: "tracking" },
+  { key: "closedAt", label: "Encerrado em (UTC)", group: "tracking" },
+  { key: "daysOpen", label: "Dias em tramitação", group: "tracking" },
+  { key: "daysInStage", label: "Dias na etapa atual", group: "tracking" },
+  { key: "movements", label: "Movimentações", group: "tracking" },
+  { key: "advances", label: "Avanços", group: "tracking" },
+  { key: "returns", label: "Devoluções/reinícios", group: "tracking" },
+  { key: "transfers", label: "Transferências", group: "tracking" },
+  { key: "comments", label: "Comentários", group: "tracking" },
+  { key: "lastMovementAt", label: "Última movimentação (UTC)", group: "tracking" },
+  { key: "lastMovementAction", label: "Última ação", group: "tracking" },
+  { key: "lastMovementBy", label: "Última ação por", group: "tracking" },
+  { key: "lastObservation", label: "Última observação", group: "tracking" },
+  { key: "stagePath", label: "Caminho das etapas", group: "tracking" },
+  { key: "unitPath", label: "Caminho das unidades", group: "tracking" },
+  { key: "participants", label: "Participantes", group: "tracking" },
+  { key: "formData", label: "Dados do formulário", group: "tracking" },
+] as const satisfies readonly { key: string; label: string; group?: "tracking" }[];
 export type ColumnKey = (typeof columns)[number]["key"];
-export type ReportRow = Record<ColumnKey, string | null> & {
+export const trackingKeys = columns
+  .filter((c) => "group" in c && c.group === "tracking")
+  .map((c) => c.key);
+export type ReportRow = Record<ColumnKey, string | number | null> & {
   id: string;
   companyId: string;
   areaId: string;
@@ -126,7 +151,7 @@ export function download(blob: Blob, name: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export type CatalogKind = "units" | "users" | "guides";
+export type CatalogKind = "units" | "users" | "guides" | "movements";
 export type CatalogFilters = {
   companyId: string;
   unitId: string;

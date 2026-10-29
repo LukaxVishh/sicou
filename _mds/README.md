@@ -34,6 +34,7 @@ Os documentos dos módulos complementam os registros diários com detalhes de us
 - [16/10/2026 — Integração da main com relatórios e importação locais](ATUALIZACOES/2026-10-16.md)
 - [17/10/2026 — Ajustes visuais do frontend](ATUALIZACOES/2026-10-17.md)
 - [25/10/2026 — Gestão de áreas, seletor corporativo e painel gerencial do Super Admin](ATUALIZACOES/2026-10-25.md)
+- [27/10/2026 — Navegação em blocos animada no Orientador](ATUALIZACOES/2026-10-27.md)
 
 ## Dados de demonstração local
 
