@@ -70,7 +70,7 @@ const schemas: Record<Kind, string[]> = {
   users: [
     "nome: obrigatório",
     "email: obrigatório e único",
-    "perfil: AREA_ADMIN, HEADQUARTER_USER ou UNIT_USER; COMPANY_ADMIN apenas para Super Admin",
+    "perfil: AREA_ADMIN, HEADQUARTER_USER ou UNIT_USER; COMPANY_ADMIN apenas para Super Admin ou Desenvolvedor",
     "unidade_codigo: obrigatório para UNIT_USER; vazio para perfis da sede",
   ],
   workflows: [

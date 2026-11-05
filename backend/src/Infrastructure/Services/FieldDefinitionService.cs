@@ -117,7 +117,7 @@ public class FieldDefinitionService : IFieldDefinitionService
             ?? throw new KeyNotFoundException("Usuário não encontrado.");
 
         var roles = await _userManager.GetRolesAsync(user);
-        if (roles.Contains(SystemRoles.SuperAdmin))
+        if (SystemRoles.IsPlatformAdmin(roles))
             return;
 
         var area = await _areaRepository.GetByIdAsync(areaId)

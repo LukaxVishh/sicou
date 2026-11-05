@@ -25,7 +25,7 @@ public partial class ReportService
         ["advance"] = ProcessActionType.Advance, ["return"] = ProcessActionType.Return, ["restart"] = ProcessActionType.Restart,
         ["transfer"] = ProcessActionType.Transfer, ["cancel"] = ProcessActionType.Cancel, ["comment"] = ProcessActionType.Comment };
     private static readonly Dictionary<string, string> RoleLabels = new() {
-        [SystemRoles.SuperAdmin] = "Super Admin", [SystemRoles.CompanyAdmin] = "Admin da Empresa", [SystemRoles.AreaAdmin] = "Gestor de Área",
+        [SystemRoles.SuperAdmin] = "Super Admin", [SystemRoles.Developer] = "Desenvolvedor", [SystemRoles.CompanyAdmin] = "Admin da Empresa", [SystemRoles.AreaAdmin] = "Gestor de Área",
         [SystemRoles.HeadquarterUser] = "Usuário da Sede", [SystemRoles.UnitUser] = "Usuário da Unidade" };
 
     private IQueryable<Area> GuideAreas(Scope scope)

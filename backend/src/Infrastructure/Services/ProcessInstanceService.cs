@@ -48,7 +48,7 @@ public class ProcessInstanceService : IProcessInstanceService
     {
         var user = await GetCurrentUserAsync();
         var roles = await _userManager.GetRolesAsync(user);
-        var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isSuperAdmin = SystemRoles.IsPlatformAdmin(roles);
         var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
 
         var area = await _areaRepository.GetByIdAsync(areaId)
@@ -71,7 +71,7 @@ public class ProcessInstanceService : IProcessInstanceService
             {
                 // Usuário da sede visualiza de todas as unidades, mas precisa ter permissão de acesso à área
                 var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-                var areaAccess = accesses.FirstOrDefault(a => a.AreaId == areaId && a.IsActive);
+                var areaAccess = accesses.FirstOrDefault(a => a.AreaId == areaId && IsCurrentLink(a, user));
                 if (areaAccess == null || (!areaAccess.CanView && !areaAccess.CanHandleWorkflowRequests && !areaAccess.CanManage))
                 {
                     throw new UnauthorizedAccessException("Você não possui permissão para visualizar processos desta área.");
@@ -94,7 +94,7 @@ public class ProcessInstanceService : IProcessInstanceService
 
         var user = await GetCurrentUserAsync();
         var roles = await _userManager.GetRolesAsync(user);
-        var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isSuperAdmin = SystemRoles.IsPlatformAdmin(roles);
         var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
 
         IReadOnlyList<ProcessInstance> instances;
@@ -191,10 +191,13 @@ public class ProcessInstanceService : IProcessInstanceService
 
     public async Task<IReadOnlyList<ProcessInstanceSummaryResponse>> GetMyProcessesAsync()
     {
-        if (string.IsNullOrEmpty(_currentUser.UserId))
-            throw new UnauthorizedAccessException("Usuário não autenticado.");
+        var user = await GetCurrentUserAsync();
+        var instances = await _instanceRepository.GetByUserIdAsync(user.Id.ToString());
 
-        var instances = await _instanceRepository.GetByUserIdAsync(_currentUser.UserId);
+        // RF-010: depois de uma troca de empresa, o autor deixa de listar os processos da empresa anterior.
+        if (!await _userManager.IsPlatformAdminAsync(user))
+            instances = instances.Where(p => p.CompanyId == user.CompanyId).ToList();
+
         return instances.Select(MapToSummaryResponse).ToList();
     }
 
@@ -217,7 +220,7 @@ public class ProcessInstanceService : IProcessInstanceService
             ?? throw new KeyNotFoundException("Usuário não encontrado.");
 
         var roles = await _userManager.GetRolesAsync(user);
-        var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isSuperAdmin = SystemRoles.IsPlatformAdmin(roles);
         var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
 
         var processType = await _processTypeRepository.GetCompleteTreeAsync(request.ProcessTypeId)
@@ -247,7 +250,7 @@ public class ProcessInstanceService : IProcessInstanceService
             if (!isSuperAdmin && !isCompanyAdmin)
             {
                 var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-                var areaAccess = accesses.FirstOrDefault(a => a.AreaId == processType.AreaId && a.IsActive);
+                var areaAccess = accesses.FirstOrDefault(a => a.AreaId == processType.AreaId && IsCurrentLink(a, user));
                 isAreaAdmin = areaAccess != null && (areaAccess.CanManage || areaAccess.CanManageWorkflows);
             }
 
@@ -401,11 +404,11 @@ public class ProcessInstanceService : IProcessInstanceService
 
         var user = await GetCurrentUserAsync();
         var roles = await _userManager.GetRolesAsync(user);
-        var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isSuperAdmin = SystemRoles.IsPlatformAdmin(roles);
         var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
 
-        if (!isSuperAdmin && !isCompanyAdmin && instance.CreatedByUserId != user.Id.ToString())
-            throw new UnauthorizedAccessException("Apenas o autor ou administradores podem protocolar este processo.");
+        if (!isSuperAdmin && !isCompanyAdmin && !await IsOperationalAuthorAsync(instance, user))
+            throw new UnauthorizedAccessException("Apenas o autor (sem transferência posterior à abertura) ou administradores podem protocolar este processo.");
 
         if (instance.Status != ProcessStatus.Draft && instance.Status != ProcessStatus.Returned)
             throw new InvalidOperationException("Este processo já se encontra protocolado e em tramitação.");
@@ -721,18 +724,18 @@ public class ProcessInstanceService : IProcessInstanceService
 
         var user = await GetCurrentUserAsync();
         var roles = await _userManager.GetRolesAsync(user);
-        var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isSuperAdmin = SystemRoles.IsPlatformAdmin(roles);
         var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
 
         if (!isSuperAdmin && user.CompanyId != instance.CompanyId)
             throw new UnauthorizedAccessException("Acesso negado a processos de outra empresa.");
 
-        var isCreator = instance.CreatedByUserId == user.Id.ToString();
+        var isCreator = await IsOperationalAuthorAsync(instance, user);
         var isAreaAdmin = false;
         if (!isSuperAdmin && !isCompanyAdmin)
         {
             var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-            var areaAccess = accesses.FirstOrDefault(a => a.AreaId == instance.AreaId && a.IsActive);
+            var areaAccess = accesses.FirstOrDefault(a => a.AreaId == instance.AreaId && IsCurrentLink(a, user));
             isAreaAdmin = areaAccess != null && (areaAccess.CanManage || areaAccess.CanManageWorkflows);
         }
 
@@ -968,7 +971,7 @@ public class ProcessInstanceService : IProcessInstanceService
     private async Task ValidateCanHandleAreaAsync(Guid areaId, ApplicationUser user)
     {
         var roles = await _userManager.GetRolesAsync(user);
-        if (roles.Contains(SystemRoles.SuperAdmin))
+        if (SystemRoles.IsPlatformAdmin(roles))
             return;
 
         var area = await _areaRepository.GetByIdAsync(areaId)
@@ -981,7 +984,7 @@ public class ProcessInstanceService : IProcessInstanceService
             return;
 
         var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-        var areaAccess = accesses.FirstOrDefault(a => a.AreaId == areaId && a.IsActive);
+        var areaAccess = accesses.FirstOrDefault(a => a.AreaId == areaId && IsCurrentLink(a, user));
 
         if (areaAccess == null || (!areaAccess.CanHandleWorkflowRequests && !areaAccess.CanManage))
             throw new UnauthorizedAccessException("Você não possui permissão para tramitar processos desta área.");
@@ -990,20 +993,34 @@ public class ProcessInstanceService : IProcessInstanceService
     private async Task ValidateCanHandleOrCreatorAsync(ProcessInstance instance, ApplicationUser user)
     {
         var roles = await _userManager.GetRolesAsync(user);
-        if (roles.Contains(SystemRoles.SuperAdmin) || roles.Contains(SystemRoles.CompanyAdmin))
+        if (SystemRoles.IsPlatformAdmin(roles) || roles.Contains(SystemRoles.CompanyAdmin))
             return;
 
-        if (instance.CreatedByUserId == user.Id.ToString())
+        if (await IsOperationalAuthorAsync(instance, user))
             return;
 
         await ValidateCanHandleAreaAsync(instance.AreaId, user);
     }
 
+    /// <summary>
+    /// RF-010: a autoria só dá acesso operacional (protocolar, editar, tramitar, cancelar) enquanto o autor
+    /// continua na empresa do processo e não foi transferido depois da abertura. A visualização continua liberada
+    /// ao autor dentro da mesma empresa, para acompanhamento.
+    /// </summary>
+    private async Task<bool> IsOperationalAuthorAsync(ProcessInstance instance, ApplicationUser user)
+        => instance.CreatedByUserId == user.Id.ToString()
+           && user.CompanyId == instance.CompanyId
+           && !await _context.UserTransfers.AnyAsync(t => t.UserId == user.Id && t.CreatedAt > instance.CreatedAt);
+
+    /// <summary>Vínculo de setor ativo e correspondente à empresa e à unidade atuais do usuário (RF-008 / RF-010).</summary>
+    private static bool IsCurrentLink(UserAreaAccess access, ApplicationUser user)
+        => access.IsActive && access.CompanyId == user.CompanyId && access.UnitId == user.UnitId;
+
     private async Task ValidateInstanceViewAccessAsync(ProcessInstance instance)
     {
         var user = await GetCurrentUserAsync();
         var roles = await _userManager.GetRolesAsync(user);
-        if (roles.Contains(SystemRoles.SuperAdmin))
+        if (SystemRoles.IsPlatformAdmin(roles))
             return;
 
         if (user.CompanyId != instance.CompanyId)
@@ -1023,7 +1040,7 @@ public class ProcessInstanceService : IProcessInstanceService
         }
 
         var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-        var areaAccess = accesses.FirstOrDefault(a => a.AreaId == instance.AreaId && a.IsActive);
+        var areaAccess = accesses.FirstOrDefault(a => a.AreaId == instance.AreaId && IsCurrentLink(a, user));
 
         if (areaAccess == null || (!areaAccess.CanView && !areaAccess.CanHandleWorkflowRequests && !areaAccess.CanManage))
             throw new UnauthorizedAccessException("Você não possui permissão para visualizar processos desta área.");

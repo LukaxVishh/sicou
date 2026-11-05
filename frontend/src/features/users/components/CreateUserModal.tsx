@@ -25,6 +25,11 @@ const roleOptions: Array<{
     description: 'Acesso administrativo global ao sistema.',
   },
   {
+    value: 'DEVELOPER',
+    label: 'Desenvolvedor',
+    description: 'Mesmo acesso global do Super admin, identificado como perfil técnico.',
+  },
+  {
     value: 'COMPANY_ADMIN',
     label: 'Admin da empresa',
     description: 'Administra dados relacionados à empresa vinculada.',

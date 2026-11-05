@@ -88,3 +88,10 @@ Thumbs.db
 .tools/
 .cache/
 **/__pycache__/
+
+# Backups locais do banco e das imagens (RNF-019)
+backups/
+
+# Guias mantidos somente localmente, por decisão do desenvolvedor (05/11/2026)
+_mds/SMTP.md
+_mds/BACKUP.md

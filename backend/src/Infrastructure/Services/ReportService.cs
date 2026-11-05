@@ -21,7 +21,7 @@ public partial class ReportService(ApplicationDbContext db, UserManager<Applicat
         var actor = await users.FindByIdAsync(current.UserId ?? "");
         if (actor is not { IsActive: true }) throw new UnauthorizedAccessException("Usuário inativo ou não autenticado.");
         var roles = await users.GetRolesAsync(actor);
-        var super = roles.Contains(SystemRoles.SuperAdmin);
+        var super = SystemRoles.IsPlatformAdmin(roles);
         var admin = super || roles.Contains(SystemRoles.CompanyAdmin);
         var areas = db.Areas.AsNoTracking().Where(a => a.IsActive && a.Company.IsActive);
         if (!super)

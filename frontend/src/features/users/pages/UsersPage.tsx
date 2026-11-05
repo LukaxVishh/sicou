@@ -19,7 +19,7 @@ import { ActionsDropdown } from '../../../shared/components';
 import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import { apiFetch } from '../../../shared/api';
 import { useAuth } from '../../auth/providers';
-import { SystemRoles } from '../../../shared/constants/roles';
+import { SystemRoles, isPlatformAdmin } from '../../../shared/constants/roles';
 import { getCompanies } from '../../companies/api';
 import type { Company } from '../../companies/types';
 import { getUsers } from '../api';
@@ -34,6 +34,7 @@ import { useAdminViewContext } from '../../../app/layouts/AdminLayout';
 
 const roleLabels: Record<UserRole, string> = {
   SUPER_ADMIN: 'Super admin',
+  DEVELOPER: 'Desenvolvedor',
   COMPANY_ADMIN: 'Admin da empresa',
   AREA_ADMIN: 'Admin da área',
   HEADQUARTER_USER: 'Usuário da sede',
@@ -57,7 +58,7 @@ export function UsersPage() {
   const { user: currentUser } = useAuth();
   const adminContext = useAdminViewContext();
 
-  const isSuperAdmin = currentUser?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(currentUser?.roles);
   const isCompanyAdmin = currentUser?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
   const canResetPasswords = isSuperAdmin || isCompanyAdmin;
 
@@ -158,12 +159,12 @@ export function UsersPage() {
   // Separação em dois grupos fundamentais:
   // 1. Administradores da Plataforma Sicou (SUPER_ADMIN ou sem empresa associada)
   const platformAdmins = useMemo(() => {
-    return users.filter((u) => u.roles.includes('SUPER_ADMIN') || !u.companyId);
+    return users.filter((u) => isPlatformAdmin(u.roles) || !u.companyId);
   }, [users]);
 
   // 2. Usuários vinculados a Empresas
   const companyUsers = useMemo(() => {
-    return users.filter((u) => u.companyId && !u.roles.includes('SUPER_ADMIN'));
+    return users.filter((u) => u.companyId && !isPlatformAdmin(u.roles));
   }, [users]);
 
   // Nome da empresa ativa no contexto global (se houver)
@@ -535,7 +536,7 @@ export function UsersPage() {
                       {/* Papel */}
                       <td className="whitespace-nowrap px-5 py-4">
                         <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-300">
-                          Super Admin do Sistema
+                          {u.roles.includes(SystemRoles.Developer) && !u.roles.includes(SystemRoles.SuperAdmin) ? 'Desenvolvedor' : 'Super Admin do Sistema'}
                         </span>
                       </td>
 

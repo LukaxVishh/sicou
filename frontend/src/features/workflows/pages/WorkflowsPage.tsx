@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'react-router';
 import { useAuth } from '../../auth/providers';
-import { SystemRoles } from '../../../shared/constants/roles';
+import { SystemRoles, isPlatformAdmin } from '../../../shared/constants/roles';
 import { useAdminViewContext } from '../../../app/layouts/AdminLayout';
 import { getCompanies } from '../../companies/api';
 import type { Company } from '../../companies/types';
@@ -43,7 +43,7 @@ export const WorkflowsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialAreaParam = searchParams.get('areaId') || '';
 
-  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(user?.roles);
   const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
   const adminContext = useAdminViewContext();
 

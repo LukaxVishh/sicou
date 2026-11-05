@@ -12,7 +12,7 @@ export function PasswordRecoveryPage() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const selectedUserId = searchParams.get('userId');
-  const authorized = user?.roles.some(r => ['SUPER_ADMIN', 'COMPANY_ADMIN'].includes(r));
+  const authorized = user?.roles.some(r => ['SUPER_ADMIN', 'DEVELOPER', 'COMPANY_ADMIN'].includes(r));
   const [users, setUsers] = useState<RecoveryUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');

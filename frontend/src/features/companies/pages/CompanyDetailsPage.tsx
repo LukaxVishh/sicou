@@ -13,7 +13,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useAuth } from '../../auth/providers';
-import { SystemRoles } from '../../../shared/constants/roles';
+import { isPlatformAdmin } from '../../../shared/constants/roles';
 import { CompanyAreasSection } from '../../areas';
 import { CompanyUnitsSection } from '../../units/components';
 import { getCompanyById } from '../api';
@@ -60,7 +60,7 @@ export function CompanyDetailsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(user?.roles);
 
   const validTabs: TabId[] = ['overview', 'areas', 'units', 'users', 'access-control', 'feed', 'guide'];
   const tabParam = searchParams.get('tab') as TabId | null;

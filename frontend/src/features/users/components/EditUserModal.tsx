@@ -32,6 +32,11 @@ const roleOptions: Array<{
     description: 'Acesso administrativo global ao sistema.',
   },
   {
+    value: 'DEVELOPER',
+    label: 'Desenvolvedor',
+    description: 'Mesmo acesso global do Super admin, identificado como perfil técnico.',
+  },
+  {
     value: 'COMPANY_ADMIN',
     label: 'Admin da empresa',
     description: 'Administra dados relacionados à empresa vinculada.',
@@ -60,6 +65,9 @@ function EditUserForm({ user, onClose, onUpdated }: EditUserFormProps) {
   const [unitId, setUnitId] = useState(user.unitId ?? '');
   const [isActive, setIsActive] = useState(user.isActive);
   const [roles, setRoles] = useState<UserRole[]>(user.roles);
+  const [copyAccessesToNewUnit, setCopyAccessesToNewUnit] = useState(false);
+  const isTransferring = (user.companyId ?? '') !== companyId || (user.unitId ?? '') !== unitId;
+  const isSameCompanyTransfer = isTransferring && Boolean(companyId) && (user.companyId ?? '') === companyId;
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -192,6 +200,7 @@ function EditUserForm({ user, onClose, onUpdated }: EditUserFormProps) {
         companyId: companyId || null,
         unitId: unitId || null,
         isActive,
+        copyAccessesToNewUnit: isSameCompanyTransfer && copyAccessesToNewUnit,
       });
 
       await updateUserRoles(user.id, {
@@ -342,6 +351,27 @@ function EditUserForm({ user, onClose, onUpdated }: EditUserFormProps) {
               />
             </div>
           </div>
+
+          {/* Transferência de lotação (RF-010) */}
+          {isTransferring && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900" role="status">
+              <p className="font-semibold">Esta alteração será registrada como transferência.</p>
+              <p className="mt-1">
+                Os acessos de setor da lotação anterior serão desativados e o colaborador precisará entrar novamente.
+              </p>
+              {isSameCompanyTransfer && (
+                <label className="mt-2 flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={copyAccessesToNewUnit}
+                    onChange={(e) => setCopyAccessesToNewUnit(e.target.checked)}
+                    className="h-4 w-4 rounded border-amber-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  Copiar as permissões de setor para a nova unidade
+                </label>
+              )}
+            </div>
+          )}
 
           <label className="mt-5 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
             <input

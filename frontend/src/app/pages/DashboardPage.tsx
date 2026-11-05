@@ -13,7 +13,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../../features/auth/providers';
-import { SystemRoles } from '../../shared/constants/roles';
+import { SystemRoles, isPlatformAdmin } from '../../shared/constants/roles';
 import { apiFetch } from '../../shared/api';
 import { getCompanies } from '../../features/companies/api';
 import type { Company } from '../../features/companies/types';
@@ -33,7 +33,7 @@ export function DashboardPage() {
   const { user } = useAuth();
   const adminContext = useAdminViewContext();
 
-  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(user?.roles);
   const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
 
   // Contexto de empresa ativa (Super Admin com seleção ou Admin de Empresa)
@@ -121,7 +121,7 @@ export function DashboardPage() {
   const inactiveCompaniesCount = totalCompaniesCount - activeCompaniesCount;
 
   const totalUsersCount = users.length;
-  const platformAdminsCount = users.filter((u) => u.roles.includes('SUPER_ADMIN') || !u.companyId).length;
+  const platformAdminsCount = users.filter((u) => isPlatformAdmin(u.roles) || !u.companyId).length;
   const companyUsersCount = totalUsersCount - platformAdminsCount;
 
   const totalUnitsCount = catalogOptions?.units.length ?? 0;

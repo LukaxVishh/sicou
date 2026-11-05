@@ -53,7 +53,7 @@ public partial class ApplicationDbContext
     {
         var query = Users.AsNoTracking().Where(u => u.IsActive && (!u.CompanyId.HasValue || Companies.Any(c => c.Id == u.CompanyId && c.IsActive)));
         var admins = UserRoles.Where(ur => Roles.Any(r => r.Id == ur.RoleId && r.Name == SystemRoles.CompanyAdmin)).Select(ur => ur.UserId);
-        var supers = UserRoles.Where(ur => Roles.Any(r => r.Id == ur.RoleId && r.Name == SystemRoles.SuperAdmin)).Select(ur => ur.UserId);
+        var supers = UserRoles.Where(ur => Roles.Any(r => r.Id == ur.RoleId && (r.Name == SystemRoles.SuperAdmin || r.Name == SystemRoles.Developer))).Select(ur => ur.UserId);
         query = query.Where(u => companyId.HasValue && u.CompanyId == companyId);
         if (!areaId.HasValue) return query;
         query = query.Where(u => Areas.Any(a => a.Id == areaId && a.IsActive && a.Company.IsActive)
@@ -162,7 +162,7 @@ public partial class ApplicationDbContext
     public IQueryable<UserNotification> VisibleNotifications(Identity.ApplicationUser user)
     {
         var admins = UserRoles.Where(ur => Roles.Any(r => r.Id == ur.RoleId && r.Name == SystemRoles.CompanyAdmin)).Select(ur => ur.UserId);
-        var supers = UserRoles.Where(ur => Roles.Any(r => r.Id == ur.RoleId && r.Name == SystemRoles.SuperAdmin)).Select(ur => ur.UserId);
+        var supers = UserRoles.Where(ur => Roles.Any(r => r.Id == ur.RoleId && (r.Name == SystemRoles.SuperAdmin || r.Name == SystemRoles.Developer))).Select(ur => ur.UserId);
         return Notifications.Where(n => n.UserId == user.Id
             && n.CompanyId.HasValue && n.CompanyId == user.CompanyId
             && Companies.Any(c => c.Id == n.CompanyId && c.IsActive)
