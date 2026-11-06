@@ -109,7 +109,9 @@ Instalação em servidores reais, autenticação do ambiente, cadência de execu
 
 ### Regras de processos verificadas nesta etapa
 
-Fluxos HTTP com token exercitam abertura, preenchimento, protocolo, inbox, transferência, relatório/exportação, avanço com campos obrigatórios, conclusão e cancelamento. Foram corrigidos acessos que permitiam a Admin da Empresa editar/protocolar processos de outra empresa, criação usando árvore/unidade de outra empresa e manutenção do acesso por autoria após transferência de unidade/empresa. Para Super Admin, o processo sempre pertence à empresa da árvore selecionada.
+Fluxos HTTP com token exercitam abertura, preenchimento, protocolo, inbox, transferência, relatório/exportação, avanço com campos obrigatórios, conclusão e cancelamento. Foram corrigidos acessos que permitiam a Admin da Empresa editar/protocolar processos de outra empresa, criação usando árvore/unidade de outra empresa e manutenção de poderes operacionais por autoria após transferência de unidade/empresa. Para Super Admin/Desenvolvedor, o processo sempre pertence à empresa da árvore selecionada.
+
+A integração com a main atual preserva o acompanhamento somente de leitura dos próprios processos dentro da mesma empresa após troca de unidade (RF-010). A autoria deixa de conceder poderes operacionais depois da transferência; mudar de empresa também remove a consulta dos processos da empresa anterior. O perfil Desenvolvedor tem o mesmo alcance de plataforma do Super Admin, mantendo a exigência de propriedade para registrar execuções de automações.
 
 Campos recebidos devem pertencer à árvore/etapa atual e estar ativos. Formulários podem reenviar valores históricos de outras etapas sem alterá-los; criar ou modificar esses valores é recusado. Esses testes cobrem cenários específicos e não substituem a homologação de todas as árvores/regras condicionais e dos requisitos completos de autorização.
 

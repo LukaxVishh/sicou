@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router';
-import { SystemRoles } from '../../shared/constants/roles';
+import { SystemRoles, isPlatformAdmin } from '../../shared/constants/roles';
 import { cn } from '../../shared/utils';
 import { useAuth } from '../../features/auth/providers';
 import { getAreasByCompanyId } from '../../features/areas/api';
@@ -71,7 +71,7 @@ export function AdminLayout() {
     });
   };
 
-  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(user?.roles);
   const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
 
   // Lista de empresas para alternância de visualização do Super Admin
@@ -188,6 +188,7 @@ export function AdminLayout() {
       icon: LayoutDashboard,
       roles: [
         SystemRoles.SuperAdmin,
+        SystemRoles.Developer,
         SystemRoles.CompanyAdmin,
       ],
     },
@@ -197,6 +198,7 @@ export function AdminLayout() {
       icon: Building2,
       roles: [
         SystemRoles.SuperAdmin,
+        SystemRoles.Developer,
         SystemRoles.CompanyAdmin,
       ],
     },
@@ -206,6 +208,7 @@ export function AdminLayout() {
       icon: Users,
       roles: [
         SystemRoles.SuperAdmin,
+        SystemRoles.Developer,
         SystemRoles.CompanyAdmin,
       ],
     },
@@ -213,19 +216,19 @@ export function AdminLayout() {
       label: 'Relatórios',
       path: '/app/reports',
       icon: BarChart3,
-      roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin, SystemRoles.AreaAdmin, SystemRoles.HeadquarterUser, SystemRoles.UnitUser],
+      roles: [SystemRoles.SuperAdmin, SystemRoles.Developer, SystemRoles.CompanyAdmin, SystemRoles.AreaAdmin, SystemRoles.HeadquarterUser, SystemRoles.UnitUser],
     },
     {
       label: 'Recuperação de senha',
       path: '/app/password-recovery',
       icon: KeyRound,
-      roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin],
+      roles: [SystemRoles.SuperAdmin, SystemRoles.Developer, SystemRoles.CompanyAdmin],
     },
     {
       label: 'Integrações',
       path: '/app/integrations',
       icon: KeyRound,
-      roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin, SystemRoles.AreaAdmin, SystemRoles.HeadquarterUser, SystemRoles.UnitUser],
+      roles: [SystemRoles.SuperAdmin, SystemRoles.Developer, SystemRoles.CompanyAdmin, SystemRoles.AreaAdmin, SystemRoles.HeadquarterUser, SystemRoles.UnitUser],
     },
     {
       label: isSuperAdmin ? 'Área Operacional' : 'Página Inicial',
@@ -233,6 +236,7 @@ export function AdminLayout() {
       icon: Home,
       roles: [
         SystemRoles.SuperAdmin,
+        SystemRoles.Developer,
         SystemRoles.CompanyAdmin,
         SystemRoles.AreaAdmin,
         SystemRoles.HeadquarterUser,

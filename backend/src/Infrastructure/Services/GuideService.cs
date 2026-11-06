@@ -19,7 +19,7 @@ public class GuideService(ApplicationDbContext db, ICurrentUserService currentUs
     {
         var user = await users.FindByIdAsync(currentUser.UserId ?? string.Empty);
         if (user is null || !user.IsActive) throw new UnauthorizedAccessException();
-        var super = await users.IsInRoleAsync(user, SystemRoles.SuperAdmin);
+        var super = await users.IsPlatformAdminAsync(user);
         var admin = await users.IsInRoleAsync(user, SystemRoles.CompanyAdmin);
         var userId = user.Id.ToString();
         return await db.Areas.AsNoTracking()
@@ -35,7 +35,7 @@ public class GuideService(ApplicationDbContext db, ICurrentUserService currentUs
         if (user is null || !user.IsActive) throw new UnauthorizedAccessException();
         var area = await db.Areas.AsNoTracking().FirstOrDefaultAsync(a => a.Id == areaId && a.IsActive && a.Company.IsActive)
             ?? throw new KeyNotFoundException("Área não encontrada.");
-        if (!await users.IsInRoleAsync(user, SystemRoles.SuperAdmin) && user.CompanyId != area.CompanyId)
+        if (!await users.IsPlatformAdminAsync(user) && user.CompanyId != area.CompanyId)
             throw new UnauthorizedAccessException("Área de outra empresa.");
         var manage = await permissions.CanManageGuideAsync(user.Id.ToString(), areaId);
         if (write ? !manage : !manage && !await permissions.CanViewAreaAsync(user.Id.ToString(), areaId))

@@ -6,7 +6,7 @@ import type { ProcessTypeSummary } from '../types';
 import { isDraftStatus, isHomologatedStatus } from '../types';
 import * as workflowsApi from '../api';
 import { useAuth } from '../../auth/providers';
-import { SystemRoles } from '../../../shared/constants/roles';
+import { SystemRoles, isPlatformAdmin } from '../../../shared/constants/roles';
 
 interface OpenProcessModalProps {
   onClose: () => void;
@@ -20,7 +20,7 @@ export const OpenProcessModal: React.FC<OpenProcessModalProps> = ({
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(user?.roles);
   const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
 
   const [availableTypes, setAvailableTypes] = useState<ProcessTypeSummary[]>([]);

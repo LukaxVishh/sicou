@@ -14,7 +14,7 @@ public class PasswordRecoveryService(UserManager<ApplicationUser> users, Applica
 {
     private static int Rank(IEnumerable<string> roles) => roles.Select(r => r switch
     {
-        SystemRoles.SuperAdmin => 4,
+        SystemRoles.SuperAdmin or SystemRoles.Developer => 4,
         SystemRoles.CompanyAdmin => 3,
         SystemRoles.AreaAdmin => 2,
         _ => 1

@@ -1,0 +1,2 @@
+# Scripts executados em containers Linux precisam de fim de linha LF.
+*.sh text eol=lf

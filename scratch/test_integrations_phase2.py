@@ -216,14 +216,20 @@ def run_phase2(request, sql, check, a, b, company_a, company_b, area_a, area_b, 
     check(request('POST', f'/api/automations/{peer["id"]}/runs', monitor, {'externalId': str(uuid.uuid4())})[0] == 404, 'same-company admin cannot forge teammate run')
     sql(f'UPDATE users SET "CompanyId"=\'{company_b}\' WHERE "Id"=\'{b["user"]["id"]}\';')
 
+    sql(f'INSERT INTO user_roles ("UserId","RoleId") SELECT \'{b["user"]["id"]}\',"Id" FROM roles WHERE "Name"=\'DEVELOPER\';')
+    _, developer, _ = request('POST', '/api/integrations/tokens', b['accessToken'], {'name': 'Developer monitoring', 'expiresInDays': 1, 'scopes': ['automations:read', 'automations:write']})
+    check(any(d['id'] == aid for d in request('GET', '/api/automations', developer['token'])[1]['automations']), 'Developer can monitor across companies like Super Admin')
+    check(request('POST', f'/api/automations/{aid}/runs', developer['token'], {'externalId': str(uuid.uuid4())})[0] == 404, 'Developer cannot forge another owner execution')
+    sql(f'DELETE FROM user_roles WHERE "UserId"=\'{b["user"]["id"]}\' AND "RoleId" IN (SELECT "Id" FROM roles WHERE "Name"=\'DEVELOPER\');')
+
     unit2 = str(uuid.uuid4())
     sql(f'''INSERT INTO units ("Id","CompanyId","Name","Code","CreatedAt","IsActive") VALUES ('{unit2}','{company_a}','Second unit','TU2',NOW(),true);
         DELETE FROM user_roles WHERE "UserId"='{uid}';
         INSERT INTO user_roles ("UserId","RoleId") SELECT '{uid}',"Id" FROM roles WHERE "Name"='UNIT_USER';
         UPDATE users SET "UnitId"='{unit2}' WHERE "Id"='{uid}';''')
     bound = token(['processes:read', 'processes:create'])
-    check(request('GET', f'/api/processes/{pid}', bound)[0] == 403, 'creator cannot read prior unit process after transfer')
-    check(all(p['id'] != pid for p in request('GET', '/api/processes/my', bound)[1]), 'my requests omit former unit records')
+    check(request('GET', f'/api/processes/{pid}', bound)[0] == 200, 'creator retains follow-up visibility inside same company after unit transfer')
+    check(any(p['id'] == pid for p in request('GET', '/api/processes/my', bound)[1]), 'my requests preserve same-company author follow-up after unit transfer')
     check(request('POST', '/api/processes', bound, {'processTypeId': tree, 'originUnitId': unit})[0] == 403, 'unit user cannot choose another origin unit')
     check(request('POST', '/api/processes', bound, {'processTypeId': tree})[0] == 201, 'unit user can open within current unit')
     sql(f'''UPDATE users SET "UnitId"=NULL,"CompanyId"='{company_b}' WHERE "Id"='{uid}';''')

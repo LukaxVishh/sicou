@@ -64,6 +64,7 @@ const hiddenByDefault: Record<CatalogKind, string[]> = {
 };
 const roles = [
   ["SUPER_ADMIN", "Super Admin"],
+  ["DEVELOPER", "Desenvolvedor"],
   ["COMPANY_ADMIN", "Admin da Empresa"],
   ["AREA_ADMIN", "Gestor de Área"],
   ["HEADQUARTER_USER", "Usuário da Sede"],

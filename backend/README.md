@@ -413,11 +413,14 @@ Ao iniciar a aplicação, `IdentitySeeder.SeedRolesAsync(app.Services)` cria as 
 
 ```txt
 SUPER_ADMIN
+DEVELOPER
 COMPANY_ADMIN
 AREA_ADMIN
 HEADQUARTER_USER
 UNIT_USER
 ```
+
+Roles ausentes são criadas na inicialização, então `DEVELOPER` aparece automaticamente em bancos existentes.
 
 ### Módulos
 
@@ -511,22 +514,52 @@ Atenção: esse endpoint está aberto e deve ser removido, protegido ou condicio
 
 ```txt
 SUPER_ADMIN
+DEVELOPER
 COMPANY_ADMIN
 AREA_ADMIN
 HEADQUARTER_USER
 UNIT_USER
 ```
 
-Uso atual:
+Uso atual (`SUPER_ADMIN` e `DEVELOPER` são os administradores da plataforma):
 
 ```txt
-CompaniesController: SUPER_ADMIN
-UnitsController: SUPER_ADMIN
-AreasController: SUPER_ADMIN
-UsersController: SUPER_ADMIN, COMPANY_ADMIN
-UserAreaAccessesController: SUPER_ADMIN, COMPANY_ADMIN
+CompaniesController: SUPER_ADMIN, DEVELOPER
+UnitsController: SUPER_ADMIN, DEVELOPER
+AreasController: SUPER_ADMIN, DEVELOPER
+UsersController: SUPER_ADMIN, DEVELOPER, COMPANY_ADMIN
+UserAreaAccessesController: SUPER_ADMIN, DEVELOPER, COMPANY_ADMIN
 SecurityTestController: testes
 ```
+
+### Perfil Desenvolvedor (RF-004)
+
+`DEVELOPER` tem exatamente os mesmos poderes de `SUPER_ADMIN`; muda apenas a identificação na interface e nos relatórios. Por decisão da equipe (05/11/2026), não há permissões técnicas próprias enquanto o monitoramento de automações (RF-024 a RF-027) não existir.
+
+- Backend: use `SystemRoles.IsPlatformAdmin(roles)`, `userManager.IsPlatformAdminAsync(user)` ou `[Authorize(Roles = SystemRoles.PlatformAdmins)]`. Não compare diretamente com `SystemRoles.SuperAdmin` em regras de acesso, senão o Desenvolvedor fica de fora.
+- Frontend: use `isPlatformAdmin(user.roles)` de `shared/constants/roles.ts`.
+- Somente administradores da plataforma concedem `SUPER_ADMIN` ou `DEVELOPER`. A importação de usuários não aceita nenhum dos dois.
+- `POST /api/admin-setup/promote-super-admin` continua promovendo especificamente para `SUPER_ADMIN`.
+
+### Transferência de usuários (RF-010)
+
+Mudar `companyId` ou `unitId` em `PUT /api/users/{id}` é tratado como transferência, gravada numa transação:
+
+1. Os acessos de setor (`user_area_accesses`) que não correspondem à nova empresa e unidade são desativados.
+2. Com `"copyAccessesToNewUnit": true` e a mesma empresa, os acessos são recriados na nova unidade com as mesmas permissões (união das permissões quando havia mais de um vínculo no setor). Vínculos inativos da nova unidade são reaproveitados, e vínculos já ativos lá não são alterados. Na troca de empresa, a cópia é ignorada.
+3. Sem cópia, as atribuições a locais de processo (`user_process_nodes`) também são desativadas.
+4. A transferência é registrada em `user_transfers`, com origem, destino, nomes da época, responsável e contagens.
+5. O `SecurityStamp` do usuário é renovado, invalidando as sessões abertas.
+
+`GET /api/users/{id}/transfers` lista o histórico, do mais recente para o mais antigo, com a mesma autorização da consulta do usuário.
+
+Efeitos nos processos:
+
+- As checagens de vínculo com setor exigem empresa e unidade atuais do usuário.
+- A autoria só dá acesso operacional (protocolar, editar rascunho, tramitar, cancelar) se o autor continua na empresa do processo e não foi transferido depois da abertura. A visualização segue liberada ao autor na mesma empresa.
+- `GET /api/processes/my` lista apenas processos da empresa atual (exceto administradores da plataforma).
+
+Validação de ponta a ponta: `scratch/test_rf004_rf010.mjs`, contra API e banco isolados (veja o cabeçalho do script).
 
 ### Policies granulares
 
@@ -1454,7 +1487,7 @@ Recuperação administrativa com senha temporária, troca obrigatória e notific
 
 ### SMTP Gmail no ambiente local
 
-O envio automático do link em **Esqueci minha senha** pode usar Gmail. Consulte [_mds/SMTP.md](../_mds/SMTP.md) para preencher a senha de aplicativo em arquivo local ignorado e iniciar a API pelo script scripts/start-backend-smtp.ps1. A recuperação administrativa por senha temporária continua separada.
+O envio automático do link em **Esqueci minha senha** pode usar Gmail. Consulte o guia SMTP no [registro de 06/11/2026](../_mds/ATUALIZACOES/2026-11-06.md#guia-do-smtp-com-gmail) para preencher a senha de aplicativo em arquivo local ignorado e iniciar a API pelo script scripts/start-backend-smtp.ps1. A recuperação administrativa por senha temporária continua separada.
 
 ### Integração de workflows com relatórios (16/10/2026)
 

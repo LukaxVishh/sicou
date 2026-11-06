@@ -28,7 +28,7 @@ public class AutomationService(ApplicationDbContext db, UserManager<ApplicationU
     {
         var actor = await ActorAsync(ct);
         var query = db.Set<Automation>().AsNoTracking();
-        if (await users.IsInRoleAsync(actor, SystemRoles.SuperAdmin)) return query;
+        if (await users.IsPlatformAdminAsync(actor)) return query;
         if (actor.CompanyId.HasValue && await users.IsInRoleAsync(actor, SystemRoles.CompanyAdmin))
             return query.Where(a => a.CompanyId == actor.CompanyId);
         return query.Where(a => a.UserId == actor.Id && a.CompanyId == actor.CompanyId && a.UnitId == actor.UnitId);

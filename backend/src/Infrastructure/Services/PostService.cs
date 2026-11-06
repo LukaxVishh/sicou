@@ -166,7 +166,7 @@ public class PostService : IPostService
 
     private async Task<Guid?> ResolveCompanyForListingAsync(ApplicationUser user, Guid? requestedCompanyId)
     {
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (await _userManager.IsPlatformAdminAsync(user))
             return requestedCompanyId;
         if (!user.CompanyId.HasValue)
             throw new UnauthorizedAccessException("Seu usuário não está vinculado a uma empresa.");
@@ -178,7 +178,7 @@ public class PostService : IPostService
     private async Task<Guid?> ResolveCompanyForCreationAsync(ApplicationUser user, Guid? requestedCompanyId, bool publishToAllCompanies)
     {
         Guid companyId;
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (await _userManager.IsPlatformAdminAsync(user))
         {
             if (publishToAllCompanies)
                 return null;
@@ -214,7 +214,7 @@ public class PostService : IPostService
 
     private async Task<bool> CanPublishInAreaAsync(ApplicationUser user, Guid? companyId, Guid areaId)
     {
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (await _userManager.IsPlatformAdminAsync(user))
             return true;
 
         if (await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin))
@@ -226,7 +226,7 @@ public class PostService : IPostService
 
     private async Task<bool> CanPublishGeneralPostAsync(ApplicationUser user, Guid? companyId)
     {
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (await _userManager.IsPlatformAdminAsync(user))
             return true;
 
         if (await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin))
@@ -245,7 +245,7 @@ public class PostService : IPostService
 
     private async Task<bool> CanModeratePostAsync(ApplicationUser user, Post post)
     {
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (await _userManager.IsPlatformAdminAsync(user))
             return true;
 
         if (post.CompanyId.HasValue && await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin) && user.CompanyId == post.CompanyId)

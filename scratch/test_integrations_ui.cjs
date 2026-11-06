@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     const errors = [];
     page.on('pageerror', error => { errors.push(error.message); console.error('PAGE ERROR', error.message); });
-    const user = { id: 'test-user', fullName: 'Teste UI', email: 'ui@example.test', companyId: null, unitId: null, roles: ['SUPER_ADMIN'], isActive: true, mustChangePassword: false };
+    const user = { id: 'test-user', fullName: 'Teste UI', email: 'ui@example.test', companyId: null, unitId: null, roles: [process.env.SICOU_UI_ROLE || 'SUPER_ADMIN'], isActive: true, mustChangePassword: false };
     await page.addInitScript(user => {
       localStorage.setItem('sicou.accessToken', 'ui-test-session');
       localStorage.setItem('sicou.expiresAt', new Date(Date.now() + 3600000).toISOString());
@@ -55,6 +55,7 @@ const assert = require('node:assert/strict');
     });
     await page.goto(process.env.SICOU_FRONTEND_URL || 'http://127.0.0.1:5188/app/integrations');
     await page.getByRole('heading', { name: 'Integrações', exact: true }).waitFor({ timeout: 10000 });
+    await page.getByRole('link', { name: 'Integrações', exact: true }).waitFor();
     await page.getByLabel('Consultar processos e árvores').waitFor();
     assert.equal(await page.getByRole('button', { name: 'Criar token', exact: true }).isDisabled(), true);
     await page.getByLabel('Nome da integração').fill('Teste automação');

@@ -16,4 +16,6 @@ public interface IUserService
     Task<bool> DeleteAsync(string id);
 
     Task<UserResponse?> UpdateRolesAsync(string id, UpdateUserRolesRequest request);
+
+    Task<IReadOnlyList<UserTransferResponse>?> GetTransfersAsync(string id);
 }

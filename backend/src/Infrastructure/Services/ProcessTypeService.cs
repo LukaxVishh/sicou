@@ -58,7 +58,7 @@ public class ProcessTypeService : IProcessTypeService
             ?? throw new KeyNotFoundException("Usuário não encontrado.");
 
         var roles = await _userManager.GetRolesAsync(user);
-        var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
+        var isSuperAdmin = SystemRoles.IsPlatformAdmin(roles);
         var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
 
         if (!user.CompanyId.HasValue && !isSuperAdmin)
@@ -359,7 +359,7 @@ public class ProcessTypeService : IProcessTypeService
             ?? throw new KeyNotFoundException("Usuário não encontrado.");
 
         var roles = await _userManager.GetRolesAsync(user);
-        if (roles.Contains(SystemRoles.SuperAdmin))
+        if (SystemRoles.IsPlatformAdmin(roles))
             return;
 
         var area = await _areaRepository.GetByIdAsync(areaId)

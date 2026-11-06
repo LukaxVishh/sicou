@@ -40,7 +40,7 @@ public class DataImportService(ApplicationDbContext db, ICurrentUserService curr
         var actor = await users.FindByIdAsync(current.UserId ?? "");
         if (actor is not { IsActive: true }) throw new UnauthorizedAccessException("Usuário inativo ou não autenticado.");
         var roles = await users.GetRolesAsync(actor);
-        var super = roles.Contains(SystemRoles.SuperAdmin); var admin = super || roles.Contains(SystemRoles.CompanyAdmin);
+        var super = SystemRoles.IsPlatformAdmin(roles); var admin = super || roles.Contains(SystemRoles.CompanyAdmin);
         if (!super && !await db.Companies.AnyAsync(c => c.Id == actor.CompanyId && c.IsActive)) throw new UnauthorizedAccessException("Empresa indisponível.");
         if (actor.UnitId.HasValue && !await db.Units.AnyAsync(u => u.Id == actor.UnitId && u.CompanyId == actor.CompanyId && u.IsActive)) throw new UnauthorizedAccessException("Unidade indisponível.");
         return (actor, super, admin);

@@ -38,6 +38,8 @@ Os documentos dos módulos complementam os registros diários com detalhes de us
 - [17/10/2026 — Ajustes visuais do frontend](ATUALIZACOES/2026-10-17.md)
 - [25/10/2026 — Gestão de áreas, seletor corporativo e painel gerencial do Super Admin](ATUALIZACOES/2026-10-25.md)
 - [27/10/2026 — Navegação em blocos animada no Orientador](ATUALIZACOES/2026-10-27.md)
+- [28/10/2026 — População de demonstração no Docker, tabela de processos, prévia de anexos do Orientador e publicação](ATUALIZACOES/2026-10-28.md)
+- [05/11/2026 — Conferência das pendências, perfil Desenvolvedor, transferência de usuários e backup](ATUALIZACOES/2026-11-05.md)
 
 ## Dados de demonstração local
 

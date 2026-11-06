@@ -9,7 +9,7 @@ import type { CompanyArea } from '../../areas/types';
 import { getAccessesByUser } from '../../access-control/api';
 import type { UserAreaAccess } from '../../access-control/types';
 import { useAuth } from '../../auth/providers';
-import { SystemRoles } from '../../../shared/constants/roles';
+import { SystemRoles, isPlatformAdmin } from '../../../shared/constants/roles';
 import { useSystemDialog } from '../../../shared/components';
 import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import { createPost, deletePost, getPosts, postImageUrl, setPostPinned, updatePost } from '../api';
@@ -39,7 +39,7 @@ export function FeedPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialAreaParam = searchParams.get('areaId') || '';
 
-  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(user?.roles);
   const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) ?? false;
   const canModerateCompany = isSuperAdmin || isCompanyAdmin;
   const adminContext = useAdminViewContext();

@@ -16,7 +16,7 @@ services:
     environment:
       POSTGRES_DB: sicou-dev
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: rootroot
+      POSTGRES_PASSWORD: ${SICOU_DB_PASSWORD:-rootroot}
     ports:
       - "5433:5432"
     volumes:
@@ -37,7 +37,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=sicou-dev;Username=postgres;Password=rootroot
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=sicou-dev;Username=postgres;Password=${SICOU_DB_PASSWORD:-rootroot}
       Cors__AllowedOrigins__0: http://localhost:3000
       Email__Host: ${SMTP_HOST:-mail}
       Email__Port: ${SMTP_PORT:-1025}
@@ -45,7 +45,8 @@ services:
       Email__Username: ${SMTP_USERNAME:-}
       Email__Password: ${SMTP_PASSWORD:-}
       Email__FromAddress: ${SMTP_FROM_ADDRESS:-no-reply@sicou.local}
-      Email__FrontendBaseUrl: ${SMTP_FRONTEND_BASE_URL:-http://localhost:3000}
+      # Frontend do Compose (porta 3000); independe do SMTP_FRONTEND_BASE_URL usado pelo script local (Vite).
+      Email__FrontendBaseUrl: ${SICOU_FRONTEND_URL:-http://localhost:3000}
     ports:
       - "8080:8080"
     volumes:
@@ -69,6 +70,33 @@ services:
       - "3000:80"
     depends_on:
       - back
+
+  # Backup básico (RNF-019): dump diário do banco e das imagens do feed, com retenção.
+  # Registro: _mds/ATUALIZACOES/2026-11-05.md. Backup manual: docker compose run --rm backup once
+  backup:
+    image: postgres:16
+    container_name: Sicou-Backup
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: sicou-dev
+      PGUSER: postgres
+      PGPASSWORD: ${SICOU_DB_PASSWORD:-rootroot}
+      TZ: ${SICOU_BACKUP_TZ:-America/Sao_Paulo}
+      BACKUP_TIME: ${SICOU_BACKUP_TIME:-02:00}
+      RETENTION_DAYS: ${SICOU_BACKUP_RETENTION_DAYS:-14}
+      KEEP_MIN: ${SICOU_BACKUP_KEEP_MIN:-3}
+    volumes:
+      - ${SICOU_BACKUP_DIR:-./backups}:/backups
+      - sicou_post_media:/uploads:ro
+      - ./scripts/backup:/scripts:ro
+    # Remove CR (checkout no Windows) antes de executar; o primeiro argumento é o modo (schedule, once, prune, next).
+    entrypoint: ["sh", "-c", "tr -d '\\r' < /scripts/sicou-backup.sh > /tmp/sicou-backup.sh && exec sh /tmp/sicou-backup.sh \"$0\""]
+    command: ["schedule"]
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   sicou_postgres_data:

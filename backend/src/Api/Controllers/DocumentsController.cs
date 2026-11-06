@@ -21,7 +21,7 @@ public class DocumentsController(DocumentProcessingService processor, UserManage
     {
         var actor = await users.FindByIdAsync(current.UserId ?? "");
         if (actor is not { IsActive: true }) return Forbid();
-        if (!await users.IsInRoleAsync(actor, SystemRoles.SuperAdmin)
+        if (!await users.IsPlatformAdminAsync(actor)
             && !await db.Companies.AnyAsync(c => c.Id == actor.CompanyId && c.IsActive, ct)) return Forbid();
         if (file.Length is 0 or > DocumentProcessingService.MaxBytes) return BadRequest(new { message = "Envie um arquivo de até 10 MB." });
         if (!await Capacity.WaitAsync(0, ct)) return StatusCode(429, new { message = "Processamento ocupado. Tente novamente em instantes." });

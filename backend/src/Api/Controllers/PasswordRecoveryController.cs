@@ -6,7 +6,7 @@ using Sicou.Domain.Constants;
 namespace Sicou.Api.Controllers;
 
 [ApiController, Route("api/password-recovery")]
-[Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.CompanyAdmin}")]
+[Authorize(Roles = $"{SystemRoles.PlatformAdmins},{SystemRoles.CompanyAdmin}")]
 public class PasswordRecoveryController(IPasswordRecoveryService service) : ControllerBase
 {
     [HttpGet("users")]

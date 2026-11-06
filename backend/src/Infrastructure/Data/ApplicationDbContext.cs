@@ -23,6 +23,8 @@ public partial class ApplicationDbContext
 
     public DbSet<UserAreaAccess> UserAreaAccesses => Set<UserAreaAccess>();
 
+    public DbSet<UserTransfer> UserTransfers => Set<UserTransfer>();
+
     public DbSet<Post> Posts => Set<Post>();
 
     public DbSet<FieldDefinition> FieldDefinitions => Set<FieldDefinition>();
@@ -65,6 +67,7 @@ public partial class ApplicationDbContext
         NotificationModelConfiguration.Configure(builder);
         IntegrationModelConfiguration.Configure(builder);
         AutomationModelConfiguration.Configure(builder);
+        UserTransferModelConfiguration.Configure(builder);
     }
 
     private static void ConfigureIdentityTables(ModelBuilder builder)

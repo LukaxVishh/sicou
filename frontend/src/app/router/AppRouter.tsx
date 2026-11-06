@@ -7,7 +7,7 @@ import { PasswordRecoveryPage } from '../../features/auth/pages/PasswordRecovery
 import { EmailPasswordRecoveryPage } from '../../features/auth/pages/EmailPasswordRecoveryPage';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuth } from '../../features/auth/providers';
-import { SystemRoles } from '../../shared/constants/roles';
+import { SystemRoles, isPlatformAdmin } from '../../shared/constants/roles';
 import {
   CompaniesPage,
   CompanyDetailsPage,
@@ -31,14 +31,14 @@ import {
 function IndexRedirect() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  const isAdmin = user.roles.includes(SystemRoles.SuperAdmin) || user.roles.includes(SystemRoles.CompanyAdmin);
+  const isAdmin = isPlatformAdmin(user.roles) || user.roles.includes(SystemRoles.CompanyAdmin);
   return <Navigate to={isAdmin ? "/app/dashboard" : "/app/home"} replace />;
 }
 
 function DashboardRouteGuard() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  const isAdmin = user.roles.includes(SystemRoles.SuperAdmin) || user.roles.includes(SystemRoles.CompanyAdmin);
+  const isAdmin = isPlatformAdmin(user.roles) || user.roles.includes(SystemRoles.CompanyAdmin);
   if (!isAdmin) {
     return <Navigate to="/app/home" replace />;
   }

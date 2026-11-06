@@ -27,7 +27,7 @@ public class PermissionService : IPermissionService
         if (user is null || !user.IsActive)
             return false;
 
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (await _userManager.IsPlatformAdminAsync(user))
             return true;
 
         if (await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin))
@@ -94,7 +94,7 @@ public class PermissionService : IPermissionService
         if (user is null || !user.IsActive)
             return false;
 
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (await _userManager.IsPlatformAdminAsync(user))
             return true;
 
         var area = await _context.Areas

@@ -85,7 +85,7 @@ export function ReportsPage() {
   );
   const { user } = useAuth();
   const isAdmin = user?.roles.some((role) =>
-    ["SUPER_ADMIN", "COMPANY_ADMIN"].includes(role),
+    ["SUPER_ADMIN", "DEVELOPER", "COMPANY_ADMIN"].includes(role),
   );
   return (
     <section className="mx-auto w-full max-w-[1680px] space-y-6">

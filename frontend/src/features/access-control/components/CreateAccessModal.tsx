@@ -2,7 +2,7 @@ import { NativeSelectDropdown } from '../../../shared/components/NativeSelectDro
 import { X } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../../auth/providers';
-import { SystemRoles } from '../../../shared/constants/roles';
+import { isPlatformAdmin } from '../../../shared/constants/roles';
 import { getCompanies } from '../../companies/api';
 import { getAreasByCompanyId } from '../../areas/api';
 import { getUnitsByCompanyId } from '../../units/api';
@@ -31,7 +31,7 @@ export function CreateAccessModal({
   defaultAreaId,
 }: CreateAccessModalProps) {
   const { user: currentUser } = useAuth();
-  const isSuperAdmin = currentUser?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(currentUser?.roles);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(

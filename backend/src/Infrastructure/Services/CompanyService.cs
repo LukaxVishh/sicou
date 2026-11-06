@@ -29,7 +29,7 @@ public class CompanyService : ICompanyService
     public async Task<CompanyResponse> CreateAsync(CreateCompanyRequest request)
     {
         var user = await GetActiveCurrentUserAsync();
-        if (!await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (!await _userManager.IsPlatformAdminAsync(user))
             throw new UnauthorizedAccessException("Apenas Super Administradores podem cadastrar empresas.");
 
         var name = request.Name.Trim();
@@ -62,7 +62,7 @@ public class CompanyService : ICompanyService
     public async Task<IReadOnlyList<CompanyResponse>> GetAllAsync()
     {
         var user = await GetActiveCurrentUserAsync();
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (await _userManager.IsPlatformAdminAsync(user))
         {
             var companies = await _companyRepository.GetAllAsync();
             return companies
@@ -83,7 +83,7 @@ public class CompanyService : ICompanyService
     public async Task<CompanyResponse> GetByIdAsync(Guid id)
     {
         var user = await GetActiveCurrentUserAsync();
-        if (!await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (!await _userManager.IsPlatformAdminAsync(user))
         {
             if (!user.CompanyId.HasValue || user.CompanyId.Value != id)
                 throw new UnauthorizedAccessException("Você não tem permissão para visualizar dados de outra empresa.");
@@ -100,7 +100,7 @@ public class CompanyService : ICompanyService
     public async Task<CompanyResponse> UpdateAsync(Guid id, UpdateCompanyRequest request)
     {
         var user = await GetActiveCurrentUserAsync();
-        if (!await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (!await _userManager.IsPlatformAdminAsync(user))
             throw new UnauthorizedAccessException("Apenas Super Administradores podem alterar dados cadastrais de empresas.");
 
         var company = await _companyRepository.GetByIdAsync(id);
@@ -134,7 +134,7 @@ public class CompanyService : ICompanyService
     public async Task DeleteAsync(Guid id)
     {
         var user = await GetActiveCurrentUserAsync();
-        if (!await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (!await _userManager.IsPlatformAdminAsync(user))
             throw new UnauthorizedAccessException("Apenas Super Administradores podem inativar empresas.");
 
         var company = await _companyRepository.GetByIdAsync(id);

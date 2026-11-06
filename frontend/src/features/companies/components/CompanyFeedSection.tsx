@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getPosts, postImageUrl, setPostPinned } from '../../posts/api';
 import type { Post } from '../../posts/types';
 import { useAuth } from '../../auth/providers';
-import { SystemRoles } from '../../../shared/constants/roles';
+import { SystemRoles, isPlatformAdmin } from '../../../shared/constants/roles';
 import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 
 type CompanyFeedSectionProps = {
@@ -23,7 +23,7 @@ function formatDate(value: string) {
 
 export function CompanyFeedSection({ companyId }: CompanyFeedSectionProps) {
   const { user } = useAuth();
-  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(user?.roles);
   const isCompanyAdmin = user?.roles.includes(SystemRoles.CompanyAdmin) && user.companyId === companyId;
   const canModerate = isSuperAdmin || isCompanyAdmin;
 

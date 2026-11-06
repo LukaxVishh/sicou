@@ -174,6 +174,11 @@ try:
     check(request("POST", "/api/posts", tenant["token"], post, form=True)[0] == 403, "removed owner role takes effect without reissuing token")
     from test_integrations_phase2 import run_phase2
     run_phase2(request, sql, check, a, b, company_a, company_b, area_a, area_b, ROOT, base)
+    if os.environ.get('SICOU_TEST_RF004_RF010') == '1':
+        subprocess.run(['node', 'scratch/test_rf004_rf010.mjs'], cwd=ROOT, check=True, env={
+            **os.environ, 'SICOU_TEST_API_BASE': base + '/api/', 'SICOU_TEST_DB_CONTAINER': container,
+            'SICOU_TEST_DB': 'sicou_tokens_test',
+        })
     stale_call = str(uuid.uuid4())
     sql(f'''INSERT INTO integration_calls ("Id","TokenId","UserId","CreatedAt","Method","Route","StatusCode","DurationMs")
         VALUES ('{stale_call}','{token_id}','{a['user']['id']}',NOW()-INTERVAL '100 days','GET','test retention',200,1);''')
