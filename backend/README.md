@@ -1485,7 +1485,7 @@ Recuperação administrativa com senha temporária, troca obrigatória e notific
 
 ### SMTP Gmail no ambiente local
 
-O envio automático do link em **Esqueci minha senha** pode usar Gmail. Consulte o guia SMTP local `_mds/SMTP.md` (mantido fora do versionamento) para preencher a senha de aplicativo em arquivo local ignorado e iniciar a API pelo script scripts/start-backend-smtp.ps1. A recuperação administrativa por senha temporária continua separada.
+O envio automático do link em **Esqueci minha senha** pode usar Gmail. Consulte o guia SMTP no [registro de 06/11/2026](../_mds/ATUALIZACOES/2026-11-06.md#guia-do-smtp-com-gmail) para preencher a senha de aplicativo em arquivo local ignorado e iniciar a API pelo script scripts/start-backend-smtp.ps1. A recuperação administrativa por senha temporária continua separada.
 
 ### Integração de workflows com relatórios (16/10/2026)
 

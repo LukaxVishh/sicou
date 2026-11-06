@@ -45,7 +45,8 @@ services:
       Email__Username: ${SMTP_USERNAME:-}
       Email__Password: ${SMTP_PASSWORD:-}
       Email__FromAddress: ${SMTP_FROM_ADDRESS:-no-reply@sicou.local}
-      Email__FrontendBaseUrl: ${SMTP_FRONTEND_BASE_URL:-http://localhost:3000}
+      # Frontend do Compose (porta 3000); independe do SMTP_FRONTEND_BASE_URL usado pelo script local (Vite).
+      Email__FrontendBaseUrl: ${SICOU_FRONTEND_URL:-http://localhost:3000}
     ports:
       - "8080:8080"
     volumes:
