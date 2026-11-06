@@ -12,14 +12,24 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Sicou.Infrastructure.Data;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Authentication;
+using Sicou.Api.Integrations;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRateLimiter(options =>
 {
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        context.User.FindFirst("integration_token_id") is { } token
+            ? RateLimitPartition.GetFixedWindowLimiter(token.Value, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+            })
+            : RateLimitPartition.GetNoLimiter("interactive"));
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.OnRejected = async (context, cancellation) =>
-        await context.HttpContext.Response.WriteAsJsonAsync(new { message = "Muitas solicitações de recuperação. Aguarde alguns minutos e tente novamente." }, cancellation);
+        await context.HttpContext.Response.WriteAsJsonAsync(new { message = "Limite de solicitações atingido. Aguarde e tente novamente." }, cancellation);
     options.AddPolicy("email-password-recovery", context =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
             $"{context.Connection.RemoteIpAddress}:{context.Request.Path.Value?.ToLowerInvariant()}",
@@ -46,6 +56,13 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Description = "API do sistema Sicou"
     });
+    options.SwaggerDoc("integrations", new OpenApiInfo
+    {
+        Title = "Sicou — API de Integrações", Version = "v1",
+        Description = "Crie um token na tela Integrações. Envie Authorization: Bearer sic_... . Os escopos limitam as operações e não ampliam as permissões do usuário. Campos de etapas posteriores são enviados na operação advance."
+    });
+    options.DocInclusionPredicate((document, api) => document == "v1"
+        || document == "integrations" && IntegrationRoutes.RequiredScope(api.HttpMethod ?? "", api.ActionDescriptor.AttributeRouteInfo?.Template) != null);
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -54,9 +71,15 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Informe o token JWT no formato: Bearer {seu_token}"
+        Description = "Cole somente o token JWT, sem o prefixo Bearer."
     });
 
+    options.AddSecurityDefinition("IntegrationToken", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http, Scheme = "bearer",
+        Description = "Cole somente o token sic_ criado em Integrações. Válido apenas nas rotas com escopo de integração documentado."
+    });
+    options.OperationFilter<IntegrationSwaggerFilter>();
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -83,9 +106,16 @@ if (string.IsNullOrWhiteSpace(jwtKey))
 builder.Services
     .AddAuthentication(options =>
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultAuthenticateScheme = "ApiAuthentication";
+        options.DefaultChallengeScheme = "ApiAuthentication";
     })
+    .AddPolicyScheme("ApiAuthentication", "JWT ou token de integração", options =>
+    {
+        options.ForwardDefaultSelector = context => context.Request.Headers.Authorization.ToString()
+            .StartsWith("Bearer sic_", StringComparison.OrdinalIgnoreCase)
+                ? IntegrationAuthenticationHandler.SchemeName : JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddScheme<AuthenticationSchemeOptions, IntegrationAuthenticationHandler>(IntegrationAuthenticationHandler.SchemeName, _ => { })
     .AddJwtBearer(options =>
     {
         options.RequireHttpsMetadata = false;
@@ -147,7 +177,6 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
@@ -162,10 +191,14 @@ using (var scope = app.Services.CreateScope())
 await IdentitySeeder.SeedRolesAsync(app.Services);
 await HrHiringWorkflowSeeder.SeedAsync(app.Services);
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Swagger:Enabled"))
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/integrations/swagger.json", "API de Integrações");
+        if (app.Environment.IsDevelopment()) options.SwaggerEndpoint("/swagger/v1/swagger.json", "API completa");
+    });
 }
 
 
@@ -182,8 +215,9 @@ app.UseStaticFiles(new StaticFileOptions
 });
 app.UseRouting();
 app.UseCorsConfiguration();
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseMiddleware<IntegrationAccessMiddleware>();
+app.UseRateLimiter();
 app.Use(async (context, next) =>
 {
     if (context.Items["MustChangePassword"] is true

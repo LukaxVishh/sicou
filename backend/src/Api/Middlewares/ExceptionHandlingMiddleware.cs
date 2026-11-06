@@ -26,6 +26,10 @@ public sealed class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (Sicou.Infrastructure.Automations.AutomationConflictException ex)
+        {
+            await WriteErrorResponseAsync(context, HttpStatusCode.Conflict, ex.Message);
+        }
         catch (KeyNotFoundException ex)
         {
             await WriteErrorResponseAsync(

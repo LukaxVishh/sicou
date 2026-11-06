@@ -28,6 +28,9 @@ Ao concluir ou descobrir uma pendência, atualize `PENDENCIAS.md` e vincule o re
 
 Os documentos dos módulos complementam os registros diários com detalhes de uso, configuração e contratos.
 
+- [05/11/2026 — Tokens de integração, Swagger e histórico de chamadas](ATUALIZACOES/2026-11-05.md)
+- [06/11/2026 — Agente local, execuções/alertas e fluxos de processos com tokens](ATUALIZACOES/2026-11-06.md)
+
 - [09/10/2026 — Recuperação, notificações e documentação](ATUALIZACOES/2026-10-09.md)
 - [14/10/2026 — Página Isolada de Tramitação e Regras de Parecer](ATUALIZACOES/2026-10-14.md)
 - [15/10/2026 — Workflows, transferências, acessos e SMTP](ATUALIZACOES/2026-10-15.md)

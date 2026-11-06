@@ -1182,3 +1182,9 @@ O menu **Relatórios** abre `/app/reports`. A API limita os dados por empresa, s
 **Atribuir responsável** abre um diálogo com candidatos elegíveis para administradores e gestores autorizados. Salvar persiste a atribuição com histórico. Solicitação sem responsável não é confundida com solicitante.
 
 Na aba **Processar documentos**, selecione DOCX, XLSX, CSV ou PDF de até 10 MB e clique em **Extrair conteúdo**. A tela apresenta texto, tabelas, avisos e download JSON. A prévia mostra 50 linhas por tabela; o JSON contém todas as linhas extraídas dentro dos limites do backend. Arquivos não são armazenados nem alteram processos. OCR de PDFs digitalizados não está incluído. Consulte os [contratos e limites](../backend/README.md#relatorios-e-documentos).
+
+## Integrações
+
+A rota autenticada `/app/integrations`, acessível pelo menu **Integrações**, permite criar e revogar tokens pessoais, guardar o segredo exibido uma vez e consultar chamadas com indicadores dos últimos sete dias. Os dados são do usuário autenticado, inclusive para Super Admin com outra empresa selecionada. Contratos e limites: [API de integrações](../backend/INTEGRACOES.md).
+
+O painel **Execuções das automações** cadastra rotinas e apresenta atividade, sucessos/falhas, alertas e histórico paginado com filtro de status. Atualiza a cada 15 segundos enquanto a página está visível. O proprietário pausa/retoma a rotina; administradores consultam a empresa e reconhecem alertas. Para Super Admin, esse painel respeita o seletor corporativo. A criação sempre usa o vínculo real do usuário, não o seletor. O cadastro não agenda nem executa comandos: configure o [agente local](../agents/README.md) no servidor.

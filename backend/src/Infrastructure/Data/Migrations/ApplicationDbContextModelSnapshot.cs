@@ -1107,6 +1107,152 @@ namespace Sicou.Infrastructure.Data.Migrations
                     b.ToTable("user_process_nodes", (string)null);
                 });
 
+            modelBuilder.Entity("Sicou.Infrastructure.Automations.Automation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ExpectedIntervalMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HeartbeatTimeoutSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxRunMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("OverdueAlertedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ScheduleBaselineAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("CompanyId", "UserId", "CreatedAt");
+
+                    b.ToTable("automations", (string)null);
+                });
+
+            modelBuilder.Entity("Sicou.Infrastructure.Automations.AutomationAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AcknowledgedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AutomationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<Guid?>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunId");
+
+                    b.HasIndex("AutomationId", "CreatedAt");
+
+                    b.ToTable("automation_alerts", (string)null);
+                });
+
+            modelBuilder.Entity("Sicou.Infrastructure.Automations.AutomationRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AutomationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("ExitCode")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ExternalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("HeartbeatTimeoutSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Host")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("LastHeartbeatAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxRunMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutomationId", "ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("AutomationId", "StartedAt");
+
+                    b.HasIndex("Status", "LastHeartbeatAt");
+
+                    b.ToTable("automation_runs", (string)null);
+                });
+
             modelBuilder.Entity("Sicou.Infrastructure.Identity.ApplicationRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1246,6 +1392,100 @@ namespace Sicou.Infrastructure.Data.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("Sicou.Infrastructure.Integrations.IntegrationCall", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("DurationMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TokenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenId", "CreatedAt");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("integration_calls", (string)null);
+                });
+
+            modelBuilder.Entity("Sicou.Infrastructure.Integrations.IntegrationToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("UnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("integration_tokens", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -1630,6 +1870,56 @@ namespace Sicou.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("ProcessNode");
+                });
+
+            modelBuilder.Entity("Sicou.Infrastructure.Automations.Automation", b =>
+                {
+                    b.HasOne("Sicou.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Sicou.Infrastructure.Automations.AutomationAlert", b =>
+                {
+                    b.HasOne("Sicou.Infrastructure.Automations.Automation", null)
+                        .WithMany()
+                        .HasForeignKey("AutomationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Sicou.Infrastructure.Automations.AutomationRun", null)
+                        .WithMany()
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Sicou.Infrastructure.Automations.AutomationRun", b =>
+                {
+                    b.HasOne("Sicou.Infrastructure.Automations.Automation", null)
+                        .WithMany()
+                        .HasForeignKey("AutomationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Sicou.Infrastructure.Integrations.IntegrationCall", b =>
+                {
+                    b.HasOne("Sicou.Infrastructure.Integrations.IntegrationToken", null)
+                        .WithMany()
+                        .HasForeignKey("TokenId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Sicou.Infrastructure.Integrations.IntegrationToken", b =>
+                {
+                    b.HasOne("Sicou.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Sicou.Domain.Entities.Area", b =>

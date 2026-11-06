@@ -1,3 +1,4 @@
+using Sicou.Application.Responses.Workflows;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sicou.Application.Interfaces.Services;
@@ -18,6 +19,7 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpGet("api/areas/{areaId:guid}/processes")]
+    [ProducesResponseType(typeof(IReadOnlyList<ProcessInstanceSummaryResponse>), 200)]
     public async Task<IActionResult> GetAreaProcesses(
         Guid areaId,
         [FromQuery] ProcessStatus? status = null,
@@ -39,6 +41,7 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpGet("api/processes/search")]
+    [ProducesResponseType(typeof(IReadOnlyList<ProcessInstanceSummaryResponse>), 200)]
     public async Task<IActionResult> SearchProcesses([FromQuery] ProcessSearchFilterRequest filter)
     {
         try
@@ -57,6 +60,7 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpGet("api/processes/my")]
+    [ProducesResponseType(typeof(IReadOnlyList<ProcessInstanceSummaryResponse>), 200)]
     public async Task<IActionResult> GetMyProcesses()
     {
         try
@@ -71,6 +75,7 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpGet("api/processes/{id:guid}")]
+    [ProducesResponseType(typeof(ProcessInstanceResponse), 200)]
     public async Task<IActionResult> GetById(Guid id)
     {
         try
@@ -89,6 +94,7 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpPost("api/processes")]
+    [ProducesResponseType(typeof(ProcessInstanceResponse), 201)]
     public async Task<IActionResult> Create([FromBody] CreateProcessInstanceRequest request)
     {
         try
@@ -111,6 +117,7 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpPut("api/processes/{id:guid}/draft")]
+    [ProducesResponseType(typeof(ProcessInstanceResponse), 200)]
     public async Task<IActionResult> UpdateDraft(Guid id, [FromBody] UpdateProcessDraftRequest request)
     {
         try
@@ -133,6 +140,7 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpPost("api/processes/{id:guid}/protocol")]
+    [ProducesResponseType(typeof(ProcessInstanceResponse), 200)]
     public async Task<IActionResult> Protocol(Guid id, [FromBody] ProtocolProcessRequest request)
     {
         try
@@ -155,6 +163,7 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpPost("api/processes/{id:guid}/advance")]
+    [ProducesResponseType(typeof(ProcessInstanceResponse), 200)]
     public async Task<IActionResult> Advance(Guid id, [FromBody] AdvanceProcessRequest request)
     {
         try
@@ -243,6 +252,7 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpPost("api/processes/{id:guid}/cancel")]
+    [ProducesResponseType(typeof(ProcessInstanceResponse), 200)]
     public async Task<IActionResult> Cancel(Guid id, [FromBody] CancelProcessRequest request)
     {
         try
@@ -265,6 +275,7 @@ public class ProcessesController : ControllerBase
     }
 
     [HttpPost("api/processes/{id:guid}/transfer")]
+    [ProducesResponseType(typeof(ProcessInstanceResponse), 200)]
     public async Task<IActionResult> Transfer(Guid id, [FromBody] TransferProcessRequest request)
     {
         try

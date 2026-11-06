@@ -36,12 +36,16 @@ A regra também está no [AGENTS.md da raiz](../AGENTS.md). Ferramentas sem supo
 
 ## Funcionalidades ainda ausentes
 
+- [x] **API de integrações — base:** tokens pessoais com validade, escopos, revogação, gestão no frontend, Swagger separado e histórico pessoal de chamadas. Testes e limites no [registro de 05/11/2026](ATUALIZACOES/2026-11-05.md) e no [guia](../backend/INTEGRACOES.md).
+- [x] **Integrações — etapa 2 técnica:** agente local, execuções com heartbeat/resultado, alertas e dashboard por empresa, retenção das chamadas e testes HTTP dos fluxos de processos com tokens. Consulte [06/11/2026](ATUALIZACOES/2026-11-06.md).
+- [ ] **Integrações — continuidade:** instalar/homologar o agente nos servidores das empresas e completar a matriz de árvores/perfis; idempotência de escritas de posts/processos, retenção de execuções/alertas e limites distribuídos. A visão administrativa entregue abrange execuções/alertas; tokens e chamadas permanecem pessoais.
+
 - [x] **RF-011 — Transferência de processos:** mover processos entre unidades e registrar unidade de origem, destino, responsável, data e horário ([2026-10-15.md](ATUALIZACOES/2026-10-15.md)).
 - [x] **RF-018 — Dashboard gerencial:** painel gerencial da plataforma Sicou e das empresas com indicadores reais multi-empresariais de adesão, colaboradores, unidades, áreas ativas e utilização estrutural ([2026-10-25.md](ATUALIZACOES/2026-10-25.md)).
-- [ ] **RF-024 — Monitoramento de automações:** implementar agente de comunicação e acompanhamento de execuções nos servidores locais.
-- [ ] **RF-025 / RNF-017 — Logs de automações:** registrar status, data/hora, mensagens de erro e duração das execuções.
-- [ ] **RF-026 — Alertas de automações:** detectar e avisar falhas, atrasos e interrupções.
-- [ ] **RF-027 — Histórico de automações:** disponibilizar consulta das execuções para auditoria e acompanhamento.
+- [ ] **RF-024 — Monitoramento de automações:** agente Python e acompanhamento de execuções entregues; falta instalação e homologação nos servidores das empresas e confronto integral com o Apêndice C ([06/11/2026](ATUALIZACOES/2026-11-06.md)).
+- [ ] **RF-025 / RNF-017 — Logs de automações:** status, datas UTC, resumo de erro, código de saída e duração entregues; não há captura de stdout/stderr nem fila offline durável. Falta homologação operacional e confirmação dos critérios completos do requisito ([06/11/2026](ATUALIZACOES/2026-11-06.md)).
+- [ ] **RF-026 — Alertas de automações:** falha, ausência de nova execução, perda de atividade e duração máxima detectadas por worker, com painel e notificação ao proprietário; falta homologação de limites e destinatários no ambiente real ([06/11/2026](ATUALIZACOES/2026-11-06.md)).
+- [ ] **RF-027 — Histórico de automações:** consulta paginada/filtro por status e dashboard administrativo da empresa entregues; falta política de retenção de execuções/alertas e confirmação integral contra o Apêndice C ([06/11/2026](ATUALIZACOES/2026-11-06.md)).
 - [ ] **RF-030 — Controle de prazos:** definir vencimentos de processos/etapas, identificar proximidade do vencimento e atraso e gerar os eventos de notificação.
 
 ## Correções técnicas relacionadas aos requisitos

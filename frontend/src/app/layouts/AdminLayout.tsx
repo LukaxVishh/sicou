@@ -222,6 +222,12 @@ export function AdminLayout() {
       roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin],
     },
     {
+      label: 'Integrações',
+      path: '/app/integrations',
+      icon: KeyRound,
+      roles: [SystemRoles.SuperAdmin, SystemRoles.CompanyAdmin, SystemRoles.AreaAdmin, SystemRoles.HeadquarterUser, SystemRoles.UnitUser],
+    },
+    {
       label: isSuperAdmin ? 'Área Operacional' : 'Página Inicial',
       path: '/app/home',
       icon: Home,

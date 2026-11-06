@@ -63,6 +63,8 @@ public partial class ApplicationDbContext
         SeedModules(builder);
         GuideModelConfiguration.Configure(builder);
         NotificationModelConfiguration.Configure(builder);
+        IntegrationModelConfiguration.Configure(builder);
+        AutomationModelConfiguration.Configure(builder);
     }
 
     private static void ConfigureIdentityTables(ModelBuilder builder)

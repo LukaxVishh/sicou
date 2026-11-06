@@ -1,3 +1,4 @@
+using Sicou.Application.Responses.Workflows;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sicou.Application.Interfaces.Services;
@@ -35,6 +36,7 @@ public class ProcessTypesController : ControllerBase
     }
 
     [HttpGet("api/process-types/available")]
+    [ProducesResponseType(typeof(IReadOnlyList<ProcessTypeSummaryResponse>), 200)]
     public async Task<IActionResult> GetAvailableForOpening()
     {
         try
@@ -53,6 +55,7 @@ public class ProcessTypesController : ControllerBase
     }
 
     [HttpGet("api/process-types/{id:guid}")]
+    [ProducesResponseType(typeof(ProcessTypeResponse), 200)]
     public async Task<IActionResult> GetById(Guid id)
     {
         try

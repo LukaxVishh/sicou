@@ -16,6 +16,7 @@ import { UsersPage, UserDetailsPage } from '../../features/users';
 import { FeedPage } from '../../features/posts';
 import { GuidePage } from '../../features/guide/GuidePage';
 import { ReportsPage } from '../../features/reports/ReportsPage';
+import { IntegrationsPage } from '../../features/integrations/IntegrationsPage';
 import {
   WorkflowsPage,
   FieldEditorPage,
@@ -118,6 +119,7 @@ export function AppRouter() {
 
             <Route path="guide" element={<GuidePage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="integrations" element={<IntegrationsPage />} />
             <Route path="password-recovery" element={<PasswordRecoveryPage />} />
 
 

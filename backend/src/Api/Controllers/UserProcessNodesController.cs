@@ -1,3 +1,4 @@
+using Sicou.Application.Responses.Workflows;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sicou.Application.Interfaces.Services;
@@ -17,6 +18,7 @@ public class UserProcessNodesController : ControllerBase
     }
 
     [HttpGet("api/users/me/process-nodes")]
+    [ProducesResponseType(typeof(List<ProcessNodeResponse>), 200)]
     public async Task<IActionResult> GetMyNodes()
     {
         try

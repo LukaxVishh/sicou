@@ -71,7 +71,7 @@ public class ProcessInstanceService : IProcessInstanceService
             {
                 // Usuário da sede visualiza de todas as unidades, mas precisa ter permissão de acesso à área
                 var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-                var areaAccess = accesses.FirstOrDefault(a => a.AreaId == areaId && a.IsActive);
+                var areaAccess = accesses.FirstOrDefault(a => a.AreaId == areaId && a.CompanyId == user.CompanyId && a.UnitId == user.UnitId && a.IsActive);
                 if (areaAccess == null || (!areaAccess.CanView && !areaAccess.CanHandleWorkflowRequests && !areaAccess.CanManage))
                 {
                     throw new UnauthorizedAccessException("Você não possui permissão para visualizar processos desta área.");
@@ -195,7 +195,12 @@ public class ProcessInstanceService : IProcessInstanceService
             throw new UnauthorizedAccessException("Usuário não autenticado.");
 
         var instances = await _instanceRepository.GetByUserIdAsync(_currentUser.UserId);
-        return instances.Select(MapToSummaryResponse).ToList();
+        var actor = await GetCurrentUserAsync();
+        var super = await _userManager.IsInRoleAsync(actor, SystemRoles.SuperAdmin);
+        var admin = await _userManager.IsInRoleAsync(actor, SystemRoles.CompanyAdmin);
+        return instances.Where(p => super || p.CompanyId == actor.CompanyId
+            && (admin || !actor.UnitId.HasValue || p.OriginUnitId == actor.UnitId || p.CurrentUnitId == actor.UnitId))
+            .Select(MapToSummaryResponse).ToList();
     }
 
     public async Task<ProcessInstanceResponse> GetByIdAsync(Guid id)
@@ -213,8 +218,7 @@ public class ProcessInstanceService : IProcessInstanceService
         if (string.IsNullOrEmpty(_currentUser.UserId))
             throw new UnauthorizedAccessException("Usuário não autenticado.");
 
-        var user = await _userManager.FindByIdAsync(_currentUser.UserId)
-            ?? throw new KeyNotFoundException("Usuário não encontrado.");
+        var user = await GetCurrentUserAsync();
 
         var roles = await _userManager.GetRolesAsync(user);
         var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
@@ -223,20 +227,20 @@ public class ProcessInstanceService : IProcessInstanceService
         var processType = await _processTypeRepository.GetCompleteTreeAsync(request.ProcessTypeId)
             ?? throw new KeyNotFoundException("Tipo de processo não encontrado.");
 
-        Guid companyId;
-        if (user.CompanyId.HasValue)
-        {
-            companyId = user.CompanyId.Value;
-        }
-        else if (isSuperAdmin)
-        {
-            var area = await _areaRepository.GetByIdAsync(processType.AreaId);
-            companyId = area?.CompanyId ?? throw new InvalidOperationException("Não foi possível identificar a empresa vinculada a este processo.");
-        }
-        else
-        {
-            throw new InvalidOperationException("Usuário não vinculado a uma empresa.");
-        }
+        var processArea = await _areaRepository.GetByIdAsync(processType.AreaId)
+            ?? throw new KeyNotFoundException("Área não encontrada.");
+        if (!processArea.IsActive || !await _context.Companies.AnyAsync(c => c.Id == processArea.CompanyId && c.IsActive))
+            throw new UnauthorizedAccessException("Área ou empresa indisponível.");
+        if (!isSuperAdmin && user.CompanyId != processArea.CompanyId)
+            throw new UnauthorizedAccessException("A árvore pertence a outra empresa.");
+        if (!isSuperAdmin && !isCompanyAdmin && !user.UnitId.HasValue
+            && !await _context.UserAreaAccesses.AnyAsync(a => a.UserId == user.Id.ToString() && a.AreaId == processArea.Id
+                && a.CompanyId == user.CompanyId && a.UnitId == user.UnitId && a.IsActive
+                && (a.CanView || a.CanManage || a.CanManageWorkflows || a.CanHandleWorkflowRequests)))
+            throw new UnauthorizedAccessException("Sem acesso à área desta árvore.");
+
+        // The target tree owns the process, including cross-company Super Admin actions.
+        var companyId = processArea.CompanyId;
 
         if (!processType.IsActive)
             throw new InvalidOperationException("Este processo está desativado para abertura.");
@@ -247,7 +251,7 @@ public class ProcessInstanceService : IProcessInstanceService
             if (!isSuperAdmin && !isCompanyAdmin)
             {
                 var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-                var areaAccess = accesses.FirstOrDefault(a => a.AreaId == processType.AreaId && a.IsActive);
+                var areaAccess = accesses.FirstOrDefault(a => a.AreaId == processType.AreaId && a.CompanyId == user.CompanyId && a.UnitId == user.UnitId && a.IsActive);
                 isAreaAdmin = areaAccess != null && (areaAccess.CanManage || areaAccess.CanManageWorkflows);
             }
 
@@ -280,6 +284,8 @@ public class ProcessInstanceService : IProcessInstanceService
         var isDraft = request.IsDraft;
         var initialStatus = isDraft ? ProcessStatus.Draft : ProcessStatus.InReview;
         var originUnitId = request.OriginUnitId ?? user.UnitId;
+        await ValidateOriginUnitAsync(originUnitId, companyId, user, isSuperAdmin || isCompanyAdmin);
+        ValidateIncomingFields(processType, processType.StartNodeId.Value, request.InitialFieldValues);
 
         if (!isDraft)
         {
@@ -360,10 +366,16 @@ public class ProcessInstanceService : IProcessInstanceService
 
         if (request.OriginUnitId.HasValue)
         {
+            var admin = await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin)
+                || await _userManager.IsInRoleAsync(user, SystemRoles.CompanyAdmin);
+            await ValidateOriginUnitAsync(request.OriginUnitId, instance.CompanyId, user, admin);
             instance.OriginUnitId = request.OriginUnitId.Value;
-            instance.CurrentUnitId ??= request.OriginUnitId.Value;
+            instance.CurrentUnitId = request.OriginUnitId.Value;
         }
 
+        var tree = await _processTypeRepository.GetCompleteTreeAsync(instance.ProcessTypeId)
+            ?? throw new KeyNotFoundException("Árvore não encontrada.");
+        ValidateIncomingFields(tree, instance.CurrentNodeId, request.FieldValues, instance.FieldValues);
         if (request.FieldValues != null)
         {
             foreach (var kvp in request.FieldValues)
@@ -400,6 +412,7 @@ public class ProcessInstanceService : IProcessInstanceService
             ?? throw new KeyNotFoundException("Processo não encontrado.");
 
         var user = await GetCurrentUserAsync();
+        await ValidateInstanceViewAccessAsync(instance);
         var roles = await _userManager.GetRolesAsync(user);
         var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
         var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
@@ -720,6 +733,7 @@ public class ProcessInstanceService : IProcessInstanceService
             ?? throw new KeyNotFoundException("Processo não encontrado.");
 
         var user = await GetCurrentUserAsync();
+        await ValidateInstanceViewAccessAsync(instance);
         var roles = await _userManager.GetRolesAsync(user);
         var isSuperAdmin = roles.Contains(SystemRoles.SuperAdmin);
         var isCompanyAdmin = roles.Contains(SystemRoles.CompanyAdmin);
@@ -732,7 +746,7 @@ public class ProcessInstanceService : IProcessInstanceService
         if (!isSuperAdmin && !isCompanyAdmin)
         {
             var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-            var areaAccess = accesses.FirstOrDefault(a => a.AreaId == instance.AreaId && a.IsActive);
+            var areaAccess = accesses.FirstOrDefault(a => a.AreaId == instance.AreaId && a.CompanyId == user.CompanyId && a.UnitId == user.UnitId && a.IsActive);
             isAreaAdmin = areaAccess != null && (areaAccess.CanManage || areaAccess.CanManageWorkflows);
         }
 
@@ -849,6 +863,28 @@ public class ProcessInstanceService : IProcessInstanceService
         return MapToCompleteResponse(updated, canManipulateAfter);
     }
 
+    private async Task ValidateOriginUnitAsync(Guid? unitId, Guid companyId, ApplicationUser user, bool admin)
+    {
+        if (unitId.HasValue && !await _context.Units.AnyAsync(u => u.Id == unitId && u.CompanyId == companyId && u.IsActive))
+            throw new UnauthorizedAccessException("Unidade de origem indisponível ou de outra empresa.");
+        if (!admin && user.UnitId.HasValue && unitId != user.UnitId)
+            throw new UnauthorizedAccessException("A unidade de origem deve ser a unidade atual do usuário.");
+    }
+
+    private static void ValidateIncomingFields(ProcessType tree, Guid nodeId, Dictionary<Guid, string?>? incoming,
+        IEnumerable<ProcessFieldValue>? existing = null)
+    {
+        if (incoming == null) return;
+        var allowed = tree.Fields.Where(f => f.IsActive && f.FieldDefinition.IsActive
+            && (f.ProcessNodeId == null || f.ProcessNodeId == nodeId)).Select(f => f.FieldDefinitionId).ToHashSet();
+        var existingById = (existing ?? Enumerable.Empty<ProcessFieldValue>()).ToDictionary(f => f.FieldDefinitionId, f => f.Value);
+        var treeFields = tree.Fields.Where(f => f.IsActive && f.FieldDefinition.IsActive).Select(f => f.FieldDefinitionId).ToHashSet();
+        // Forms can resend previous-stage values unchanged, but cannot create or change them.
+        if (incoming.Any(pair => !allowed.Contains(pair.Key) && (!treeFields.Contains(pair.Key)
+            || !existingById.TryGetValue(pair.Key, out var previous) || previous != pair.Value)))
+            throw new InvalidOperationException("Há campos que não pertencem à árvore/etapa atual ou estão inativos.");
+    }
+
     private static void ValidateRequiredNodeFields(
         ProcessType processType,
         Guid nodeId,
@@ -857,6 +893,7 @@ public class ProcessInstanceService : IProcessInstanceService
         bool isRejectingTransition,
         string? observations)
     {
+        ValidateIncomingFields(processType, nodeId, incomingValues, existingValues);
         var merged = new Dictionary<Guid, string?>();
         foreach (var fv in existingValues)
         {
@@ -955,8 +992,13 @@ public class ProcessInstanceService : IProcessInstanceService
         if (string.IsNullOrEmpty(_currentUser.UserId))
             throw new UnauthorizedAccessException("Usuário não autenticado.");
 
-        return await _userManager.FindByIdAsync(_currentUser.UserId)
+        var user = await _userManager.FindByIdAsync(_currentUser.UserId)
             ?? throw new KeyNotFoundException("Usuário não encontrado.");
+        if (!user.IsActive || user.MustChangePassword
+            || user.CompanyId.HasValue && !await _context.Companies.AnyAsync(c => c.Id == user.CompanyId && c.IsActive)
+            || user.UnitId.HasValue && !await _context.Units.AnyAsync(u => u.Id == user.UnitId && u.CompanyId == user.CompanyId && u.IsActive))
+            throw new UnauthorizedAccessException("Usuário, empresa ou unidade indisponível.");
+        return user;
     }
 
     private async Task ValidateAreaHandleAccessAsync(Guid areaId)
@@ -981,7 +1023,7 @@ public class ProcessInstanceService : IProcessInstanceService
             return;
 
         var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-        var areaAccess = accesses.FirstOrDefault(a => a.AreaId == areaId && a.IsActive);
+        var areaAccess = accesses.FirstOrDefault(a => a.AreaId == areaId && a.CompanyId == user.CompanyId && a.UnitId == user.UnitId && a.IsActive);
 
         if (areaAccess == null || (!areaAccess.CanHandleWorkflowRequests && !areaAccess.CanManage))
             throw new UnauthorizedAccessException("Você não possui permissão para tramitar processos desta área.");
@@ -989,6 +1031,7 @@ public class ProcessInstanceService : IProcessInstanceService
 
     private async Task ValidateCanHandleOrCreatorAsync(ProcessInstance instance, ApplicationUser user)
     {
+        await ValidateInstanceViewAccessAsync(instance);
         var roles = await _userManager.GetRolesAsync(user);
         if (roles.Contains(SystemRoles.SuperAdmin) || roles.Contains(SystemRoles.CompanyAdmin))
             return;
@@ -1002,6 +1045,8 @@ public class ProcessInstanceService : IProcessInstanceService
     private async Task ValidateInstanceViewAccessAsync(ProcessInstance instance)
     {
         var user = await GetCurrentUserAsync();
+        if (!await _context.Areas.AnyAsync(a => a.Id == instance.AreaId && a.CompanyId == instance.CompanyId && a.IsActive && a.Company.IsActive))
+            throw new UnauthorizedAccessException("Área ou empresa indisponível.");
         var roles = await _userManager.GetRolesAsync(user);
         if (roles.Contains(SystemRoles.SuperAdmin))
             return;
@@ -1009,10 +1054,10 @@ public class ProcessInstanceService : IProcessInstanceService
         if (user.CompanyId != instance.CompanyId)
             throw new UnauthorizedAccessException("Acesso negado a processos de outra empresa.");
 
-        if (roles.Contains(SystemRoles.CompanyAdmin) || instance.CreatedByUserId == user.Id.ToString())
+        if (roles.Contains(SystemRoles.CompanyAdmin))
             return;
 
-        var isUnitUser = user.UnitId.HasValue && roles.Contains(SystemRoles.UnitUser);
+        var isUnitUser = user.UnitId.HasValue;
         if (isUnitUser)
         {
             if (instance.OriginUnitId != user.UnitId && instance.CurrentUnitId != user.UnitId)
@@ -1022,8 +1067,10 @@ public class ProcessInstanceService : IProcessInstanceService
             return;
         }
 
+        if (instance.CreatedByUserId == user.Id.ToString()) return;
+
         var accesses = await _userAreaAccessRepository.GetByUserIdAsync(user.Id.ToString());
-        var areaAccess = accesses.FirstOrDefault(a => a.AreaId == instance.AreaId && a.IsActive);
+        var areaAccess = accesses.FirstOrDefault(a => a.AreaId == instance.AreaId && a.CompanyId == user.CompanyId && a.UnitId == user.UnitId && a.IsActive);
 
         if (areaAccess == null || (!areaAccess.CanView && !areaAccess.CanHandleWorkflowRequests && !areaAccess.CanManage))
             throw new UnauthorizedAccessException("Você não possui permissão para visualizar processos desta área.");

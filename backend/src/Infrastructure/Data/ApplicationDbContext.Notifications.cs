@@ -164,7 +164,8 @@ public partial class ApplicationDbContext
         var admins = UserRoles.Where(ur => Roles.Any(r => r.Id == ur.RoleId && r.Name == SystemRoles.CompanyAdmin)).Select(ur => ur.UserId);
         var supers = UserRoles.Where(ur => Roles.Any(r => r.Id == ur.RoleId && r.Name == SystemRoles.SuperAdmin)).Select(ur => ur.UserId);
         return Notifications.Where(n => n.UserId == user.Id
-            && n.CompanyId.HasValue && n.CompanyId == user.CompanyId
+            && ((n.Audience == "automation" && !n.CompanyId.HasValue && !user.CompanyId.HasValue)
+            || n.CompanyId.HasValue && n.CompanyId == user.CompanyId
             && Companies.Any(c => c.Id == n.CompanyId && c.IsActive)
             && (!n.AreaId.HasValue || Areas.Any(a => a.Id == n.AreaId && a.IsActive && a.Company.IsActive)
                 && (supers.Contains(user.Id) || admins.Contains(user.Id)
@@ -175,6 +176,6 @@ public partial class ApplicationDbContext
                         : n.Audience == "process" ? !user.UnitId.HasValue && (a.CanHandleWorkflowRequests || a.CanManage || a.CanView)
                         : a.CanView || a.CanManage || a.CanPublishInformatives || a.CanManageGuide || a.CanManageWorkflows || a.CanHandleWorkflowRequests))
                 || (n.Audience == "process" && ProcessInstances.Any(p => p.Id == n.ProcessInstanceId && p.CompanyId == user.CompanyId
-                    && (p.CreatedByUserId == user.Id.ToString() || (user.UnitId.HasValue && p.OriginUnitId == user.UnitId && p.Status != ProcessStatus.Draft)))))));
+                    && (p.CreatedByUserId == user.Id.ToString() || (user.UnitId.HasValue && p.OriginUnitId == user.UnitId && p.Status != ProcessStatus.Draft))))))));
     }
 }

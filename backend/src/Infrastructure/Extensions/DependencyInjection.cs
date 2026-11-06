@@ -52,6 +52,8 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
 
         services.AddScoped<IUnitRepository, UnitRepository>();
+        services.AddScoped<Sicou.Infrastructure.Automations.AutomationService>();
+        services.AddHostedService<Sicou.Infrastructure.Automations.AutomationMonitorWorker>();
         services.AddScoped<IAreaRepository, AreaRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<IUserAreaAccessRepository, UserAreaAccessRepository>();

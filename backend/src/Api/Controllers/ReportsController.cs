@@ -8,9 +8,11 @@ namespace Sicou.Api.Controllers;
 public class ReportsController(IReportService reports) : ControllerBase
 {
     [HttpGet("options")]
+    [ProducesResponseType(typeof(ReportOptions), 200)]
     public async Task<IActionResult> Options(CancellationToken ct) => Ok(await reports.GetOptionsAsync(ct));
 
     [HttpGet("processes")]
+    [ProducesResponseType(typeof(ReportResult), 200)]
     public async Task<IActionResult> Processes([FromQuery] ReportFilter filter, CancellationToken ct)
     {
         Response.Headers.CacheControl = "no-store";

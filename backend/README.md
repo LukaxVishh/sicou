@@ -1,5 +1,7 @@
 # Sicou Backend
 
+Integrações externas: [tokens pessoais, escopos, Swagger e histórico de chamadas](INTEGRACOES.md).
+
 Backend do **Sicou**, uma plataforma modular para organização, governança e centralização de processos entre uma sede administrativa e suas unidades.
 
 O objetivo do sistema é permitir que uma empresa configure sua estrutura corporativa, cadastre unidades, organize áreas da sede, habilite módulos por área, gerencie usuários, delegue permissões granulares e, nas próximas fases, publique informativos, orientações e fluxos de trabalho para as unidades.

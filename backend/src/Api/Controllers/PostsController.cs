@@ -1,3 +1,4 @@
+using Sicou.Application.Responses.Posts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sicou.Application.Interfaces.Services;
@@ -32,6 +33,7 @@ public class PostsController : ControllerBase
 
     [HttpPost]
     [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(PostResponse), 201)]
     public async Task<IActionResult> Create([FromForm] CreatePostRequest request, IFormFile? image)
     {
         try
