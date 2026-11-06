@@ -6,6 +6,8 @@ using Sicou.Application.Interfaces.Services;
 using Sicou.Application.Requests.Users;
 using Sicou.Application.Responses.Users;
 using Sicou.Domain.Constants;
+using Sicou.Domain.Entities;
+using Sicou.Infrastructure.Data;
 using Sicou.Infrastructure.Identity;
 
 namespace Sicou.Infrastructure.Services;
@@ -17,25 +19,28 @@ public class UserService : IUserService
     private readonly ICompanyRepository _companyRepository;
     private readonly IUnitRepository _unitRepository;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ApplicationDbContext _context;
 
     public UserService(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
         ICompanyRepository companyRepository,
         IUnitRepository unitRepository,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        ApplicationDbContext context)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _companyRepository = companyRepository;
         _unitRepository = unitRepository;
         _currentUserService = currentUserService;
+        _context = context;
     }
 
     public async Task<UserResponse> CreateAsync(CreateUserRequest request)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         if (string.IsNullOrWhiteSpace(request.FullName))
             throw new InvalidOperationException("O nome completo é obrigatório.");
@@ -58,8 +63,8 @@ public class UserService : IUserService
 
             targetCompanyId = currentUser.CompanyId.Value;
 
-            if (request.Roles.Contains(SystemRoles.SuperAdmin))
-                throw new UnauthorizedAccessException("Você não tem permissão para conceder a role Super Admin.");
+            if (SystemRoles.IsPlatformAdmin(request.Roles))
+                throw new UnauthorizedAccessException("Você não tem permissão para conceder os perfis Super Admin ou Desenvolvedor.");
         }
 
         if (targetCompanyId.HasValue)
@@ -114,7 +119,7 @@ public class UserService : IUserService
     public async Task<List<UserResponse>> GetAllAsync()
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         var query = _userManager.Users.AsNoTracking();
 
@@ -142,7 +147,7 @@ public class UserService : IUserService
     public async Task<UserResponse?> GetByIdAsync(string id)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         var user = await _userManager.FindByIdAsync(id);
         if (user is null)
@@ -157,7 +162,7 @@ public class UserService : IUserService
     public async Task<UserResponse?> UpdateAsync(string id, UpdateUserRequest request)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         var user = await _userManager.FindByIdAsync(id);
         if (user is null)
@@ -201,23 +206,162 @@ public class UserService : IUserService
             user.NormalizedUserName = _userManager.NormalizeName(request.Email.Trim());
         }
 
+        var previousCompanyId = user.CompanyId;
+        var previousUnitId = user.UnitId;
+        var isTransfer = previousCompanyId != targetCompanyId || previousUnitId != request.UnitId;
+
         user.FullName = request.FullName.Trim();
         user.CompanyId = targetCompanyId;
         user.UnitId = request.UnitId;
         user.IsActive = request.IsActive;
         user.UpdatedAt = DateTime.UtcNow;
 
+        // A transferência (RF-010) grava usuário, acessos e registro juntos: qualquer falha desfaz tudo.
+        await using var transaction = isTransfer ? await _context.Database.BeginTransactionAsync() : null;
+
         var result = await _userManager.UpdateAsync(user);
         if (!result.Succeeded)
             throw new InvalidOperationException(string.Join(" | ", result.Errors.Select(x => x.Description)));
 
+        if (transaction is not null)
+        {
+            await ApplyTransferAsync(user, previousCompanyId, previousUnitId, request.CopyAccessesToNewUnit, currentUser);
+            // Sessões abertas carregam a empresa e a unidade antigas; o usuário precisa entrar novamente.
+            await _userManager.UpdateSecurityStampAsync(user);
+            await transaction.CommitAsync();
+        }
+
         return await MapToResponseAsync(user);
     }
+
+    /// <summary>
+    /// RF-010: desativa os acessos de setor que não correspondem à nova empresa/unidade, recria-os na nova unidade
+    /// quando solicitado (somente na mesma empresa) e registra a transferência.
+    /// Sem cópia, as atribuições a locais de processo também são desativadas.
+    /// </summary>
+    private async Task ApplyTransferAsync(ApplicationUser user, Guid? fromCompanyId, Guid? fromUnitId,
+        bool copyRequested, ApplicationUser actor)
+    {
+        var userId = user.Id.ToString();
+        var now = DateTime.UtcNow;
+        var copy = copyRequested && fromCompanyId.HasValue && fromCompanyId == user.CompanyId;
+
+        var revoked = await _context.UserAreaAccesses
+            .Where(a => a.UserId == userId && a.IsActive && (a.CompanyId != user.CompanyId || a.UnitId != user.UnitId))
+            .ToListAsync();
+        foreach (var access in revoked)
+        {
+            access.IsActive = false;
+            access.UpdatedAt = now;
+        }
+
+        var copied = 0;
+        if (copy)
+        {
+            var companyId = user.CompanyId!.Value;
+            var activeAreaIds = await _context.Areas
+                .Where(a => a.CompanyId == companyId && a.IsActive)
+                .Select(a => a.Id)
+                .ToListAsync();
+            var targetRows = await _context.UserAreaAccesses
+                .Where(a => a.UserId == userId && a.CompanyId == companyId && a.UnitId == user.UnitId)
+                .ToListAsync();
+
+            foreach (var group in revoked.Where(a => a.CompanyId == companyId && activeAreaIds.Contains(a.AreaId)).GroupBy(a => a.AreaId))
+            {
+                var target = targetRows.FirstOrDefault(a => a.AreaId == group.Key);
+                if (target is { IsActive: true })
+                    continue; // Acesso já configurado na nova unidade: mantido como está, sem ampliar permissões.
+
+                if (target is null)
+                {
+                    target = new UserAreaAccess { UserId = userId, CompanyId = companyId, UnitId = user.UnitId, AreaId = group.Key };
+                    _context.UserAreaAccesses.Add(target);
+                }
+
+                target.CanView = group.Any(a => a.CanView);
+                target.CanManage = group.Any(a => a.CanManage);
+                target.CanPublishInformatives = group.Any(a => a.CanPublishInformatives);
+                target.CanManageGuide = group.Any(a => a.CanManageGuide);
+                target.CanManageWorkflows = group.Any(a => a.CanManageWorkflows);
+                target.CanHandleWorkflowRequests = group.Any(a => a.CanHandleWorkflowRequests);
+                target.IsActive = true;
+                target.UpdatedAt = now;
+                copied++;
+            }
+        }
+
+        var revokedNodes = 0;
+        if (!copy)
+        {
+            var nodes = await _context.UserProcessNodes.Where(n => n.UserId == userId && n.IsActive).ToListAsync();
+            foreach (var node in nodes)
+            {
+                node.IsActive = false;
+                node.UpdatedAt = now;
+            }
+            revokedNodes = nodes.Count;
+        }
+
+        var companyIds = new[] { fromCompanyId, user.CompanyId }.Where(x => x.HasValue).Select(x => x!.Value).ToList();
+        var unitIds = new[] { fromUnitId, user.UnitId }.Where(x => x.HasValue).Select(x => x!.Value).ToList();
+        var companyNames = await _context.Companies.Where(c => companyIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Name);
+        var unitNames = await _context.Units.Where(u => unitIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Name);
+
+        _context.UserTransfers.Add(new UserTransfer
+        {
+            UserId = user.Id,
+            FromCompanyId = fromCompanyId,
+            FromCompanyName = fromCompanyId.HasValue ? companyNames.GetValueOrDefault(fromCompanyId.Value) : null,
+            FromUnitId = fromUnitId,
+            FromUnitName = fromUnitId.HasValue ? unitNames.GetValueOrDefault(fromUnitId.Value) : null,
+            ToCompanyId = user.CompanyId,
+            ToCompanyName = user.CompanyId.HasValue ? companyNames.GetValueOrDefault(user.CompanyId.Value) : null,
+            ToUnitId = user.UnitId,
+            ToUnitName = user.UnitId.HasValue ? unitNames.GetValueOrDefault(user.UnitId.Value) : null,
+            PerformedByUserId = actor.Id,
+            PerformedByName = actor.FullName,
+            CopyAccessesRequested = copyRequested,
+            RevokedAreaAccesses = revoked.Count,
+            CopiedAreaAccesses = copied,
+            RevokedProcessNodes = revokedNodes
+        });
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<IReadOnlyList<UserTransferResponse>?> GetTransfersAsync(string id)
+    {
+        var currentUser = await GetActiveCurrentUserAsync();
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
+
+        var user = await _userManager.FindByIdAsync(id);
+        if (user is null)
+            return null;
+
+        if (!isSuperAdmin && user.CompanyId != currentUser.CompanyId)
+            throw new UnauthorizedAccessException("Você não tem permissão para visualizar este usuário.");
+
+        var transfers = await _context.UserTransfers.AsNoTracking()
+            .Where(t => t.UserId == user.Id)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+
+        return transfers.Select(t => new UserTransferResponse(
+            t.Id, t.CreatedAt,
+            t.FromCompanyName, UnitLabel(t.FromCompanyId, t.FromUnitName),
+            t.ToCompanyName, UnitLabel(t.ToCompanyId, t.ToUnitName),
+            t.PerformedByName, t.CopyAccessesRequested,
+            t.RevokedAreaAccesses, t.CopiedAreaAccesses, t.RevokedProcessNodes)).ToList();
+    }
+
+    private static string UnitLabel(Guid? companyId, string? unitName)
+        => unitName ?? (companyId.HasValue ? "Sede" : "Sem empresa");
 
     public async Task<bool> DeleteAsync(string id)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         var user = await _userManager.FindByIdAsync(id);
         if (user is null)
@@ -239,7 +383,7 @@ public class UserService : IUserService
     public async Task<UserResponse?> UpdateRolesAsync(string id, UpdateUserRolesRequest request)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         var user = await _userManager.FindByIdAsync(id);
         if (user is null)
@@ -248,8 +392,8 @@ public class UserService : IUserService
         if (!isSuperAdmin && user.CompanyId != currentUser.CompanyId)
             throw new UnauthorizedAccessException("Você não tem permissão para alterar as permissões deste usuário.");
 
-        if (!isSuperAdmin && request.Roles.Contains(SystemRoles.SuperAdmin))
-            throw new UnauthorizedAccessException("Você não tem permissão para conceder o perfil Super Admin.");
+        if (!isSuperAdmin && SystemRoles.IsPlatformAdmin(request.Roles))
+            throw new UnauthorizedAccessException("Você não tem permissão para conceder os perfis Super Admin ou Desenvolvedor.");
 
         foreach (var role in request.Roles)
         {

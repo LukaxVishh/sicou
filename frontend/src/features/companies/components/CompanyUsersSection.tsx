@@ -22,6 +22,12 @@ type CompanyUsersSectionProps = {
 };
 
 const roleBadges: Record<UserRole, { label: string; bg: string; text: string; border: string }> = {
+  DEVELOPER: {
+    label: 'Desenvolvedor',
+    bg: 'bg-fuchsia-50',
+    text: 'text-fuchsia-700',
+    border: 'border-fuchsia-200',
+  },
   SUPER_ADMIN: {
     label: 'Super Admin',
     bg: 'bg-purple-50',

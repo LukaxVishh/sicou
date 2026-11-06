@@ -38,7 +38,7 @@ public class UserAreaAccessService : IUserAreaAccessService
     public async Task<UserAreaAccessResponse> CreateAsync(CreateUserAreaAccessRequest request)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         if (string.IsNullOrWhiteSpace(request.UserId))
             throw new InvalidOperationException("O usuário é obrigatório.");
@@ -136,7 +136,7 @@ public class UserAreaAccessService : IUserAreaAccessService
     public async Task<UserAreaAccessResponse?> GetByIdAsync(Guid id)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         var access = await _repository.GetByIdAsync(id);
         if (access is null)
@@ -151,7 +151,7 @@ public class UserAreaAccessService : IUserAreaAccessService
     public async Task<List<UserAreaAccessResponse>> GetByUserIdAsync(string userId)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
         var isCompanyAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.CompanyAdmin);
 
         var targetUser = await _userManager.FindByIdAsync(userId);
@@ -177,7 +177,7 @@ public class UserAreaAccessService : IUserAreaAccessService
     public async Task<List<UserAreaAccessResponse>> GetByCompanyIdAsync(Guid companyId)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         if (!isSuperAdmin && currentUser.CompanyId != companyId)
             throw new UnauthorizedAccessException("Você não tem permissão para visualizar acessos de outra empresa.");
@@ -195,7 +195,7 @@ public class UserAreaAccessService : IUserAreaAccessService
     public async Task<UserAreaAccessResponse?> UpdateAsync(Guid id, UpdateUserAreaAccessRequest request)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         var access = await _repository.GetByIdAsync(id);
         if (access is null)
@@ -222,7 +222,7 @@ public class UserAreaAccessService : IUserAreaAccessService
     public async Task<bool> DeleteAsync(Guid id)
     {
         var currentUser = await GetActiveCurrentUserAsync();
-        var isSuperAdmin = await _userManager.IsInRoleAsync(currentUser, SystemRoles.SuperAdmin);
+        var isSuperAdmin = await _userManager.IsPlatformAdminAsync(currentUser);
 
         var access = await _repository.GetByIdAsync(id);
         if (access is null)

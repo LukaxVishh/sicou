@@ -212,7 +212,7 @@ public class UserProcessNodeService : IUserProcessNodeService
             ?? throw new UnauthorizedAccessException("Usuário atual não encontrado.");
 
         var roles = await _userManager.GetRolesAsync(currentUser);
-        if (roles.Contains(SystemRoles.SuperAdmin) || roles.Contains(SystemRoles.CompanyAdmin))
+        if (SystemRoles.IsPlatformAdmin(roles) || roles.Contains(SystemRoles.CompanyAdmin))
             return;
 
         throw new UnauthorizedAccessException("Você não possui permissão para consultar os locais deste usuário.");
@@ -230,7 +230,7 @@ public class UserProcessNodeService : IUserProcessNodeService
         var roles = await _userManager.GetRolesAsync(currentUser);
 
         // SuperAdmin e CompanyAdmin podem gerenciar
-        if (roles.Contains(SystemRoles.SuperAdmin) || roles.Contains(SystemRoles.CompanyAdmin))
+        if (SystemRoles.IsPlatformAdmin(roles) || roles.Contains(SystemRoles.CompanyAdmin))
             return;
 
         throw new UnauthorizedAccessException("Apenas administradores podem atribuir locais de processo a colaboradores.");
@@ -246,7 +246,7 @@ public class UserProcessNodeService : IUserProcessNodeService
             ?? throw new UnauthorizedAccessException("Usuário atual não encontrado.");
 
         var roles = await _userManager.GetRolesAsync(currentUser);
-        if (roles.Contains(SystemRoles.SuperAdmin))
+        if (SystemRoles.IsPlatformAdmin(roles))
             return;
 
         if (roles.Contains(SystemRoles.CompanyAdmin))

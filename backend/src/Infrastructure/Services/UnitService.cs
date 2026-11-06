@@ -186,7 +186,7 @@ public class UnitService : IUnitService
     private async Task ValidateCompanyAccessAsync(Guid companyId, bool writeOperation = false)
     {
         var user = await GetActiveCurrentUserAsync();
-        if (await _userManager.IsInRoleAsync(user, SystemRoles.SuperAdmin))
+        if (await _userManager.IsPlatformAdminAsync(user))
             return;
 
         if (!user.CompanyId.HasValue || user.CompanyId.Value != companyId)

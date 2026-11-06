@@ -1107,6 +1107,79 @@ namespace Sicou.Infrastructure.Data.Migrations
                     b.ToTable("user_process_nodes", (string)null);
                 });
 
+            modelBuilder.Entity("Sicou.Domain.Entities.UserTransfer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CopiedAreaAccesses")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("CopyAccessesRequested")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("FromCompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FromCompanyName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("FromUnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FromUnitName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PerformedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("PerformedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RevokedAreaAccesses")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RevokedProcessNodes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ToCompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ToCompanyName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("ToUnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ToUnitName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("user_transfers", (string)null);
+                });
+
             modelBuilder.Entity("Sicou.Infrastructure.Identity.ApplicationRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1630,6 +1703,15 @@ namespace Sicou.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("ProcessNode");
+                });
+
+            modelBuilder.Entity("Sicou.Domain.Entities.UserTransfer", b =>
+                {
+                    b.HasOne("Sicou.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Sicou.Domain.Entities.Area", b =>

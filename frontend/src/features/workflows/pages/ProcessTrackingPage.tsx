@@ -31,7 +31,7 @@ import {
   User,
 } from 'lucide-react';
 import { useAuth } from '../../auth/providers';
-import { SystemRoles } from '../../../shared/constants/roles';
+import { SystemRoles, isPlatformAdmin } from '../../../shared/constants/roles';
 import { SelectDropdown } from '../../../shared/components/SelectDropdown';
 import { getAccessesByUser } from '../../access-control/api';
 import { getUnitsByCompanyId } from '../../units/api';
@@ -134,7 +134,7 @@ export const ProcessTrackingPage: React.FC = () => {
       // Autor do processo OU Administradores da respectiva área / empresa / superadmin
       const isCreator = currentUser?.id === proc.createdByUserId;
       const isAdm =
-        currentUser?.roles?.includes(SystemRoles.SuperAdmin) ||
+        isPlatformAdmin(currentUser?.roles) ||
         currentUser?.roles?.includes(SystemRoles.CompanyAdmin);
 
       if (isCreator || isAdm) {

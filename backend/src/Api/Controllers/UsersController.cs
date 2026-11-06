@@ -8,7 +8,7 @@ namespace Sicou.Api.Controllers;
 
 [ApiController]
 [Route("api/users")]
-[Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.CompanyAdmin}")]
+[Authorize(Roles = $"{SystemRoles.PlatformAdmins},{SystemRoles.CompanyAdmin}")]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _service;
@@ -71,6 +71,18 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> UpdateRoles(string id, [FromBody] UpdateUserRolesRequest request)
     {
         var response = await _service.UpdateRolesAsync(id, request);
+
+        if (response is null)
+            return NotFound();
+
+        return Ok(response);
+    }
+
+    /// <summary>Histórico de transferências de unidade/empresa do usuário (RF-010).</summary>
+    [HttpGet("{id}/transfers")]
+    public async Task<IActionResult> GetTransfers(string id)
+    {
+        var response = await _service.GetTransfersAsync(id);
 
         if (response is null)
             return NotFound();

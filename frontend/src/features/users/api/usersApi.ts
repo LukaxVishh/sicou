@@ -4,7 +4,15 @@ import type {
   UpdateUserRequest,
   UpdateUserRolesRequest,
   User,
+  UserTransfer,
 } from '../types';
+
+/** Histórico de transferências de unidade/empresa do usuário (RF-010). */
+export async function getUserTransfers(userId: string) {
+  return apiFetch<UserTransfer[]>(`/api/users/${userId}/transfers`, {
+    method: 'GET',
+  });
+}
 
 export async function getUsers() {
   return apiFetch<User[]>('/api/users', {

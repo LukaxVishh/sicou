@@ -45,6 +45,7 @@ public static class IdentitySeeder
         return roleName switch
         {
             SystemRoles.SuperAdmin => "Administrador geral do sistema.",
+            SystemRoles.Developer => "Desenvolvedor: mesmos poderes do administrador geral do sistema.",
             SystemRoles.CompanyAdmin => "Administrador da empresa.",
             SystemRoles.AreaAdmin => "Administrador de área da sede.",
             SystemRoles.HeadquarterUser => "Usuário operacional da sede.",

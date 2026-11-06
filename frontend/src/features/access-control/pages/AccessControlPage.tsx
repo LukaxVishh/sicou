@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../auth/providers';
-import { SystemRoles } from '../../../shared/constants/roles';
+import { isPlatformAdmin } from '../../../shared/constants/roles';
 import { ActionsDropdown } from '../../../shared/components';
 import { SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import { getCompanies } from '../../companies/api';
@@ -34,7 +34,7 @@ function formatDate(value?: string | null) {
 
 export function AccessControlPage() {
   const { user: currentUser } = useAuth();
-  const isSuperAdmin = currentUser?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(currentUser?.roles);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(

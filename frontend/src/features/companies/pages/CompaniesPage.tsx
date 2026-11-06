@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ActionsDropdown, SystemEmptyState, SystemLoadingState, SystemNotice } from '../../../shared/components';
 import { useAuth } from '../../auth/providers';
-import { SystemRoles } from '../../../shared/constants/roles';
+import { isPlatformAdmin } from '../../../shared/constants/roles';
 import {
   CreateCompanyModal,
   DeleteCompanyModal,
@@ -22,7 +22,7 @@ function formatDate(value: string) {
 export function CompaniesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isSuperAdmin = user?.roles.includes(SystemRoles.SuperAdmin) ?? false;
+  const isSuperAdmin = isPlatformAdmin(user?.roles);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);

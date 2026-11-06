@@ -8,7 +8,7 @@ namespace Sicou.Api.Controllers;
 
 [ApiController]
 [Route("api/admin-setup")]
-[Authorize(Roles = SystemRoles.SuperAdmin)]
+[Authorize(Roles = SystemRoles.PlatformAdmins)]
 public class AdminSetupController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;

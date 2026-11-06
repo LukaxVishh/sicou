@@ -19,7 +19,7 @@ public class SecurityTestController : ControllerBase
     }
 
     [HttpGet("super-admin")]
-    [Authorize(Roles = SystemRoles.SuperAdmin)]
+    [Authorize(Roles = SystemRoles.PlatformAdmins)]
     public IActionResult SuperAdmin()
     {
         return Ok(new
