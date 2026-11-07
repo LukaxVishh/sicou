@@ -4,13 +4,15 @@ import { apiFetch } from '../../shared/api/apiFetch';
 import { useSystemDialog } from '../../shared/components/SystemDialogProvider';
 import { AutomationPanel } from './AutomationPanel';
 
-type Token = { id: string; name: string; scopes: string; createdAt: string; expiresAt: string; revokedAt: string | null };
+type Token = { id: string; name: string; externalSystem: string; scopes: string; createdAt: string; expiresAt: string; revokedAt: string | null };
 type Call = { id: string; tokenId: string; method: string; route: string; statusCode: number; durationMs: number; createdAt: string };
 type Calls = { total: number; lastSevenDays: { calls: number; errors: number }; items: Call[] };
 const labels: Record<string, string> = {
   'posts:create': 'Criar posts', 'processes:create': 'Abrir processos', 'processes:read': 'Consultar processos e árvores',
   'processes:write': 'Preencher, protocolar e avançar processos', 'processes:cancel': 'Cancelar processos',
   'processes:transfer': 'Transferir processos', 'reports:read': 'Consultar e exportar relatórios de processos',
+  'imports:read': 'Consultar opções e modelos de importação', 'imports:write': 'Validar e confirmar importações',
+  'documents:process': 'Processar documentos DOCX, XLSX, CSV e PDF',
   'automations:read': 'Consultar monitoramento de automações', 'automations:write': 'Registrar execuções e atividade de automações',
 };
 const date = (value: string) => new Date(value).toLocaleString('pt-BR');
@@ -23,6 +25,7 @@ export function IntegrationsPage() {
   const [calls, setCalls] = useState<Calls | null>(null);
   const [page, setPage] = useState(1);
   const [name, setName] = useState('');
+  const [externalSystem, setExternalSystem] = useState('');
   const [days, setDays] = useState(30);
   const [secret, setSecret] = useState('');
   const [error, setError] = useState('');
@@ -60,9 +63,9 @@ export function IntegrationsPage() {
     event.preventDefault();
     void run(async () => {
       const result = await apiFetch<{ token: string }>('/api/integrations/tokens', {
-        method: 'POST', body: JSON.stringify({ name, expiresInDays: days, scopes: selected }),
+        method: 'POST', body: JSON.stringify({ name, externalSystem, expiresInDays: days, scopes: selected }),
       });
-      setSecret(result.token); setName(''); setSelected([]);
+      setSecret(result.token); setName(''); setExternalSystem(''); setSelected([]);
     });
   }
 
@@ -88,16 +91,17 @@ export function IntegrationsPage() {
       <p className="mt-2 text-sm text-slate-600">O token usa seus acessos atuais e os escopos selecionados. Mudanças de senha, empresa ou unidade invalidam o token.</p>
       <form onSubmit={create} className="mt-4 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2"><label className="text-sm">Nome da integração<input required maxLength={100} value={name} onChange={e => setName(e.target.value)} className="mt-1 block w-full rounded-xl border border-slate-300 p-2" placeholder="Ex.: Automação do financeiro" /></label>
+          <label className="text-sm">Sistema externo<input required maxLength={100} value={externalSystem} onChange={e => setExternalSystem(e.target.value)} className="mt-1 block w-full rounded-xl border border-slate-300 p-2" placeholder="Ex.: Robô financeiro / ERP" /></label>
           <label className="text-sm">Validade em dias (1 a 365)<input type="number" required min={1} max={365} value={days} onChange={e => setDays(Number(e.target.value))} className="mt-1 block w-full rounded-xl border border-slate-300 p-2" /></label></div>
         <fieldset><legend className="mb-2 text-sm font-semibold">Permissões do token</legend><div className="grid gap-3 sm:grid-cols-2">{scopes.map(scope => <label key={scope} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selected.includes(scope)} onChange={e => setSelected(current => e.target.checked ? [...current, scope] : current.filter(s => s !== scope))} />{labels[scope] ?? scope}</label>)}</div></fieldset>
-        <button disabled={busy || loading || selected.length === 0 || !!secret || !name.trim()} className={button}>{busy ? 'Salvando...' : 'Criar token'}</button>
+        <button disabled={busy || loading || selected.length === 0 || !!secret || !name.trim() || !externalSystem.trim()} className={button}>{busy ? 'Salvando...' : 'Criar token'}</button>
       </form>
     </section>
     <section className="rounded-2xl border border-slate-200 bg-white p-5">
       <h2 className="text-lg font-semibold">Meus tokens</h2>
       {loading ? <p className="mt-4" role="status">Carregando...</p> : tokens.length === 0 ? <p className="mt-4 text-sm text-slate-500">Você ainda não criou tokens.</p> : <ul className="mt-4 divide-y divide-slate-100">{tokens.map(token => <li key={token.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
         <div className="min-w-0"><p className="font-semibold">{token.name} <span className="text-xs font-normal text-slate-500">{token.revokedAt ? 'Revogado' : new Date(token.expiresAt) <= new Date() ? 'Expirado' : 'Não revogado'}</span></p>
-          <p className="mt-1 text-xs text-slate-500">Expira em {date(token.expiresAt)}</p><p className="mt-1 break-words text-xs text-slate-600">{token.scopes.split(' ').map(s => labels[s] ?? s).join(' · ')}</p></div>
+          <p className="mt-1 text-xs text-slate-500">Sistema externo: {token.externalSystem}</p><p className="mt-1 text-xs text-slate-500">Expira em {date(token.expiresAt)}</p><p className="mt-1 break-words text-xs text-slate-600">{token.scopes.split(' ').map(s => labels[s] ?? s).join(' · ')}</p></div>
         {!token.revokedAt && <button type="button" disabled={busy} onClick={() => void revoke(token)} className="rounded-lg border border-rose-200 px-3 py-2 text-sm text-rose-700 disabled:opacity-50">Revogar</button>}
       </li>)}</ul>}
     </section>

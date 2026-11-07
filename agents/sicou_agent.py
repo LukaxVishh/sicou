@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Run a local command and report its lifecycle to Sicou (Python 3.10+, standard library).
-The token is read only from SICOU_INTEGRATION_TOKEN. No remote commands, output upload,
-password files or shell expansion are used. Configure scheduling with cron/Task Scheduler.
+"""Execute a local command and report its lifecycle (Python 3.10+, standard library).
+Read the credential from SICOU_INTEGRATION_TOKEN. Bounded stdout/stderr tails are
+redacted before upload; disable capture with --no-capture-output. No remote
+commands or shell expansion. Configure scheduling locally with cron/Task Scheduler.
 """
 import argparse
+import codecs
 import json
 import os
 import signal
@@ -15,6 +17,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import re
+import threading
 
 
 class ApiError(Exception):
@@ -33,7 +37,7 @@ class Client:
         self.base_url = base_url.rstrip('/')
         self.token = token
 
-    def post(self, path, body=None, attempts=4):
+    def post(self, path, body=None, attempts=4, max_delay=4):
         payload = json.dumps(body or {}).encode()
         for attempt in range(attempts):
             request = urllib.request.Request(self.base_url + path, data=payload, headers={
@@ -49,7 +53,7 @@ class Client:
             except (urllib.error.URLError, TimeoutError, OSError):
                 if attempt == attempts - 1:
                     raise ConnectionError('Não foi possível comunicar com o Sicou.') from None
-            time.sleep(min(2 ** attempt, 4))
+            time.sleep(min(2 ** attempt, max_delay))
 
 
 def stop_child(child):
@@ -74,6 +78,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='Executa uma automação local e informa seu estado ao Sicou.')
     parser.add_argument('--url', default=os.environ.get('SICOU_API_URL'))
     parser.add_argument('--automation-id', default=os.environ.get('SICOU_AUTOMATION_ID'))
+    parser.add_argument('--no-capture-output', action='store_true', help='Não transmitir trechos de stdout/stderr.')
     parser.add_argument('command', nargs=argparse.REMAINDER, help='Comando local após --')
     args = parser.parse_args(argv)
     token = os.environ.get('SICOU_INTEGRATION_TOKEN', '')
@@ -85,6 +90,46 @@ def main(argv=None):
         client = Client(args.url, token)
     except ValueError as error:
         parser.error(str(error))
+    # Bound capture in memory. Only a redacted tail is sent, never full output.
+    tails = {'stdout': '', 'stderr': ''}
+    truncated = {'stdout': False, 'stderr': False}
+    tail_lock = threading.Lock()
+    readers = []
+    def collect(pipe, stream, name):
+        # Incremental decoder: a multibyte character split between reads (e.g. "ção")
+        # must not be replaced by U+FFFD in the uploaded tail.
+        decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+        def append(text):
+            with tail_lock:
+                combined = tails[name] + text
+                truncated[name] = truncated[name] or len(combined) > 3000
+                tails[name] = combined[-3000:]
+        try:
+            while True:
+                chunk = pipe.read1(1024)
+                if not chunk:
+                    break
+                try:
+                    stream.buffer.write(chunk)
+                    stream.buffer.flush()
+                except (BrokenPipeError, OSError):
+                    pass
+                append(decoder.decode(chunk))
+            append(decoder.decode(b'', final=True))
+        finally:
+            pipe.close()
+
+    def redact(value):
+        # Explicit token and secret-like environment values; redact before truncation.
+        secrets = [v for k, v in os.environ.items() if len(v) >= 6 and re.search(r'token|password|secret|api_?key', k, re.I)]
+        for value_secret in sorted(set(secrets + [token]), key=len, reverse=True):
+            if value_secret:
+                value = value.replace(value_secret, '[REDACTED]')
+        value = re.sub(r'sic_[0-9a-fA-F]{64}', '[REDACTED]', value)
+        value = re.sub(r'(?i)(bearer\s+)\S+', r'\1[REDACTED]', value)
+        value = re.sub(r'(?i)((?:password|token|secret|api[_-]?key)\s*[:=]\s*)[^\s,;]+', r'\1[REDACTED]', value)
+        return value
+
     child = None
     run_id = None
     interrupted = False
@@ -104,7 +149,14 @@ def main(argv=None):
         if interrupted:
             client.post(f'/api/automations/runs/{run_id}/complete', {'succeeded': False, 'message': 'Execução interrompida antes de iniciar o comando.'})
             return 130
-        child = subprocess.Popen(command, start_new_session=os.name == 'posix')
+        child = subprocess.Popen(command, start_new_session=os.name == 'posix',
+                                 stdout=None if args.no_capture_output else subprocess.PIPE,
+                                 stderr=None if args.no_capture_output else subprocess.PIPE)
+        if not args.no_capture_output:
+            for name, pipe, stream in [('stdout', child.stdout, sys.stdout), ('stderr', child.stderr, sys.stderr)]:
+                thread = threading.Thread(target=collect, args=(pipe, stream, name), daemon=True)
+                thread.start()
+                readers.append(thread)
         next_heartbeat = time.monotonic() + 10
         while child.poll() is None:
             if interrupted:
@@ -124,10 +176,20 @@ def main(argv=None):
                 next_heartbeat = time.monotonic() + 10
             time.sleep(0.2)
         code = child.wait()
+        for thread in readers:
+            thread.join(timeout=2)
+        with tail_lock:
+            safe_tails = {name: redact(value.partition('\n')[2] if truncated[name] else value) for name, value in tails.items()}
+        logs = '\n'.join(f'[{name}]\n{value[-3000:]}' for name, value in safe_tails.items() if value).strip() or None
+        diagnostic = safe_tails['stderr'].strip()[-750:]
+        message = ('Comando interrompido localmente.' if interrupted else 'Comando finalizado.' if code == 0
+                   else f'Comando terminou com código {code}.' + (f' Erro: {diagnostic}' if diagnostic else ''))
+        # Completion is idempotent on the server: retry longer (~1 min) so a brief API
+        # outage at the end of the routine does not lose the real result.
         client.post(f'/api/automations/runs/{run_id}/complete', {
             'succeeded': code == 0 and not interrupted, 'exitCode': code,
-            'message': 'Comando interrompido localmente.' if interrupted else 'Comando finalizado.' if code == 0 else 'Comando terminou com código de erro.',
-        })
+            'message': message, 'logs': logs,
+        }, attempts=7, max_delay=20)
         return 130 if interrupted else code if 0 <= code <= 255 else 1
     except (ApiError, ConnectionError, OSError) as error:
         if child is not None:

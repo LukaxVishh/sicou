@@ -8,6 +8,7 @@ namespace Sicou.Api.Controllers;
 public class ImportsController(DataImportService imports) : ControllerBase
 {
     [HttpGet("options")]
+    [ProducesResponseType(typeof(ImportOptions), StatusCodes.Status200OK)]
     public async Task<IActionResult> Options() { Response.Headers.CacheControl = "no-store"; return Ok(await imports.OptionsAsync()); }
 
     [HttpGet("{kind}/template/{format}")]
@@ -19,6 +20,7 @@ public class ImportsController(DataImportService imports) : ControllerBase
     }
 
     [HttpPost("{kind}/preview"), RequestSizeLimit(ImportFileReader.MaxBytes + 65536)]
+    [ProducesResponseType(typeof(ImportPreview), StatusCodes.Status200OK)]
     public async Task<IActionResult> Preview(string kind, [FromForm] Guid companyId, [FromForm] Guid? areaId, IFormFile file)
     {
         if (file.Length is 0 or > ImportFileReader.MaxBytes) return BadRequest(new { message = "Envie um arquivo de até 2 MB." });
@@ -28,6 +30,7 @@ public class ImportsController(DataImportService imports) : ControllerBase
     }
 
     [HttpPost("confirm")]
+    [ProducesResponseType(typeof(ImportResult), StatusCodes.Status200OK)]
     public async Task<IActionResult> Confirm(ConfirmImportRequest request, CancellationToken ct)
     {
         Response.Headers.CacheControl = "no-store";

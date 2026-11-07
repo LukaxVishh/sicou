@@ -59,7 +59,7 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("integrations", new OpenApiInfo
     {
         Title = "Sicou — API de Integrações", Version = "v1",
-        Description = "Crie um token na tela Integrações. Envie Authorization: Bearer sic_... . Os escopos limitam as operações e não ampliam as permissões do usuário. Campos de etapas posteriores são enviados na operação advance."
+        Description = "Crie um token na tela Integrações. Envie Authorization: Bearer sic_... . Os escopos limitam as operações e não ampliam as permissões do usuário. Campos de etapas posteriores são enviados na operação advance. O grupo Workflows reúne o monitoramento das rotinas executadas pelo agente local (escopos automations:read e automations:write)."
     });
     options.DocInclusionPredicate((document, api) => document == "v1"
         || document == "integrations" && IntegrationRoutes.RequiredScope(api.HttpMethod ?? "", api.ActionDescriptor.AttributeRouteInfo?.Template) != null);

@@ -6,9 +6,11 @@ A tela **Integrações** (`/app/integrations`) permite criar tokens pessoais, es
 
 O Swagger de integrações está em `/swagger`, documento `/swagger/integrations/swagger.json`, com operações, schemas de entrada/saída e códigos de erro. Desenvolvimento também oferece o documento completo `v1`. Fora de Development, habilite explicitamente `Swagger__Enabled=true`; isso disponibiliza os documentos OpenAPI, mas as operações continuam autenticadas. A interface não memoriza tokens entre recargas. Use HTTPS na implantação.
 
+No Swagger, o monitoramento de automações aparece no grupo **Workflows**, o termo da proposta, com resumo e descrição em cada operação. Só a apresentação mudou: rotas (`/api/automations/...`), escopos (`automations:read`/`automations:write`), contratos JSON e tabelas continuam com os nomes atuais, para que agentes e tokens já criados continuem funcionando. Não confundir com o módulo **Workflows e Processos** (árvores de tramitação, RF-013).
+
 ## Tokens e autenticação
 
-Entre no sistema com sua conta e abra **Integrações**. Escolha nome, validade de 1 a 365 dias e pelo menos um escopo. O segredo `sic_...` aparece somente na criação: guarde-o no gerenciador de segredos da automação. A listagem nunca retorna o segredo ou seu hash. O banco guarda SHA-256 de 32 bytes aleatórios; não é um JWT de sessão.
+Entre no sistema com sua conta e abra **Integrações**. Escolha nome, sistema externo, validade de 1 a 365 dias e pelo menos um escopo. O segredo `sic_...` aparece somente na criação: guarde-o no gerenciador de segredos da automação. A listagem nunca retorna o segredo ou seu hash. O banco guarda SHA-256 de 32 bytes aleatórios; não é um JWT de sessão.
 
 Envie `Authorization: Bearer TOKEN`. No botão Authorize do Swagger, selecione IntegrationToken e cole apenas o segredo, sem `Bearer`.
 
@@ -19,8 +21,8 @@ Uma credencial de integração não pode gerir usuários, alterar configuraçõe
 ### Gestão, exclusivamente com JWT de sessão
 
 - `GET /api/integrations/scopes`: lista de escopos aceitos.
-- `POST /api/integrations/tokens`: `{ "name": "Financeiro", "expiresInDays": 30, "scopes": ["processes:read"] }`. Retorna 201 com `id`, `name`, `scopes`, `expiresAt` e `token` (uma vez). Até 20 tokens ativos por usuário; a verificação de quantidade não constitui garantia transacional contra criações concorrentes.
-- `GET /api/integrations/tokens`: metadados próprios, com `scopes` separados por espaço, criação, expiração e revogação.
+- `POST /api/integrations/tokens`: `{ "name": "Financeiro", "externalSystem": "Robô financeiro", "expiresInDays": 30, "scopes": ["processes:read"] }`. Retorna 201 com `id`, `name`, `scopes`, `expiresAt` e `token` (uma vez). Até 20 tokens ativos por usuário; a verificação de quantidade não constitui garantia transacional contra criações concorrentes.
+- `GET /api/integrations/tokens`: metadados próprios, incluindo `externalSystem`, com `scopes` separados por espaço, criação, expiração e revogação.
 - `DELETE /api/integrations/tokens/{id}`: revoga imediatamente; repetir mantém a revogação. Outro proprietário recebe 404.
 - `GET /api/integrations/calls?page=1&pageSize=25`: histórico próprio, `total`, indicadores `lastSevenDays.calls/errors` e `items`. Página começa em 1, tamanho de 1 a 100. Respostas de gestão usam `Cache-Control: no-store`.
 
@@ -28,6 +30,9 @@ Uma credencial de integração não pode gerir usuários, alterar configuraçõe
 
 | Escopo | Rotas |
 | --- | --- |
+| `documents:process` | `POST /api/documents/process` (multipart `file`, DOCX/XLSX/CSV/PDF, até 10 MB) |
+| `imports:read` | `GET /api/imports/options`; `GET /api/imports/{kind}/template/{format}` |
+| `imports:write` | `POST /api/imports/{kind}/preview`; `POST /api/imports/confirm` |
 | `posts:create` | `POST /api/posts` |
 | `processes:create` | `POST /api/processes` |
 | `processes:write` | `PUT /api/processes/{id}/draft`; `POST /api/processes/{id}/protocol`; `POST /api/processes/{id}/advance` |
@@ -72,7 +77,7 @@ O painel mostra totais e erros dos últimos sete dias e histórico paginado. Cha
 
 ## Monitoramento de execuções
 
-Em **Integrações → Execuções das automações**, cadastre uma rotina com nome, tempo máximo sem atividade (30 a 3600 segundos), duração máxima (1 a 1440 minutos) e, opcionalmente, intervalo esperado de início (1 a 10080 minutos). O intervalo serve para detectar atrasos; não executa nem agenda a rotina. Um novo cadastro ou retomada começa a contar o intervalo a partir daquele momento. Alterações dos limites não modificam prazos das execuções já iniciadas.
+Em **Integrações → Execuções das automações**, cadastre uma rotina com nome, tempo máximo sem atividade (30 a 3600 segundos), duração esperada (1 a 1440 minutos; campo `maxRunMinutes` mantido por compatibilidade) e, opcionalmente, intervalo esperado de início (1 a 10080 minutos). O intervalo serve para detectar atrasos; não executa nem agenda a rotina. Um novo cadastro ou retomada começa a contar o intervalo a partir daquele momento. Alterações dos limites não modificam prazos das execuções já iniciadas.
 
 O cadastro pertence ao usuário e ao vínculo empresa/unidade atual. Somente esse proprietário, com o mesmo vínculo, registra execuções ou altera a configuração. Outros usuários veem apenas suas automações. Admin da Empresa consulta histórico/indicadores e reconhece alertas da própria empresa; Super Admin consulta todos e pode filtrar `companyId`. O seletor corporativo limita a visualização do Super Admin. O dashboard recusa mais de 200 definições visíveis e pede recorte de empresa; não existe paginação do cadastro nesta versão.
 
@@ -81,15 +86,15 @@ O cadastro pertence ao usuário e ao vínculo empresa/unidade atual. Somente ess
 - `POST /api/automations` (JWT de sessão): `{ "name": "Financeiro", "heartbeatTimeoutSeconds": 120, "maxRunMinutes": 60, "expectedIntervalMinutes": 1440 }`. Retorna 201 com o cadastro e seu ID; intervalo pode ser `null`.
 - `PUT /api/automations/{id}` (JWT de sessão, proprietário): mesmas configurações e `isActive`. Pausar impede novos inícios e alertas de frequência; execuções já iniciadas continuam monitoradas. Histórico não é apagado.
 - `GET /api/automations?companyId=...` (sessão ou `automations:read`): `automations`, `summary` (`running`, `succeeded`, `failed`, `unacknowledgedAlerts`) e os últimos 50 `alerts`. Sucessos e falhas/interrupções usam inícios dos últimos sete dias; execuções em andamento e alertas não reconhecidos são contados em todo o histórico visível.
-- `GET /api/automations/{id}/runs?page=1&pageSize=25&status=Failed`: histórico paginado (até 100/página), `total` e `items`. Status: `Running`, `Succeeded`, `Failed`, `Interrupted`. Datas do servidor em UTC; `durationMs` é calculada do início ao término e fica `null` enquanto executa.
+- `GET /api/automations/{id}/runs?page=1&pageSize=25&status=Failed`: histórico paginado (até 100/página), `total` e `items`. Status: `Running`, `NoCommunication`, `Succeeded`, `Failed`, `Interrupted` (histórico legado). Resposta inclui `logs` e `durationAlertedAt`. Datas do servidor em UTC; `durationMs` é calculada do início ao término e fica `null` enquanto executa.
 - `POST /api/automations/{id}/runs` (`automations:write` ou sessão do proprietário): `{ "externalId": "UUID-GERADO-PELO-CLIENTE", "host": "servidor-financeiro" }`. Retorna 201 na primeira gravação, 200 ao repetir a mesma chave e host, sempre com a mesma execução. Host tem até 100 caracteres. UUID vazio é inválido; reaproveitar chave com outro host retorna 409. Repetir chave após pausar devolve a execução existente, sem iniciar outra.
-- `POST /api/automations/runs/{id}/heartbeat` (`automations:write`): sinal de atividade, sem corpo relevante. Atualiza `lastHeartbeatAt` somente enquanto estiver no prazo e em execução.
-- `POST /api/automations/runs/{id}/complete` (`automations:write`): `{ "succeeded": false, "exitCode": 7, "message": "Comando terminou com código de erro." }`. `succeeded` deve ser explícito. Mensagem opcional tem até 2000 caracteres; não envie dados pessoais, credenciais ou segredos. Sucesso com código diferente de zero é recusado. Repetir exatamente o resultado final é idempotente; mudar resultado ou encerrar uma execução interrompida retorna 409. Não há reinício de execuções terminais.
+- `POST /api/automations/runs/{id}/heartbeat` (`automations:write`): sinal de atividade, sem corpo relevante. Atualiza `lastHeartbeatAt` e recupera `NoCommunication` para `Running`. Duração excedida não bloqueia atividade ou conclusão.
+- `POST /api/automations/runs/{id}/complete` (`automations:write`): `{ "succeeded": false, "exitCode": 7, "message": "Comando terminou com código de erro." }`. `succeeded` deve ser explícito. Mensagem opcional tem até 2000 caracteres; `logs` opcional aceita até 16.000 caracteres; não envie dados pessoais, credenciais ou segredos. Sucesso com código diferente de zero é recusado. Repetir exatamente o resultado final é idempotente; mudar resultado/logs ou encerrar uma execução terminal retorna 409. `NoCommunication` permite conclusão posterior com o resultado real. Não há reinício de execuções terminais.
 - `POST /api/automations/alerts/{id}/acknowledge` (JWT de sessão e visibilidade): marca leitura/reconhecimento, sem alterar resultado nem resolver a causa.
 
-O monitor verifica a cada 30 segundos (configuração `Automations__ScanIntervalSeconds`, 1 a 300). Falta de heartbeat ou duração máxima excedida produz `Interrupted`; conclusão com falha produz `Failed`. Sem novo início no intervalo esperado gera alerta `Overdue`, uma vez por período de ausência; um novo início rearma a verificação. Nenhum alerta depende de abrir o dashboard.
+O monitor verifica a cada 30 segundos (configuração `Automations__ScanIntervalSeconds`, 1 a 300). Falta de heartbeat produz `NoCommunication`, sem `finishedAt`, e alerta próprio. O retorno de heartbeat recupera `Running`; conclusão posterior aceita o resultado real. Duração esperada excedida gera `DurationExceeded` uma vez por execução (`durationAlertedAt`), mantendo o comando e sua conclusão liberados. Conclusão com falha produz `Failed`. Registros legados `Interrupted` permanecem terminais e não são reescritos. Sem novo início no intervalo esperado gera alerta `Overdue`, uma vez por período de ausência; um novo início rearma a verificação. Nenhum alerta depende de abrir o dashboard.
 
-Alertas ficam no painel e geram notificação para o proprietário. Reconhecer não apaga o histórico. A API serializa alterações por automação com locks de linha PostgreSQL; início concorrente com mesmo UUID não duplica execuções e workers concorrentes não duplicam a mesma interrupção/ausência. O monitor depende da API e do banco estarem disponíveis. Uma API parada detecta prazos vencidos ao retornar; não é um monitor externo de disponibilidade.
+O responsável operacional é o proprietário do cadastro. Alertas ficam no painel e geram notificação persistida para esse responsável na mesma transação. O alerta de falha (UC-021/E2) inclui o código de saída e a mensagem reportada pelo agente; mensagem do alerta e título da notificação são limitados a 250 caracteres. Administradores mantêm a consulta por empresa; não há redistribuição automática da responsabilidade. Reconhecer não apaga o histórico. A API serializa alterações por automação com locks de linha PostgreSQL; início concorrente com mesmo UUID não duplica execuções e workers concorrentes não duplicam a mesma interrupção/ausência. O monitor depende da API e do banco estarem disponíveis. Uma API parada detecta prazos vencidos ao retornar; não é um monitor externo de disponibilidade.
 
 ### Agente local
 
@@ -101,9 +106,9 @@ python3 sicou_agent.py -- python3 /opt/automacoes/financeiro.py
 
 Agende esse comando no cron, serviço local ou Agendador de Tarefas. O Sicou não instala serviços remotamente e não envia comandos ao agente. HTTPS é obrigatório fora de localhost. O token é lido do ambiente e não precisa ser argumento de linha de comando.
 
-O agente registra início antes de lançar o processo, envia heartbeat a cada 10 segundos e conclui com o código real de saída. Não faz upload de stdout/stderr; envia apenas resumo padronizado. Usa o mesmo UUID nas tentativas de início e o mesmo resultado nas tentativas de conclusão, com backoff para erros de rede, 429 e 5xx. Uma nova invocação local usa UUID novo; não existe deduplicação entre dois agendamentos que o operador execute separadamente.
+O agente registra início antes de lançar o processo, envia heartbeat a cada 10 segundos e conclui com o código real de saída. Mantém a saída no terminal e transmite apenas os últimos 3.000 caracteres de cada fluxo stdout/stderr. Ao truncar, descarta a primeira linha parcial para não enviar um fragmento de segredo cortado na borda. Oculta o token e valores de ambiente com nomes de segredo, além de padrões Bearer/token/senha. Em falhas, inclui trecho do diagnóstico de stderr na mensagem. A filtragem não identifica todo dado pessoal ou segredo arbitrário; rotinas devem produzir logs apropriados. Use `--no-capture-output` antes de `--` para manter toda a saída somente local. Usa o mesmo UUID nas tentativas de início e o mesmo resultado nas tentativas de conclusão, com backoff para erros de rede, 429 e 5xx. A conclusão, por ser idempotente, tenta por cerca de um minuto (7 tentativas, espera máxima de 20 s) antes de desistir. Os trechos de saída são decodificados de forma incremental, preservando caracteres acentuados divididos entre leituras. Uma nova invocação local usa UUID novo; não existe deduplicação entre dois agendamentos que o operador execute separadamente.
 
-Falha ao iniciar o executável é registrada como falha. SIGINT/SIGTERM encerra o processo e informa cancelamento local como `Failed`. Respostas de heartbeat 401/403/404/409 interrompem o processo local; o servidor preserva seu estado final ou detecta interrupção pelo timeout. No POSIX, encerra o grupo do processo; no Windows, encerra apenas o processo direto. Se a comunicação ficar indisponível, tenta reportar novamente; não há fila durável de eventos offline. SIGKILL/queda do servidor será identificado pelo timeout no Sicou, e um comando local iniciado em grupo próprio pode continuar executando até ser encerrado pelo operador/serviço local.
+Falha ao iniciar o executável é registrada como falha. SIGINT/SIGTERM encerra o processo e informa cancelamento local como `Failed`. Respostas de heartbeat 401/403/404/409 interrompem o processo local; o servidor preserva seu estado final ou detecta ausência de comunicação pelo timeout. No POSIX, encerra o grupo do processo; no Windows, encerra apenas o processo direto. Se a comunicação ficar indisponível, tenta reportar novamente; não há fila durável de eventos offline. SIGKILL/queda do servidor será identificado como sem comunicação pelo timeout no Sicou, e um comando local iniciado em grupo próprio pode continuar executando até ser encerrado pelo operador/serviço local.
 
 Instalação em servidores reais, autenticação do ambiente, cadência de execução e homologação operacional precisam ser feitas pela equipe de cada empresa. Não foram executadas instalações ou alterações em servidores de terceiros nesta entrega.
 
@@ -122,3 +127,35 @@ A migration `20261105233838_AddIntegrationTokens` cria tokens/chamadas; `2026110
 `python3 scratch/test_integration_tokens.py` compila a API, cria PostgreSQL descartável via Docker, inicia API com configuração de teste, executa verificações HTTP e remove os processos/contêineres. Requer Docker e .NET 8; `SICOU_DOTNET` seleciona o executável. Não lê nem altera dados de uma instalação existente.
 
 Próximas etapas: instalar/homologar o agente nos servidores das empresas, concluir a matriz de árvores/perfis, idempotência de escritas de negócio, rotação, política de retenção de execuções/alertas, limites distribuídos e filtros/paginação do cadastro. Os requisitos RF-024 a RF-027 têm implementação de agente/monitoramento nesta etapa; comprovação integral contra o Apêndice C e ambiente real continua pendente.
+
+
+## Integração com ferramentas de documentos
+
+Um cliente externo pode enviar arquivos diretamente ao Sicou com `documents:process`:
+
+```sh
+curl --fail-with-body -H "Authorization: Bearer $SICOU_INTEGRATION_TOKEN" \
+  -F "file=@/caminho/documento.pdf" http://localhost:5175/api/documents/process
+```
+
+Resposta 200: `fileName`, `format`, `text`, `tables`, `warnings` e `pageCount`. Os formatos DOCX, XLSX, CSV e PDF foram exercitados por cliente HTTP com token. A extração é somente leitura, não armazena o arquivo nem faz OCR; mantém limites de texto, tabelas e capacidade do processador existente. O escopo não concede acesso a cadastros ou importações.
+
+Para importar, use `imports:read` para opções/modelos e `imports:write` para prévia/confirmação. Prévia é multipart com `companyId`, `areaId` quando necessário e `file` (até 2 MB). Confirmação usa `{ "token": "TOKEN-DA-PREVIA" }`. O token da prévia não é a credencial de integração: é de uso único e vinculado ao usuário. Cadastros, formatos, permissões de empresa/setor, transação e validações permanecem os do [contrato de importação](../_mds/README.md#importacao-de-cadastros). Escopo não concede privilégios administrativos. Confirmar não deve ser repetido automaticamente após timeout; uma nova prévia é necessária se o resultado for desconhecido.
+
+Novos escopos não são concedidos aos tokens antigos automaticamente. Crie outro token com os escopos necessários. `externalSystem` é obrigatório ao criar; na migration, tokens existentes recebem o nome anterior como identificação inicial, preservando hash, validade e revogação. Gestão e revogação continuam pessoais por JWT, conforme a decisão original de tokens pessoais; os perfis de administração mantêm seus poderes nos serviços de negócio. Não foi introduzido bloqueio de criação para usuários operacionais.
+
+## Dicionário complementar ao Apêndice D — integrações e automações
+
+Este complemento descreve as tabelas reais e pode ser incorporado ao documento acadêmico. Datas são UTC (`timestamp with time zone`). IDs são UUID. As tabelas de integrações/monitoramento são adicionais às tabelas gerais do Apêndice D recebido.
+
+| Tabela | Campos e tipos | Regras e relações |
+| --- | --- | --- |
+| `integration_tokens` | `Id`, `UserId`: uuid; `CompanyId`, `UnitId`: uuid opcionais; `Name`, `ExternalSystem`: varchar(100); `TokenHash`: varchar(64); `SecurityStamp`: varchar(256); `Scopes`: varchar(500); `CreatedAt`, `ExpiresAt`: data UTC; `RevokedAt`: data UTC opcional | PK `Id`; FK `UserId` → `users`, exclusão restrita; hash único; índice por usuário/criação. Empresa/unidade são vínculo lógico revalidado, não FKs configuradas. Segredo não armazenado. |
+| `integration_calls` | `Id`, `TokenId`, `UserId`: uuid; `Method`: varchar(10); `Route`: varchar(300); `StatusCode`: integer; `DurationMs`: bigint; `CreatedAt`: data UTC | PK `Id`; FK `TokenId` → `integration_tokens`, exclusão restrita; índices usuário/criação e token/criação. Rotas usam template; sem corpo, query ou credenciais. Retenção padrão 90 dias. |
+| `automations` | `Id`, `UserId`: uuid; `CompanyId`, `UnitId`: uuid opcionais; `Name`: varchar(100); `IsActive`: boolean; `HeartbeatTimeoutSeconds`, `MaxRunMinutes`: integer; `ExpectedIntervalMinutes`: integer opcional; `CreatedAt`, `ScheduleBaselineAt`: data UTC; `LastStartedAt`, `OverdueAlertedAt`: data UTC opcionais | PK `Id`; FK `UserId` → `users`, exclusão restrita; índice empresa/usuário/criação. Proprietário e vínculo atuais obrigatórios para escrita. `MaxRunMinutes` é duração esperada, sem cancelamento automático. |
+| `automation_runs` | `Id`, `AutomationId`, `ExternalId`: uuid; `Status`: varchar(20); `Host`: varchar(100); `StartedAt`, `LastHeartbeatAt`: data UTC; `FinishedAt`, `DurationAlertedAt`: data UTC opcionais; `ExitCode`: integer opcional; `Message`: varchar(2000) opcional; `Logs`: varchar(16000) opcional; `HeartbeatTimeoutSeconds`, `MaxRunMinutes`: integer | PK `Id`; FK `AutomationId` → `automations`, exclusão restrita; único automação/UUID externo; índices automação/início e status/heartbeat. `Running` e `NoCommunication` são abertos; `Succeeded`, `Failed` e legado `Interrupted` são terminais. Limites são copiados no início. Duração é derivada. |
+| `automation_alerts` | `Id`, `AutomationId`: uuid; `RunId`: uuid opcional; `Kind`: varchar(20); `Message`: varchar(250); `CreatedAt`: data UTC; `AcknowledgedAt`: data UTC opcional | PK `Id`; FKs `AutomationId` → `automations` e `RunId` → `automation_runs`, exclusão restrita; índice automação/criação. Tipos atuais: `Failure`, `NoCommunication`, `DurationExceeded`, `Overdue`; legado `Interrupted` preservado. |
+
+Alertas geram registros na tabela geral `user_notifications`, vinculados ao proprietário. Não há nova tabela de destinatários. Sem retenção automática de execuções/alertas; não existe exclusão de histórico nas operações do painel.
+
+Migration `20261106172007_AlignAutomationMonitoringWithTcc`: adiciona `ExternalSystem`, `Logs` e `DurationAlertedAt`, com backfill do sistema externo pelo nome do token. Não altera resultados antigos. Faça backup e confira o banco antes de iniciar a API, que aplica migrations automaticamente.

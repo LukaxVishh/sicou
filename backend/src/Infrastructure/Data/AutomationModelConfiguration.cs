@@ -23,6 +23,7 @@ public static class AutomationModelConfiguration
             e.Property(r => r.Status).HasMaxLength(20);
             e.Property(r => r.Host).HasMaxLength(100);
             e.Property(r => r.Message).HasMaxLength(2000);
+            e.Property(r => r.Logs).HasMaxLength(16000);
             e.HasIndex(r => new { r.AutomationId, r.ExternalId }).IsUnique();
             e.HasIndex(r => new { r.AutomationId, r.StartedAt });
             e.HasIndex(r => new { r.Status, r.LastHeartbeatAt });

@@ -7,6 +7,7 @@ Esta pasta centraliza as pendências e os registros das atualizações assistida
 - [Pendências por requisito e prioridade](PENDENCIAS.md)
 - [Modelo de registro de atualização](MODELO_ATUALIZACAO.md)
 - [Registros de atualizações](ATUALIZACOES/)
+- [Relatório do monitoramento de automações — entregas, TCC e resultados esperados](../RELATORIO_AUTOMACOES_TCC.md)
 - [Backend](../backend/README.md)
 - [Frontend](../frontend/README.md)
 - [Orientador](../backend/ORIENTADOR.md)

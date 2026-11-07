@@ -92,7 +92,7 @@ public class AutomationService(ApplicationDbContext db, UserManager<ApplicationU
         var runs = db.Set<AutomationRun>().AsNoTracking().Where(r => ids.Contains(r.AutomationId));
         var alerts = db.Set<AutomationAlert>().AsNoTracking().Where(a => ids.Contains(a.AutomationId));
         return new AutomationDashboardResponse(definitions, new AutomationSummaryResponse(
-            await runs.CountAsync(r => r.Status == "Running", ct),
+            await runs.CountAsync(r => (r.Status == "Running" || r.Status == "NoCommunication"), ct),
             await runs.CountAsync(r => r.StartedAt >= since && r.Status == "Succeeded", ct),
             await runs.CountAsync(r => r.StartedAt >= since && (r.Status == "Failed" || r.Status == "Interrupted"), ct),
             await alerts.CountAsync(a => a.AcknowledgedAt == null, ct)),
@@ -105,7 +105,7 @@ public class AutomationService(ApplicationDbContext db, UserManager<ApplicationU
         var query = db.Set<AutomationRun>().AsNoTracking().Where(r => r.AutomationId == id);
         if (!string.IsNullOrEmpty(status))
         {
-            if (status is not ("Running" or "Succeeded" or "Failed" or "Interrupted")) throw new ArgumentException("Status inválido.");
+            if (status is not ("Running" or "NoCommunication" or "Succeeded" or "Failed" or "Interrupted")) throw new ArgumentException("Status inválido.");
             query = query.Where(r => r.Status == status);
         }
         var items = await query.OrderByDescending(r => r.StartedAt).ThenBy(r => r.Id)
@@ -149,19 +149,15 @@ public class AutomationService(ApplicationDbContext db, UserManager<ApplicationU
         await RequireOwnerAsync(automation, ct);
         var run = await db.Set<AutomationRun>().SingleAsync(r => r.Id == id, ct);
         var now = Now();
-        if (run.Status == "Running" && DeadlineExceeded(run, now))
-        {
-            Interrupt(automation, run, now);
-            await db.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-            throw new AutomationConflictException("Execução interrompida por ausência de atividade ou duração máxima.");
-        }
-        if (run.Status != "Running")
+        if (run.Status is not ("Running" or "NoCommunication"))
         {
             if (completion is not null && run.Status == (completion.Succeeded ? "Succeeded" : "Failed")
-                && run.ExitCode == completion.ExitCode && run.Message == completion.Message?.Trim()) return Response(run);
+                && run.ExitCode == completion.ExitCode && run.Message == completion.Message?.Trim()
+                && run.Logs == completion.Logs?.Trim()) return Response(run);
             throw new AutomationConflictException("Execução já encerrada; o resultado não pode ser alterado.");
         }
+        Observe(automation, run, now);
+        run.Status = "Running"; // A resumed agent can recover communication and report its actual outcome.
         run.LastHeartbeatAt = now;
         if (completion is not null)
         {
@@ -169,7 +165,8 @@ public class AutomationService(ApplicationDbContext db, UserManager<ApplicationU
                 throw new ArgumentException("Uma execução bem-sucedida não pode ter código de saída diferente de zero.");
             run.Status = completion.Succeeded ? "Succeeded" : "Failed";
             run.FinishedAt = now; run.ExitCode = completion.ExitCode; run.Message = completion.Message?.Trim();
-            if (!completion.Succeeded) Alert(automation, run.Id, "Failure", "Execução terminou com falha.", now);
+            run.Logs = completion.Logs?.Trim();
+            if (!completion.Succeeded) Alert(automation, run.Id, "Failure", FailureMessage(run), now);
         }
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -185,44 +182,59 @@ public class AutomationService(ApplicationDbContext db, UserManager<ApplicationU
         await db.SaveChangesAsync(ct);
     }
 
-    public static bool DeadlineExceeded(AutomationRun run, DateTime now) =>
-        now >= run.LastHeartbeatAt.AddSeconds(run.HeartbeatTimeoutSeconds) || now >= run.StartedAt.AddMinutes(run.MaxRunMinutes);
-
-    private void Interrupt(Automation automation, AutomationRun run, DateTime now)
+    private void Observe(Automation automation, AutomationRun run, DateTime now)
     {
-        run.Status = "Interrupted"; run.FinishedAt = now;
-        run.Message = "Atividade interrompida ou duração máxima excedida.";
-        Alert(automation, run.Id, "Interrupted", run.Message, now);
+        if (now >= run.LastHeartbeatAt.AddSeconds(run.HeartbeatTimeoutSeconds) && run.Status != "NoCommunication")
+        {
+            run.Status = "NoCommunication";
+            Alert(automation, run.Id, "NoCommunication", "Agente sem comunicação; aguardando retorno.", now);
+        }
+        if (now >= run.StartedAt.AddMinutes(run.MaxRunMinutes) && run.DurationAlertedAt is null)
+        {
+            run.DurationAlertedAt = now;
+            Alert(automation, run.Id, "DurationExceeded", "Duração esperada excedida; a execução continua.", now);
+        }
     }
+
+    // UC-021/E2: the alert carries the reported diagnostic, not only a generic failure.
+    private static string FailureMessage(AutomationRun run)
+    {
+        var code = run.ExitCode is { } exit ? $" (código {exit})" : "";
+        var detail = string.IsNullOrWhiteSpace(run.Message) ? "" : $": {run.Message.Trim()}";
+        return $"Execução terminou com falha{code}{detail}";
+    }
+
+    private static string Limit(string value, int max) => value.Length <= max ? value : value[..(max - 1)] + "…";
 
     private void Alert(Automation automation, Guid? runId, string kind, string message, DateTime now)
     {
-        db.Add(new AutomationAlert { AutomationId = automation.Id, RunId = runId, Kind = kind, Message = message, CreatedAt = now });
+        // Both columns are varchar(250); the owner name alone may take 100 characters.
+        db.Add(new AutomationAlert { AutomationId = automation.Id, RunId = runId, Kind = kind, Message = Limit(message, 250), CreatedAt = now });
         db.Notifications.Add(new UserNotification
         {
             UserId = automation.UserId, CompanyId = automation.CompanyId, Audience = "automation",
-            Title = $"Automação {automation.Name}: {message}", Url = "/app/integrations", CreatedAt = now
+            Title = Limit($"Automação {automation.Name}: {message}", 250), Url = "/app/integrations", CreatedAt = now
         });
     }
 
     public async Task ScanAsync(CancellationToken ct)
     {
         // Only active owners/bindings participate in automatic alerts. Running executions
-        // remain subject to interruption even if their definition is paused.
+        // remain monitored even if their definition is paused.
         var eligible = db.Set<Automation>().AsNoTracking().Where(a => db.Users.Any(u => u.Id == a.UserId && u.IsActive
             && u.CompanyId == a.CompanyId && u.UnitId == a.UnitId)
             && (!a.CompanyId.HasValue || db.Companies.Any(c => c.Id == a.CompanyId && c.IsActive))
             && (!a.UnitId.HasValue || db.Units.Any(u => u.Id == a.UnitId && u.IsActive && u.CompanyId == a.CompanyId)));
         var ids = await db.Set<Automation>().Where(a => eligible.Any(e => e.Id == a.Id) && a.IsActive && a.ExpectedIntervalMinutes != null
-            || db.Set<AutomationRun>().Any(r => r.AutomationId == a.Id && r.Status == "Running")).Select(a => a.Id).ToListAsync(ct);
+            || db.Set<AutomationRun>().Any(r => r.AutomationId == a.Id && (r.Status == "Running" || r.Status == "NoCommunication"))).Select(a => a.Id).ToListAsync(ct);
         foreach (var id in ids)
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             var automation = await LockAsync(id, ct);
             var canSchedule = await eligible.AnyAsync(a => a.Id == id, ct);
             var now = Now();
-            var running = await db.Set<AutomationRun>().Where(r => r.AutomationId == id && r.Status == "Running").ToListAsync(ct);
-            foreach (var run in running.Where(r => DeadlineExceeded(r, now))) Interrupt(automation, run, now);
+            var running = await db.Set<AutomationRun>().Where(r => r.AutomationId == id && (r.Status == "Running" || r.Status == "NoCommunication")).ToListAsync(ct);
+            foreach (var run in running) Observe(automation, run, now);
             if (canSchedule && automation.IsActive && automation.ExpectedIntervalMinutes is { } interval && automation.OverdueAlertedAt == null
                 && now >= (automation.LastStartedAt > automation.ScheduleBaselineAt ? automation.LastStartedAt.Value : automation.ScheduleBaselineAt).AddMinutes(interval))
             {
@@ -238,5 +250,5 @@ public class AutomationService(ApplicationDbContext db, UserManager<ApplicationU
     private static AutomationRunResponse Response(AutomationRun run) => new(run.Id, run.AutomationId, run.ExternalId,
         run.Status, run.Host, run.StartedAt, run.LastHeartbeatAt, run.FinishedAt,
         run.FinishedAt.HasValue ? (long)(run.FinishedAt.Value - run.StartedAt).TotalMilliseconds : null,
-        run.ExitCode, run.Message);
+        run.ExitCode, run.Message, run.Logs, run.DurationAlertedAt);
 }

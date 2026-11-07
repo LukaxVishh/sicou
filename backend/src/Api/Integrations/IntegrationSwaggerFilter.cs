@@ -24,13 +24,23 @@ public class IntegrationSwaggerFilter : IOperationFilter
                         ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] = Binary()
                     }
                 };
+            if (context.ApiDescription.ActionDescriptor.AttributeRouteInfo?.Template == "api/imports/{kind}/template/{format}")
+                operation.Responses["200"] = new OpenApiResponse
+                {
+                    Description = "Modelo de importação em csv, xlsx ou json, conforme cadastro.",
+                    Content = new Dictionary<string, OpenApiMediaType>
+                    {
+                        ["text/csv"] = Binary(), ["application/json"] = Binary(),
+                        ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] = Binary()
+                    }
+                };
             foreach (var (code, description) in new[] {
                 ("400", "Dados ou filtros inválidos."), ("401", "Token ausente, inválido, expirado ou revogado."),
                 ("403", "Escopo ausente ou proprietário sem permissão para o recurso."),
                 ("404", "Recurso não encontrado."), ("429", "Limite de 120 chamadas por minuto por token nesta instância.") })
                 operation.Responses.TryAdd(code, new OpenApiResponse { Description = description });
             if (scope.StartsWith("automations:"))
-                operation.Responses.TryAdd("409", new OpenApiResponse { Description = "Execução encerrada, prazo excedido, automação pausada ou externalId em conflito." });
+                operation.Responses.TryAdd("409", new OpenApiResponse { Description = "Execução já encerrada, automação pausada ou externalId em conflito. Duração excedida não bloqueia heartbeat nem conclusão." });
             operation.Description = (operation.Description ?? "") + $" Integrações: escopo `{scope}` e permissões atuais do proprietário obrigatórios.";
             operation.Security = new List<OpenApiSecurityRequirement>
             {

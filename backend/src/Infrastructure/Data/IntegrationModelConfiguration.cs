@@ -13,6 +13,7 @@ public static class IntegrationModelConfiguration
             e.ToTable("integration_tokens");
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.ExternalSystem).HasMaxLength(100);
             e.Property(x => x.TokenHash).HasMaxLength(64);
             e.Property(x => x.SecurityStamp).HasMaxLength(256);
             e.Property(x => x.Scopes).HasMaxLength(500);

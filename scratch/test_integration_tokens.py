@@ -3,6 +3,7 @@ Run from the repository root: python3 scratch/test_integration_tokens.py
 SICOU_DOTNET may select the dotnet executable. Never targets an existing database.
 """
 import hashlib
+import shlex
 import json
 import os
 from pathlib import Path
@@ -18,7 +19,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 DOTNET = os.environ.get("SICOU_DOTNET", shutil.which("dotnet") or "dotnet")
-DOCKER = ["docker", "--host=unix:///var/run/docker.sock"]
+DOCKER = shlex.split(os.environ.get("SICOU_CONTAINER_ENGINE", "docker --host=unix:///var/run/docker.sock"))
 container = "sicou-tokens-test-" + uuid.uuid4().hex[:10]
 checks = 0
 
@@ -51,9 +52,15 @@ def request(method, path, token=None, body=None, form=False):
     headers = {"Content-Type": f"multipart/form-data; boundary={boundary}" if form else "application/json"}
     if token:
         headers["Authorization"] = "Bearer " + token
-    payload = json.dumps(body).encode() if body is not None else None
+    payload = json.dumps(body).encode() if body is not None and not form else None
     if form:
-        payload = ("".join(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n' for key, value in body.items()) + f"--{boundary}--\r\n").encode()
+        def part(key, value):
+            if isinstance(value, tuple):
+                filename, content = value
+                return f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"; filename="{filename}"\r\nContent-Type: application/octet-stream\r\n\r\n'.encode() + content + b'\r\n'
+            return f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode()
+        payload = b''.join(part(key, value) for key, value in body.items()) + f'--{boundary}--\r\n'.encode()
+
     req = urllib.request.Request(base + path, data=payload, headers=headers, method=method)
     try:
         response = opener.open(req, timeout=20)
@@ -71,9 +78,9 @@ process = None
 log = tempfile.TemporaryFile(mode="w+")
 try:
     subprocess.run([DOTNET, "build", "backend/src/Api", "--nologo"], cwd=ROOT, check=True, stdout=log, stderr=log)
-    subprocess.run(DOCKER + ["run", "--rm", "-d", "--name", container, "-e", "POSTGRES_HOST_AUTH_METHOD=trust", "-e", "POSTGRES_DB=sicou_tokens_test", "-p", f"127.0.0.1:{db_port}:5432", "postgres:16-alpine"], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(DOCKER + ["run", "--rm", "-d", "--name", container, "-e", "POSTGRES_HOST_AUTH_METHOD=trust", "-e", "POSTGRES_DB=sicou_tokens_test", "-p", f"127.0.0.1:{db_port}:5432", "docker.io/library/postgres:16"], check=True, stdout=subprocess.DEVNULL)
     for _ in range(60):
-        ready = subprocess.run(DOCKER + ["exec", container, "pg_isready", "-U", "postgres"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        ready = subprocess.run(DOCKER + ["exec", container, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if ready.returncode == 0:
             break
         time.sleep(0.5)
@@ -106,16 +113,18 @@ try:
         sessions.append(session)
     a, b = sessions
     jwt = a["accessToken"]
-    check(request("POST", "/api/integrations/tokens", jwt, {"name": "bad", "expiresInDays": 1, "scopes": ["admin:all"]})[0] == 400, "unknown scope rejected")
-    check(request("POST", "/api/integrations/tokens", jwt, {"name": "bad", "expiresInDays": 0, "scopes": ["processes:read"]})[0] == 400, "zero validity rejected")
-    check(request("POST", "/api/integrations/tokens", jwt, {"name": "bad", "expiresInDays": 1, "scopes": []})[0] == 400, "empty scopes rejected")
+    check(request("POST", "/api/integrations/tokens", jwt, {"name": "bad", "externalSystem": "Regression client", "expiresInDays": 1, "scopes": ["admin:all"]})[0] == 400, "unknown scope rejected")
+    check(request("POST", "/api/integrations/tokens", jwt, {"name": "bad", "externalSystem": "Regression client", "expiresInDays": 0, "scopes": ["processes:read"]})[0] == 400, "zero validity rejected")
+    check(request("POST", "/api/integrations/tokens", jwt, {"name": "bad", "externalSystem": "Regression client", "expiresInDays": 1, "scopes": []})[0] == 400, "empty scopes rejected")
 
     def mint(scopes=None):
-        status, value, headers = request("POST", "/api/integrations/tokens", jwt, {"name": "Test", "expiresInDays": 1, "scopes": scopes or ["processes:read"]})
+        status, value, headers = request("POST", "/api/integrations/tokens", jwt, {"name": "Test", "externalSystem": "Regression client", "expiresInDays": 1, "scopes": scopes or ["processes:read"]})
         check(status == 201 and "no-store" in headers.get("Cache-Control", ""), "token created with no-store")
         return value
 
+    check(request("POST", "/api/integrations/tokens", jwt, {"name": "Missing system", "expiresInDays": 1, "scopes": ["processes:read"]})[0] == 400, "external system is required")
     token = mint()
+    check(token['externalSystem'] == 'Regression client', 'external system returned by creation')
     secret, token_id = token["token"], token["id"]
     stored = sql(f'SELECT "TokenHash" FROM integration_tokens WHERE "Id"=\'{token_id}\';')
     check(stored == hashlib.sha256(secret.encode()).hexdigest().upper() and secret not in stored, "only SHA256 hash persisted")
@@ -126,7 +135,7 @@ try:
     check(request("GET", "/api/processes/my", secret)[0] == 200, "token authenticates allowed read")
     check(request("POST", "/api/processes", secret, {})[0] == 403, "missing scope denied before business operation")
     check(request("GET", "/api/users", secret)[0] == 403, "administration denied")
-    check(request("POST", "/api/integrations/tokens", secret, {"name": "child", "expiresInDays": 1, "scopes": ["processes:read"]})[0] == 403, "token cannot mint other tokens")
+    check(request("POST", "/api/integrations/tokens", secret, {"name": "child", "externalSystem": "Regression client", "expiresInDays": 1, "scopes": ["processes:read"]})[0] == 403, "token cannot mint other tokens")
     check(request("GET", "/api/processes/my", "sic_" + "0" * 64)[0] == 401, "unknown token rejected")
     check(request("GET", "/api/processes/my", secret[:-1] + "!")[0] == 401, "malformed token rejected")
 

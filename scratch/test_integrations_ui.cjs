@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(process.env.SICOU_CHROMIUM ? { executablePath: process.env.SICOU_CHROMIUM } : {}) });
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     const errors = [];
@@ -34,7 +34,7 @@ const assert = require('node:assert/strict');
         alerts.push({ id: 'test-alert', automationId: body.id, kind: 'Failure', message: 'Execução terminou com falha.', createdAt: new Date().toISOString(), acknowledgedAt: null });
       }
       else if (path === '/api/automations') body = { automations, summary: { running: 0, succeeded: 1, failed: 1, unacknowledgedAlerts: alerts.filter(a => !a.acknowledgedAt).length }, alerts };
-      else if (path === '/api/automations/test-automation/runs') body = { total: 1, items: [{ id: 'test-run', status: 'Succeeded', host: 'test-host', startedAt: new Date().toISOString(), durationMs: 1500, message: 'Comando finalizado.', exitCode: 0 }] };
+      else if (path === '/api/automations/test-automation/runs') body = { total: 1, items: [{ id: 'test-run', status: 'NoCommunication', logs: 'diagnóstico de teste', durationAlertedAt: new Date().toISOString(), host: 'test-host', startedAt: new Date().toISOString(), durationMs: 1500, message: 'Comando finalizado.', exitCode: 0 }] };
       else if (path === '/api/automations/test-automation' && method === 'PUT') { automations[0] = { ...automations[0], ...route.request().postDataJSON() }; body = automations[0]; }
       else if (path === '/api/automations/alerts/test-alert/acknowledge') { alerts[0].acknowledgedAt = new Date().toISOString(); await route.fulfill({ status: 204 }); return; }
       else if (path === '/api/integrations/scopes') body = ['processes:read', 'posts:create'];
@@ -42,8 +42,9 @@ const assert = require('node:assert/strict');
       else if (path === '/api/integrations/tokens' && method === 'POST') {
         const request = route.request().postDataJSON();
         assert.equal(request.name, 'Teste automação');
+        assert.equal(request.externalSystem, 'Robô de teste');
         assert.deepEqual(request.scopes, ['processes:read']);
-        const token = { id: 'test-token', name: request.name, scopes: 'processes:read', createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString(), revokedAt: null };
+        const token = { id: 'test-token', name: request.name, externalSystem: request.externalSystem, scopes: 'processes:read', createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString(), revokedAt: null };
         tokens.push(token); creates++;
         body = { ...token, token: 'sic_ui_test_one_time_secret' };
       } else if (path === '/api/integrations/tokens') body = tokens;
@@ -59,6 +60,7 @@ const assert = require('node:assert/strict');
     await page.getByLabel('Consultar processos e árvores').waitFor();
     assert.equal(await page.getByRole('button', { name: 'Criar token', exact: true }).isDisabled(), true);
     await page.getByLabel('Nome da integração').fill('Teste automação');
+    await page.getByLabel('Sistema externo', { exact: true }).fill('Robô de teste');
     await page.getByLabel('Consultar processos e árvores').check();
     await page.getByRole('button', { name: 'Criar token', exact: true }).click();
     await page.getByText('sic_ui_test_one_time_secret', { exact: true }).waitFor();
@@ -77,7 +79,10 @@ const assert = require('node:assert/strict');
     await page.getByLabel('Nome da automação', { exact: true }).fill('Rotina financeira');
     await page.getByRole('button', { name: 'Cadastrar automação', exact: true }).click();
     await page.getByRole('button', { name: 'Ver execuções de Rotina financeira' }).click();
-    await page.getByText('Comando finalizado. (código 0)', { exact: true }).waitFor();
+    await page.getByRole('cell').filter({ hasText: 'Sem comunicação' }).waitFor();
+    await page.getByText('Duração esperada excedida', { exact: true }).waitFor();
+    await page.locator('summary').filter({ hasText: 'Ver logs' }).click();
+    await page.getByText('diagnóstico de teste', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Reconhecer alerta', exact: true }).click();
     await page.getByText('Reconhecido', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Pausar', exact: true }).click();

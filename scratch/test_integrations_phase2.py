@@ -20,9 +20,12 @@ def run_phase2(request, sql, check, a, b, company_a, company_b, area_a, area_b, 
         INSERT INTO user_roles ("UserId", "RoleId") SELECT '{b['user']['id']}', "Id" FROM roles WHERE "Name"='COMPANY_ADMIN';''')
 
     def token(scopes):
-        status, data, _ = request('POST', '/api/integrations/tokens', jwt, {'name': 'Phase 2', 'expiresInDays': 1, 'scopes': scopes})
+        status, data, _ = request('POST', '/api/integrations/tokens', jwt, {'name': 'Phase 2', 'externalSystem': 'Regression client', 'expiresInDays': 1, 'scopes': scopes})
         check(status == 201, 'phase 2 token created')
         return data['token']
+
+    from test_integrations_documents import run_documents
+    run_documents(request, check, lambda scopes: {'token': token(scopes)}, company_a)
 
     monitor = token(['automations:read', 'automations:write'])
     reader = token(['automations:read'])
@@ -68,6 +71,11 @@ def run_phase2(request, sql, check, a, b, company_a, company_b, area_a, area_b, 
     request('POST', f'/api/automations/runs/{failed}/complete', monitor, failure)
     check(sql(f'SELECT COUNT(*) FROM automation_alerts WHERE "RunId"=\'{failed}\';') == '1', 'failed completion retries create one alert')
     check(any('Automação' in n['title'] for n in request('GET', '/api/notifications', jwt)[1]['items']), 'failure produces in-app notification')
+    check(sql(f'SELECT "Message" FROM automation_alerts WHERE "RunId"=\'{failed}\';') == 'Execução terminou com falha (código 2): Test failure', 'failure alert carries exit code and reported error')
+    check(any('código 2' in n['title'] and 'Test failure' in n['title'] for n in request('GET', '/api/notifications', jwt)[1]['items']), 'failure notification tells the owner what failed')
+    long_failed = start()
+    check(request('POST', f'/api/automations/runs/{long_failed}/complete', monitor, {'succeeded': False, 'exitCode': 1, 'message': 'e' * 2000})[0] == 200, 'long failure message is accepted')
+    check(len(sql(f'SELECT "Message" FROM automation_alerts WHERE "RunId"=\'{long_failed}\';')) == 250, 'failure alert message is bounded to its column')
 
     def wait_for(predicate, label):
         deadline = time.monotonic() + 12
@@ -80,11 +88,16 @@ def run_phase2(request, sql, check, a, b, company_a, company_b, area_a, area_b, 
 
     lost = start()
     sql(f'UPDATE automation_runs SET "LastHeartbeatAt"=NOW()-INTERVAL \'40 seconds\' WHERE "Id"=\'{lost}\';')
-    wait_for(lambda: sql(f'SELECT "Status" FROM automation_runs WHERE "Id"=\'{lost}\';') == 'Interrupted', 'background monitor detects lost heartbeat')
-    check(request('POST', f'/api/automations/runs/{lost}/complete', monitor, completed)[0] == 409, 'late completion cannot overwrite interruption')
+    wait_for(lambda: sql(f'SELECT "Status" FROM automation_runs WHERE "Id"=\'{lost}\';') == 'NoCommunication', 'background monitor identifies lost communication')
+    check(request('POST', f'/api/automations/runs/{lost}/heartbeat', monitor, {})[1]['status'] == 'Running', 'heartbeat recovers lost communication')
+    check(request('POST', f'/api/automations/runs/{lost}/complete', monitor, completed)[0] == 200, 'recovered run reports actual completion')
     long = start()
     sql(f'UPDATE automation_runs SET "StartedAt"=NOW()-INTERVAL \'2 minutes\' WHERE "Id"=\'{long}\';')
-    wait_for(lambda: sql(f'SELECT "Status" FROM automation_runs WHERE "Id"=\'{long}\';') == 'Interrupted', 'background monitor enforces maximum duration')
+    wait_for(lambda: sql(f'SELECT COUNT(*) FROM automation_alerts WHERE "RunId"=\'{long}\' AND "Kind"=\'DurationExceeded\';') == '1', 'duration exceeded produces alert')
+    time.sleep(1.2)
+    check(sql(f'SELECT COUNT(*) FROM automation_alerts WHERE "RunId"=\'{long}\' AND "Kind"=\'DurationExceeded\';') == '1', 'duration alert is not duplicated')
+    check(request('POST', f'/api/automations/runs/{long}/heartbeat', monitor, {})[1]['status'] == 'Running', 'duration alert preserves heartbeat')
+    check(request('POST', f'/api/automations/runs/{long}/complete', monitor, completed)[1]['status'] == 'Succeeded', 'run completes after exceeding duration')
     sql(f'UPDATE automations SET "ScheduleBaselineAt"=NOW()-INTERVAL \'2 minutes\', "LastStartedAt"=NULL, "OverdueAlertedAt"=NULL WHERE "Id"=\'{aid}\';')
     wait_for(lambda: sql(f'SELECT COUNT(*) FROM automation_alerts WHERE "AutomationId"=\'{aid}\' AND "Kind"=\'Overdue\';') == '1', 'missed scheduled start produces alert')
     time.sleep(1.2)
@@ -106,11 +119,33 @@ def run_phase2(request, sql, check, a, b, company_a, company_b, area_a, area_b, 
         latest = request('GET', f'/api/automations/{aid}/runs', jwt)[1]['items'][0]
         check(result.returncode == code and latest['status'] == ('Succeeded' if code == 0 else 'Failed'), f'real local agent reports exit code {code}')
         check(monitor.encode() not in result.stdout + result.stderr, 'agent output does not expose token')
-    heartbeat = subprocess.run([sys.executable, str(root / 'agents/sicou_agent.py'), '--', sys.executable, '-c', 'import time; time.sleep(11)'], env=agent_env, capture_output=True, timeout=35)
-    check(heartbeat.returncode == 0, 'agent runs long enough to send heartbeat')
+    diagnostic = subprocess.run([sys.executable, str(root / 'agents/sicou_agent.py'), '--', sys.executable, '-c',
+        "import os,sys; print('diagnostic: connection refused',file=sys.stderr); print(os.environ['SICOU_INTEGRATION_TOKEN'],file=sys.stderr); raise SystemExit(3)"], env=agent_env, capture_output=True, timeout=30)
+    latest = request('GET', f'/api/automations/{aid}/runs', jwt)[1]['items'][0]
+    check(diagnostic.returncode == 3 and 'connection refused' in latest['logs'] and 'connection refused' in latest['message'], 'real error and logs are available in history')
+    check(monitor not in latest['logs'] + latest['message'] and '[REDACTED]' in latest['logs'], 'agent redacts integration secret before upload')
+    check(request('POST', f"/api/automations/runs/{latest['id']}/complete", monitor, {'succeeded': False, 'logs': 'x' * 16001})[0] == 400, 'oversized logs rejected')
+    before_runs = int(sql(f'SELECT COUNT(*) FROM automation_runs WHERE "AutomationId"=\'{aid}\';'))
+    heartbeat = subprocess.Popen([sys.executable, str(root / 'agents/sicou_agent.py'), '--', sys.executable, '-c', 'import time; time.sleep(11)'], env=agent_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    wait_for(lambda: int(sql(f'SELECT COUNT(*) FROM automation_runs WHERE "AutomationId"=\'{aid}\';')) > before_runs, 'real long-running agent starts')
+    heartbeat_id = sql(f'SELECT "Id" FROM automation_runs WHERE "AutomationId"=\'{aid}\' ORDER BY "StartedAt" DESC LIMIT 1;')
+    sql(f'UPDATE automation_runs SET "StartedAt"=NOW()-INTERVAL \'2 minutes\' WHERE "Id"=\'{heartbeat_id}\';')
+    heartbeat.communicate(timeout=35)
+    check(heartbeat.returncode == 0, 'real command survives duration alert and heartbeat')
+    latest = request('GET', f'/api/automations/{aid}/runs', jwt)[1]['items'][0]
+    completed_heartbeat = next(r for r in request('GET', f'/api/automations/{aid}/runs?pageSize=100', jwt)[1]['items'] if r['id'] == heartbeat_id)
+    check(completed_heartbeat['status'] == 'Succeeded' and completed_heartbeat['durationAlertedAt'], 'real agent finishes successfully after expected duration')
+    uncaptured = subprocess.run([sys.executable, str(root / 'agents/sicou_agent.py'), '--no-capture-output', '--', sys.executable, '-c', "print('local-only')"], env=agent_env, capture_output=True, timeout=30)
+    latest = request('GET', f'/api/automations/{aid}/runs', jwt)[1]['items'][0]
+    check(uncaptured.returncode == 0 and latest['logs'] is None and b'local-only' in uncaptured.stdout, 'capture opt-out preserves local output without uploading')
     missing = subprocess.run([sys.executable, str(root / 'agents/sicou_agent.py'), '--', '/nonexistent/sicou-test-command'], env=agent_env, capture_output=True, timeout=30)
     latest = request('GET', f'/api/automations/{aid}/runs', jwt)[1]['items'][0]
     check(missing.returncode == 1 and latest['status'] == 'Failed', 'failed local launch does not leave running execution')
+    # 1023 ASCII bytes push the 2-byte "ç" across the agent's 1024-byte read boundary.
+    accented = subprocess.run([sys.executable, str(root / 'agents/sicou_agent.py'), '--', sys.executable, '-c',
+        "import sys; sys.stdout.buffer.write(b'a' * 1023 + 'Execução concluída'.encode()); sys.stdout.flush()"], env=agent_env, capture_output=True, timeout=30)
+    latest = request('GET', f'/api/automations/{aid}/runs', jwt)[1]['items'][0]
+    check(accented.returncode == 0 and 'Execução concluída' in latest['logs'] and '\ufffd' not in latest['logs'], 'agent preserves UTF-8 characters split across reads')
 
     # Simulate a gateway losing successful start/completion responses after commit.
     dropped = set()
@@ -163,7 +198,7 @@ def run_phase2(request, sql, check, a, b, company_a, company_b, area_a, area_b, 
     tree, start_node, stage, end, initial, step = seed_tree(area_a, uid)
     other_tree, *_ = seed_tree(area_b, b['user']['id'])
     workflow = token(['processes:read', 'processes:create', 'processes:write', 'processes:transfer', 'processes:cancel', 'reports:read'])
-    _, foreign, _ = request('POST', '/api/integrations/tokens', b['accessToken'], {'name': 'Foreign workflow', 'expiresInDays': 1, 'scopes': ['processes:read', 'processes:write', 'automations:write']})
+    _, foreign, _ = request('POST', '/api/integrations/tokens', b['accessToken'], {'name': 'Foreign workflow', 'externalSystem': 'Regression client', 'expiresInDays': 1, 'scopes': ['processes:read', 'processes:write', 'automations:write']})
     foreign_token = foreign['token']
     check(request('POST', f'/api/automations/{aid}/runs', foreign_token, {'externalId': str(uuid.uuid4())})[0] == 404, 'another owner token cannot report execution')
     check(request('POST', '/api/processes', workflow, {'processTypeId': other_tree})[0] == 403, 'cannot open process from another company tree')
@@ -217,7 +252,7 @@ def run_phase2(request, sql, check, a, b, company_a, company_b, area_a, area_b, 
     sql(f'UPDATE users SET "CompanyId"=\'{company_b}\' WHERE "Id"=\'{b["user"]["id"]}\';')
 
     sql(f'INSERT INTO user_roles ("UserId","RoleId") SELECT \'{b["user"]["id"]}\',"Id" FROM roles WHERE "Name"=\'DEVELOPER\';')
-    _, developer, _ = request('POST', '/api/integrations/tokens', b['accessToken'], {'name': 'Developer monitoring', 'expiresInDays': 1, 'scopes': ['automations:read', 'automations:write']})
+    _, developer, _ = request('POST', '/api/integrations/tokens', b['accessToken'], {'name': 'Developer monitoring', 'externalSystem': 'Regression client', 'expiresInDays': 1, 'scopes': ['automations:read', 'automations:write']})
     check(any(d['id'] == aid for d in request('GET', '/api/automations', developer['token'])[1]['automations']), 'Developer can monitor across companies like Super Admin')
     check(request('POST', f'/api/automations/{aid}/runs', developer['token'], {'externalId': str(uuid.uuid4())})[0] == 404, 'Developer cannot forge another owner execution')
     sql(f'DELETE FROM user_roles WHERE "UserId"=\'{b["user"]["id"]}\' AND "RoleId" IN (SELECT "Id" FROM roles WHERE "Name"=\'DEVELOPER\');')

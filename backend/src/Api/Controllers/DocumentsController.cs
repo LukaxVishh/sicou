@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +18,8 @@ public class DocumentsController(DocumentProcessingService processor, UserManage
     private static readonly SemaphoreSlim Capacity = new(2);
 
     [HttpPost("process"), RequestSizeLimit(DocumentProcessingService.MaxBytes + 65536)]
-    public async Task<IActionResult> Process(IFormFile file, CancellationToken ct)
+    [ProducesResponseType(typeof(ProcessedDocument), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Process([Required] IFormFile file, CancellationToken ct)
     {
         var actor = await users.FindByIdAsync(current.UserId ?? "");
         if (actor is not { IsActive: true }) return Forbid();

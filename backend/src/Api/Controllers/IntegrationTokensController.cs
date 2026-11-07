@@ -15,7 +15,8 @@ namespace Sicou.Api.Controllers;
 public record CreateIntegrationTokenRequest(
     [Required, StringLength(100, MinimumLength = 1)] string Name,
     [Range(1, 365)] int ExpiresInDays,
-    [Required, MinLength(1), MaxLength(20)] string[] Scopes);
+    [Required, MinLength(1), MaxLength(20)] string[] Scopes,
+    [Required, StringLength(100, MinimumLength = 1)] string ExternalSystem);
 
 // Management always requires an interactive session. An API token cannot mint tokens.
 [ApiController, Route("api/integrations"), Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -30,14 +31,14 @@ public class IntegrationTokensController(ApplicationDbContext db, UserManager<Ap
     [HttpGet("tokens")]
     public async Task<IActionResult> List(CancellationToken ct) => Ok(await db.Set<IntegrationToken>().AsNoTracking()
         .Where(t => t.UserId == UserId).OrderByDescending(t => t.CreatedAt)
-        .Select(t => new { t.Id, t.Name, t.Scopes, t.CreatedAt, t.ExpiresAt, t.RevokedAt }).ToListAsync(ct));
+        .Select(t => new { t.Id, t.Name, t.ExternalSystem, t.Scopes, t.CreatedAt, t.ExpiresAt, t.RevokedAt }).ToListAsync(ct));
 
     [HttpPost("tokens")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(CreateIntegrationTokenRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Scopes.Any(s => !IntegrationRoutes.Scopes.Contains(s)))
-            return BadRequest(new { message = "Informe um nome e escopos válidos." });
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.ExternalSystem) || request.Scopes.Any(s => !IntegrationRoutes.Scopes.Contains(s)))
+            return BadRequest(new { message = "Informe nome, sistema externo e escopos válidos." });
         var user = await users.FindByIdAsync(UserId.ToString());
         if (user is null || !user.IsActive || user.MustChangePassword || string.IsNullOrEmpty(user.SecurityStamp)) return Forbid();
         if (await db.Set<IntegrationToken>().CountAsync(t => t.UserId == UserId && t.RevokedAt == null && t.ExpiresAt > DateTime.UtcNow, ct) >= 20)
@@ -46,13 +47,13 @@ public class IntegrationTokensController(ApplicationDbContext db, UserManager<Ap
         var token = new IntegrationToken
         {
             UserId = user.Id, CompanyId = user.CompanyId, UnitId = user.UnitId,
-            SecurityStamp = user.SecurityStamp, Name = request.Name.Trim(),
+            SecurityStamp = user.SecurityStamp, Name = request.Name.Trim(), ExternalSystem = request.ExternalSystem.Trim(),
             TokenHash = IntegrationTokenSecret.Hash(secret), ExpiresAt = DateTime.UtcNow.AddDays(request.ExpiresInDays),
             Scopes = string.Join(' ', request.Scopes.Distinct().Order())
         };
         db.Add(token);
         await db.SaveChangesAsync(ct);
-        return Created($"/api/integrations/tokens/{token.Id}", new { token.Id, token.Name, token.Scopes, token.ExpiresAt, token = secret });
+        return Created($"/api/integrations/tokens/{token.Id}", new { token.Id, token.Name, token.ExternalSystem, token.Scopes, token.ExpiresAt, token = secret });
     }
 
     [HttpDelete("tokens/{id:guid}")]

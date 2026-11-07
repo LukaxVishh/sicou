@@ -6,6 +6,11 @@ public static class IntegrationRoutes
     public static readonly IReadOnlyDictionary<string, string> Allowed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["POST api/posts"] = "posts:create",
+        ["POST api/documents/process"] = "documents:process",
+        ["GET api/imports/options"] = "imports:read",
+        ["GET api/imports/{kind}/template/{format}"] = "imports:read",
+        ["POST api/imports/{kind}/preview"] = "imports:write",
+        ["POST api/imports/confirm"] = "imports:write",
         ["GET api/automations"] = "automations:read",
         ["GET api/automations/{id:guid}/runs"] = "automations:read",
         ["POST api/automations/{id:guid}/runs"] = "automations:write",

@@ -7,6 +7,7 @@ public class IntegrationToken
     public Guid? CompanyId { get; set; }
     public Guid? UnitId { get; set; }
     public string Name { get; set; } = "";
+    public string ExternalSystem { get; set; } = "";
     public string TokenHash { get; set; } = "";
     public string SecurityStamp { get; set; } = "";
     public string Scopes { get; set; } = "";
