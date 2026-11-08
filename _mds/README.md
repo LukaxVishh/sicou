@@ -11,7 +11,6 @@ Esta pasta centraliza as pendências e os registros das atualizações assistida
 - [Frontend](../frontend/README.md)
 - [Orientador](../backend/ORIENTADOR.md)
 - [Recuperação de senha e notificações](../backend/RECUPERACAO_E_NOTIFICACOES.md)
-- [API de integração de Workflows](../backend/INTEGRACOES.md)
 
 ## Regra para atualizações usando IA
 
@@ -38,8 +37,7 @@ Os documentos dos módulos complementam os registros diários com detalhes de us
 - [27/10/2026 — Navegação em blocos animada no Orientador](ATUALIZACOES/2026-10-27.md)
 - [28/10/2026 — População de demonstração no Docker, tabela de processos, prévia de anexos do Orientador e publicação](ATUALIZACOES/2026-10-28.md)
 - [05/11/2026 — Conferência das pendências, perfil Desenvolvedor, transferência de usuários e backup](ATUALIZACOES/2026-11-05.md)
-- [06/11/2026 — Diagnóstico do SMTP real (Gmail)](ATUALIZACOES/2026-11-06.md)
-- [08/11/2026 — API de integração de Workflows: tokens, Swagger separado e rotas para agentes](ATUALIZACOES/2026-11-08.md)
+- [08/11/2026 — API de integração de Workflows](ATUALIZACOES/2026-11-08.md)
 
 ## Dados de demonstração local
 

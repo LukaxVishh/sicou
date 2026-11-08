@@ -1485,7 +1485,14 @@ Recuperação administrativa com senha temporária, troca obrigatória e notific
 
 ### API de integração de Workflows (RF-021 / RF-023)
 
-Agentes e sistemas externos operam os Workflows por `/api/integrations/v1`, com tokens `sic_...` de integrações cadastradas na tela **Integrações** por Super Admin, Desenvolvedor ou Admin da Empresa (nome, sistema externo e escopos, conforme o UC-020). A integração pertence a uma empresa e não age em nome de usuário. Há escopos por operação, auditoria de chamadas e limite por minuto. O Swagger separado fica em `/integrations/docs`. Consulte [INTEGRACOES.md](INTEGRACOES.md).
+Integrações são cadastradas em **Integrações** (`/app/integrations`) por Super Admin, Desenvolvedor ou Admin da Empresa, com nome, sistema externo e escopos (UC-020). Cada integração pertence a uma empresa, não age em nome de usuário e só acessa dados dessa empresa. O token `sic_...` aparece uma vez (o banco guarda o SHA-256) e pode ser renovado ou revogado.
+
+- Rotas: `/api/integrations/v1` (`Authorization: Bearer sic_...`): workflows, abertura de processo, status, histórico, `advance`, `return`, `restart`, `comments`, `cancel` e `transfer`. Campos e etapas aceitam código. Gestão em `/api/integrations/tokens` (JWT de sessão).
+- Escopos: `workflows:read`, `processes:read`, `processes:create`, `processes:move`, `processes:comment`, `processes:cancel` e `processes:transfer`.
+- Swagger separado: `/integrations/docs` (fora de Development, só com `Integrations:SwaggerEnabled=true`).
+- Configuração: `Integrations:TokenLifetimeDays` (90), `Integrations:RequestsPerMinute` (120) e `Integrations:CallRetentionDays` (90).
+- Banco: migration `AddIntegrationTokens` (`integration_tokens` e `integration_calls`).
+- Teste: `scratch/run_integration_workflows_test.sh` (Podman, banco descartável).
 
 ### SMTP Gmail no ambiente local
 
