@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\src\Domain\Sicou.Domain.csproj" />
     <ProjectReference Include="..\..\src\Application\Sicou.Application.csproj" />
     <ProjectReference Include="..\..\src\Infrastructure\Sicou.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Api\Sicou.Api.csproj" />
   </ItemGroup>
 
 </Project>

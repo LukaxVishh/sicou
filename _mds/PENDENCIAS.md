@@ -59,6 +59,16 @@ Itens que existiam no código ou nos registros, mas não constavam nesta lista. 
 - [ ] **Contexto de empresa no Dashboard e em Usuários:** se a aba guardar a empresa escolhida por um Super Admin, um Admin da Empresa que entrar depois vê as telas vazias, porque essas páginas priorizam `selectedCompanyId` e o logout não limpa `sicou_superadmin_selected_company` do `sessionStorage`. Não há vazamento de dados (o backend filtra pela empresa do usuário). Correção sugerida: usar o `activeCompanyId` do contexto e limpar a chave no logout.
 - [ ] **Qualidade do frontend:** `npm run lint` acusa 99 erros e 7 avisos (principalmente `no-explicit-any` e `setState` em efeitos) e não faz parte do build; o pacote principal tem 1,56 MB, acima do aviso de 500 kB do Vite.
 
+## Integração de Workflows — 08/11/2026
+
+- [ ] **Idempotência das escritas da API v1:** aceitar uma chave de idempotência (`Idempotency-Key`) em abertura e tramitação, para que um agente possa repetir a chamada com segurança após timeout. Hoje a orientação é consultar antes de repetir.
+- [ ] **Tramitação duplicada entre serviços:** a parte de mutação (etapa, status, histórico) existe no `ProcessInstanceService` (interface) e no `IntegrationProcessService` (integrações). As regras de validação são compartilhadas. Unificar num componente comum quando houver testes da interface que cubram a refatoração ([08/11/2026](ATUALIZACOES/2026-11-08.md)).
+- [ ] **Alcance das integrações:** hoje vale para a empresa inteira, limitado só pelos escopos. Avaliar restrição por setor se a equipe ampliar o UC-020.
+- [ ] **Limite e auditoria distribuídos:** o limite por token fica em memória, por instância; várias réplicas exigem armazenamento compartilhado. As respostas 429 não são atribuídas ao token no log.
+- [ ] **Homologação visual da tela Integrações** (`/app/integrations`) em navegadores e celular. O build e o lint da tela passaram; a tela não foi aberta em navegador nesta entrega.
+- [ ] **Incorporar ao TCC** o complemento [COMPLEMENTO_API_INTEGRACAO_WORKFLOWS.md](../../Docs%20-%20TCC/COMPLEMENTO_API_INTEGRACAO_WORKFLOWS.md) (fora do repositório, na pasta local de documentos do TCC). O complemento anterior do Apêndice D descreve tabelas de automações que não existem na `main`.
+- [ ] **Build do frontend sem lockfile:** com `vite` 8.3.6 (instalação sem respeitar o `package-lock.json`), o `verify-production-bundle.mjs` falha também na `main`. Com as versões travadas (8.0.16), o build passa. Instale respeitando o lockfile.
+
 ## Critérios que precisam de comprovação
 
 - [ ] **RNF-001 — Navegadores:** registrar evidências de funcionamento em Chrome, Firefox, Edge e Safari.
@@ -72,6 +82,7 @@ Itens que existiam no código ou nos registros, mas não constavam nesta lista. 
 
 ## Entregas recentes já realizadas
 
+- [x] **RF-021 / RF-023 / RNF-014 / RNF-015 — API de integração de Workflows:** integrações cadastradas por Super Admin, Desenvolvedor ou Admin da Empresa somente com os campos do UC-020 (nome, sistema externo e escopos), vinculadas a uma empresa e sem usuário, com token `sic_`, validade fixa configurável, renovação (UC-020/E1), revogação e invalidação por empresa inativa. Inclui Swagger separado em `/integrations/docs`, as rotas `/api/integrations/v1` (workflows, abertura com protocolo atômico, status com próximos passos, avanço, devolução, reinício, parecer, cancelamento e transferência, com campos e etapas por código), auditoria das chamadas com retenção de 90 dias e limite por token. A tela **Integrações** fica em `/app/integrations`. 92 verificações HTTP e 9 testes unitários novos aprovados em banco descartável ([08/11/2026](ATUALIZACOES/2026-11-08.md), [contrato](../backend/INTEGRACOES.md)). Homologação visual da tela não realizada. Não cobre RF-024 a RF-027 (automações).
 - [x] **RF-019 — Relatórios:** `/app/reports` com processos, unidades, usuários e orientações, filtros próprios, seleção de colunas e paginação. Processos incluem período UTC, empresa, setor, unidade, status e responsável; atribuição com histórico. Diretórios de unidades/usuários são administrativos; orientações respeitam setores, módulo e publicação. [Tipos e contratos](README.md#tipos-de-relatorio).
 - [x] **RF-020 — Exportação:** PDF, XLSX e CSV com os mesmos filtros e permissões da consulta. Limites explícitos: 1.000 processos em PDF, 5.000 em XLSX/CSV, sem truncamento silencioso.
 - [x] **RF-022 / RNF-016 — Processamento de documentos:** extração de texto/tabelas de DOCX, XLSX, CSV e PDF; aplicação concreta em **Relatórios → Importar dados** para unidades, usuários e orientações por CSV/XLSX e workflows completos por JSON. Modelos, prévia com erros por linha, confirmação com permissões revalidadas e gravação transacional sem lotes parciais. Sem OCR, atualização em massa ou execução de macros/fórmulas. [Contratos, limites e validações](README.md#importacao-de-cadastros). Homologação visual de navegadores/dispositivos permanece pendente.
@@ -101,6 +112,7 @@ Os avisos existentes ainda precisam dos complementos de prazo, aprovação e aut
 - [Atualizações de 27/10/2026](ATUALIZACOES/2026-10-27.md)
 - [Atualizações de 28/10/2026](ATUALIZACOES/2026-10-28.md)
 - [Conferência de 05/11/2026](ATUALIZACOES/2026-11-05.md)
+- [API de integração de Workflows](../backend/INTEGRACOES.md) e [registro de 08/11/2026](ATUALIZACOES/2026-11-08.md)
 
 Responsáveis e datas de entrega devem ser definidos pela equipe. Em 16/10/2026, a integração de `origin/main` (`bf402ee`) com `implementacao-do-orientador` e os trabalhos locais foi concluída no commit `7c60bd5`, enviado primeiro à branch e depois integrado e publicado na `main`, conforme autorização do desenvolvedor. Consulte o [registro da integração e publicação](ATUALIZACOES/2026-10-16.md).
 

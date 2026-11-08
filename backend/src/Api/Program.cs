@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Sicou.Infrastructure.Data;
 using Microsoft.Extensions.FileProviders;
+using Sicou.Api.Integrations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +20,32 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.OnRejected = async (context, cancellation) =>
-        await context.HttpContext.Response.WriteAsJsonAsync(new { message = "Muitas solicitações de recuperação. Aguarde alguns minutos e tente novamente." }, cancellation);
+    {
+        var isIntegration = context.HttpContext.Request.Path.StartsWithSegments(IntegrationAuth.RoutePrefix);
+        if (isIntegration) context.HttpContext.Response.Headers.RetryAfter = "60";
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            message = isIntegration
+                ? "Limite de chamadas por minuto deste token excedido. Aguarde e tente novamente."
+                : "Muitas solicitações de recuperação. Aguarde alguns minutos e tente novamente.",
+            statusCode = StatusCodes.Status429TooManyRequests
+        }, cancellation);
+    };
+    // Integrações: limite por token (hash do segredo), em memória e por instância da API.
+    options.AddPolicy(IntegrationAuth.RateLimitPolicy, context =>
+    {
+        string? header = context.Request.Headers.Authorization;
+        var secret = header?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true ? header[7..].Trim() : header?.Trim();
+        var key = !string.IsNullOrEmpty(secret) && secret.StartsWith("sic_", StringComparison.Ordinal)
+            ? "token:" + Sicou.Infrastructure.Services.IntegrationTokenService.HashSecret(secret)
+            : "ip:" + context.Connection.RemoteIpAddress;
+        return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(key,
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Clamp(builder.Configuration.GetValue<int?>("Integrations:RequestsPerMinute") ?? 120, 1, 10000),
+                Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+            });
+    });
     options.AddPolicy("email-password-recovery", context =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
             $"{context.Connection.RemoteIpAddress}:{context.Request.Path.Value?.ToLowerInvariant()}",
@@ -38,40 +64,8 @@ builder.Services.AddControllers()
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddCorsConfiguration(builder.Configuration);
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Sicou API",
-        Version = "v1",
-        Description = "API do sistema Sicou"
-    });
-
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Informe o token JWT no formato: Bearer {seu_token}"
-    });
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
+builder.Services.AddSwaggerGen(IntegrationSwagger.Configure);
+builder.Services.AddHostedService<IntegrationCallRetentionWorker>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
@@ -122,7 +116,8 @@ builder.Services
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
-    });
+    })
+    .AddIntegrationTokens();
 
 
 builder.Services.AddAuthorization(options =>
@@ -144,10 +139,11 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy(SystemPolicies.CanHandleWorkflow, policy =>
         policy.Requirements.Add(new AreaPermissionRequirement(SystemPolicies.CanHandleWorkflow)));
+
+    options.AddIntegrationScopePolicies();
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
@@ -162,10 +158,41 @@ using (var scope = app.Services.CreateScope())
 await IdentitySeeder.SeedRolesAsync(app.Services);
 await HrHiringWorkflowSeeder.SeedAsync(app.Services);
 
-if (app.Environment.IsDevelopment())
+// Swagger completo: somente em Development. Swagger de integrações: Development ou Integrations:SwaggerEnabled=true.
+var fullSwagger = app.Environment.IsDevelopment();
+var integrationSwagger = fullSwagger || app.Configuration.GetValue<bool>("Integrations:SwaggerEnabled");
+if (integrationSwagger)
 {
+    if (!fullSwagger)
+    {
+        // Fora de Development, publica apenas o documento de integrações.
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.StartsWithSegments("/swagger")
+                && !context.Request.Path.StartsWithSegments($"/swagger/{IntegrationSwagger.DocumentName}"))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+            await next(context);
+        });
+    }
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.RoutePrefix = IntegrationSwagger.UiRoutePrefix;
+        options.DocumentTitle = "Sicou — API de Integração de Workflows";
+        options.SwaggerEndpoint($"/swagger/{IntegrationSwagger.DocumentName}/swagger.json", "Integração de Workflows (token sic_)");
+        options.DisplayRequestDuration();
+    });
+}
+if (fullSwagger)
+{
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint($"/swagger/{IntegrationSwagger.FullDocumentName}/swagger.json", "Sicou API completa (JWT)");
+        options.SwaggerEndpoint($"/swagger/{IntegrationSwagger.DocumentName}/swagger.json", "Integração de Workflows (token sic_)");
+    });
 }
 
 
@@ -196,6 +223,7 @@ app.Use(async (context, next) =>
     }
     await next(context);
 });
+app.UseMiddleware<IntegrationCallAuditMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 

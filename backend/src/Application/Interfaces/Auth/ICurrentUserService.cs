@@ -11,4 +11,7 @@ public interface ICurrentUserService
     bool IsAuthenticated { get; }
 
     bool IsInRole(string role);
+
+    /// <summary>Verdadeiro quando a requisição foi autenticada por uma integração (sem usuário).</summary>
+    bool IsIntegration { get; }
 }

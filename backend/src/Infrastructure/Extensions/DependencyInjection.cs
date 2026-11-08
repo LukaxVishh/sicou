@@ -86,6 +86,8 @@ public static class DependencyInjection
         services.AddScoped<DocumentProcessingService>();
         services.AddMemoryCache();
         services.AddScoped<DataImportService>();
+        services.AddScoped<IIntegrationTokenService, IntegrationTokenService>();
+        services.AddScoped<IIntegrationProcessService, IntegrationProcessService>();
 
         services.AddScoped<IAuthorizationHandler, AreaPermissionHandler>();
 

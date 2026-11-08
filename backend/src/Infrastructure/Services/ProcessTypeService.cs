@@ -381,7 +381,7 @@ public class ProcessTypeService : IProcessTypeService
         }
     }
 
-    private static ProcessTypeSummaryResponse MapToSummaryResponse(ProcessType p) => new()
+    internal static ProcessTypeSummaryResponse MapToSummaryResponse(ProcessType p) => new()
     {
         Id = p.Id,
         AreaId = p.AreaId,
@@ -398,7 +398,7 @@ public class ProcessTypeService : IProcessTypeService
         CreatedAt = p.CreatedAt
     };
 
-    private static ProcessTypeResponse MapToCompleteResponse(ProcessType p) => new()
+    internal static ProcessTypeResponse MapToCompleteResponse(ProcessType p) => new()
     {
         Id = p.Id,
         AreaId = p.AreaId,

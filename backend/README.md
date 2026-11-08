@@ -1483,6 +1483,10 @@ Consulte [ORIENTADOR.md](ORIENTADOR.md) para uso, endpoints, migração e execu�
 
 Recuperação administrativa com senha temporária, troca obrigatória e notificações no sistema por empresa/área. Consulte [RECUPERACAO_E_NOTIFICACOES.md](RECUPERACAO_E_NOTIFICACOES.md).
 
+### API de integração de Workflows (RF-021 / RF-023)
+
+Agentes e sistemas externos operam os Workflows por `/api/integrations/v1`, com tokens `sic_...` de integrações cadastradas na tela **Integrações** por Super Admin, Desenvolvedor ou Admin da Empresa (nome, sistema externo e escopos, conforme o UC-020). A integração pertence a uma empresa e não age em nome de usuário. Há escopos por operação, auditoria de chamadas e limite por minuto. O Swagger separado fica em `/integrations/docs`. Consulte [INTEGRACOES.md](INTEGRACOES.md).
+
 ### SMTP Gmail no ambiente local
 
 O envio automático do link em **Esqueci minha senha** pode usar Gmail. Consulte o guia SMTP no [registro de 06/11/2026](../_mds/ATUALIZACOES/2026-11-06.md#guia-do-smtp-com-gmail) para preencher a senha de aplicativo em arquivo local ignorado e iniciar a API pelo script scripts/start-backend-smtp.ps1. A recuperação administrativa por senha temporária continua separada.
