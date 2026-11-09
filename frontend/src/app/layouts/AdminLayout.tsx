@@ -18,6 +18,7 @@ import {
   BarChart3,
   Plus,
   Globe,
+  Plug,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router';
@@ -217,6 +218,12 @@ export function AdminLayout() {
       path: '/app/reports',
       icon: BarChart3,
       roles: [SystemRoles.SuperAdmin, SystemRoles.Developer, SystemRoles.CompanyAdmin, SystemRoles.AreaAdmin, SystemRoles.HeadquarterUser, SystemRoles.UnitUser],
+    },
+    {
+      label: 'Integrações',
+      path: '/app/integrations',
+      icon: Plug,
+      roles: [SystemRoles.SuperAdmin, SystemRoles.Developer, SystemRoles.CompanyAdmin],
     },
     {
       label: 'Recuperação de senha',

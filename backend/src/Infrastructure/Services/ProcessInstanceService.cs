@@ -125,7 +125,7 @@ public class ProcessInstanceService : IProcessInstanceService
         return filtered.Select(MapToSummaryResponse).ToList();
     }
 
-    private static IEnumerable<ProcessInstance> ApplySearchFilters(
+    internal static IEnumerable<ProcessInstance> ApplySearchFilters(
         IEnumerable<ProcessInstance> instances,
         ProcessSearchFilterRequest? filter)
     {
@@ -852,7 +852,7 @@ public class ProcessInstanceService : IProcessInstanceService
         return MapToCompleteResponse(updated, canManipulateAfter);
     }
 
-    private static void ValidateRequiredNodeFields(
+    internal static void ValidateRequiredNodeFields(
         ProcessType processType,
         Guid nodeId,
         IEnumerable<ProcessFieldValue> existingValues,
@@ -905,10 +905,10 @@ public class ProcessInstanceService : IProcessInstanceService
         }
     }
 
-    private static bool IsTerminalStatus(ProcessStatus status) =>
+    internal static bool IsTerminalStatus(ProcessStatus status) =>
         status is ProcessStatus.Approved or ProcessStatus.Rejected or ProcessStatus.Finished or ProcessStatus.AdministrativeCancellation;
 
-    private static ProcessStatus ResolveStatusForNode(ProcessNode? node)
+    internal static ProcessStatus ResolveStatusForNode(ProcessNode? node)
     {
         if (node == null)
             return ProcessStatus.InReview;
@@ -1046,7 +1046,7 @@ public class ProcessInstanceService : IProcessInstanceService
             throw new UnauthorizedAccessException("Você não possui permissão para visualizar processos desta área.");
     }
 
-    private static ProcessInstanceSummaryResponse MapToSummaryResponse(ProcessInstance p)
+    internal static ProcessInstanceSummaryResponse MapToSummaryResponse(ProcessInstance p)
     {
         var originUnitName = p.OriginUnit?.Name ?? "Sede da Empresa";
         var currentUnitName = !string.IsNullOrWhiteSpace(p.CurrentUnitName)
@@ -1084,7 +1084,7 @@ public class ProcessInstanceService : IProcessInstanceService
         };
     }
 
-    private static ProcessInstanceResponse MapToCompleteResponse(ProcessInstance p, bool canManipulate = false)
+    internal static ProcessInstanceResponse MapToCompleteResponse(ProcessInstance p, bool canManipulate = false)
     {
         var openEvent = p.History
             .OrderBy(h => h.CreatedAt)

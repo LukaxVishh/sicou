@@ -25,6 +25,9 @@ public class CurrentUserService : ICurrentUserService
     public bool IsAuthenticated =>
         _httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated == true;
 
+    public bool IsIntegration =>
+        _httpContextAccessor.HttpContext?.User.HasClaim(c => c.Type == "integration_token_id") == true;
+
     public bool IsInRole(string role)
     {
         return _httpContextAccessor.HttpContext?.User.IsInRole(role) == true;

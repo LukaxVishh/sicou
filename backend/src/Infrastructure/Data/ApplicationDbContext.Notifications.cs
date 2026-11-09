@@ -15,12 +15,16 @@ public partial class ApplicationDbContext
     // Notifications are inserted in the same SaveChanges transaction as the action.
     public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
-        if (Guid.TryParse(_notificationActor?.UserId, out var actorId))
+        // Integrações (UC-020) não têm usuário: notificam todos os destinatários elegíveis (actorId vazio).
+        var isIntegration = _notificationActor?.IsIntegration == true;
+        var actorId = Guid.Empty;
+        if (isIntegration || Guid.TryParse(_notificationActor?.UserId, out actorId))
         {
             ChangeTracker.DetectChanges();
             var events = await CollectEventsAsync();
-            var actor = await Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == actorId && u.IsActive, cancellationToken);
-            if (actor != null)
+            var actorActive = isIntegration
+                || await Users.AsNoTracking().AnyAsync(u => u.Id == actorId && u.IsActive, cancellationToken);
+            if (actorActive)
             {
                 foreach (var change in events.DistinctBy(e => new { e.CompanyId, e.AreaId, e.ProcessId, e.Audience, e.Title, e.Url }))
                 {

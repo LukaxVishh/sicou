@@ -59,6 +59,13 @@ Itens que existiam no código ou nos registros, mas não constavam nesta lista. 
 - [ ] **Contexto de empresa no Dashboard e em Usuários:** se a aba guardar a empresa escolhida por um Super Admin, um Admin da Empresa que entrar depois vê as telas vazias, porque essas páginas priorizam `selectedCompanyId` e o logout não limpa `sicou_superadmin_selected_company` do `sessionStorage`. Não há vazamento de dados (o backend filtra pela empresa do usuário). Correção sugerida: usar o `activeCompanyId` do contexto e limpar a chave no logout.
 - [ ] **Qualidade do frontend:** `npm run lint` acusa 99 erros e 7 avisos (principalmente `no-explicit-any` e `setState` em efeitos) e não faz parte do build; o pacote principal tem 1,56 MB, acima do aviso de 500 kB do Vite.
 
+## Integração de Workflows — 08/11/2026
+
+- [ ] Idempotência nas escritas da API de integração (repetir após timeout pode duplicar).
+- [ ] Limite de chamadas compartilhado entre instâncias (hoje em memória).
+- [ ] Unificar a tramitação de `ProcessInstanceService` e `IntegrationProcessService`.
+- [ ] Homologação visual da tela **Integrações**.
+
 ## Critérios que precisam de comprovação
 
 - [ ] **RNF-001 — Navegadores:** registrar evidências de funcionamento em Chrome, Firefox, Edge e Safari.
@@ -72,6 +79,7 @@ Itens que existiam no código ou nos registros, mas não constavam nesta lista. 
 
 ## Entregas recentes já realizadas
 
+- [x] **RF-021 / RF-023 / RNF-014 / RNF-015 — API de integração de Workflows:** integrações por empresa (UC-020), token `sic_`, escopos, Swagger separado e tela **Integrações** ([08/11/2026](ATUALIZACOES/2026-11-08.md)). Homologação visual pendente.
 - [x] **RF-019 — Relatórios:** `/app/reports` com processos, unidades, usuários e orientações, filtros próprios, seleção de colunas e paginação. Processos incluem período UTC, empresa, setor, unidade, status e responsável; atribuição com histórico. Diretórios de unidades/usuários são administrativos; orientações respeitam setores, módulo e publicação. [Tipos e contratos](README.md#tipos-de-relatorio).
 - [x] **RF-020 — Exportação:** PDF, XLSX e CSV com os mesmos filtros e permissões da consulta. Limites explícitos: 1.000 processos em PDF, 5.000 em XLSX/CSV, sem truncamento silencioso.
 - [x] **RF-022 / RNF-016 — Processamento de documentos:** extração de texto/tabelas de DOCX, XLSX, CSV e PDF; aplicação concreta em **Relatórios → Importar dados** para unidades, usuários e orientações por CSV/XLSX e workflows completos por JSON. Modelos, prévia com erros por linha, confirmação com permissões revalidadas e gravação transacional sem lotes parciais. Sem OCR, atualização em massa ou execução de macros/fórmulas. [Contratos, limites e validações](README.md#importacao-de-cadastros). Homologação visual de navegadores/dispositivos permanece pendente.
@@ -101,6 +109,7 @@ Os avisos existentes ainda precisam dos complementos de prazo, aprovação e aut
 - [Atualizações de 27/10/2026](ATUALIZACOES/2026-10-27.md)
 - [Atualizações de 28/10/2026](ATUALIZACOES/2026-10-28.md)
 - [Conferência de 05/11/2026](ATUALIZACOES/2026-11-05.md)
+- [Atualizações de 08/11/2026](ATUALIZACOES/2026-11-08.md)
 
 Responsáveis e datas de entrega devem ser definidos pela equipe. Em 16/10/2026, a integração de `origin/main` (`bf402ee`) com `implementacao-do-orientador` e os trabalhos locais foi concluída no commit `7c60bd5`, enviado primeiro à branch e depois integrado e publicado na `main`, conforme autorização do desenvolvedor. Consulte o [registro da integração e publicação](ATUALIZACOES/2026-10-16.md).
 

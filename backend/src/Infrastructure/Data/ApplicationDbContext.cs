@@ -47,6 +47,10 @@ public partial class ApplicationDbContext
 
     public DbSet<UserProcessNode> UserProcessNodes => Set<UserProcessNode>();
 
+    public DbSet<IntegrationToken> IntegrationTokens => Set<IntegrationToken>();
+
+    public DbSet<IntegrationCall> IntegrationCalls => Set<IntegrationCall>();
+
     private readonly Sicou.Application.Interfaces.Auth.ICurrentUserService? _notificationActor;
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
@@ -66,6 +70,7 @@ public partial class ApplicationDbContext
         GuideModelConfiguration.Configure(builder);
         NotificationModelConfiguration.Configure(builder);
         UserTransferModelConfiguration.Configure(builder);
+        IntegrationModelConfiguration.Configure(builder);
     }
 
     private static void ConfigureIdentityTables(ModelBuilder builder)

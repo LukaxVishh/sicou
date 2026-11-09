@@ -1483,6 +1483,17 @@ Consulte [ORIENTADOR.md](ORIENTADOR.md) para uso, endpoints, migração e execu�
 
 Recuperação administrativa com senha temporária, troca obrigatória e notificações no sistema por empresa/área. Consulte [RECUPERACAO_E_NOTIFICACOES.md](RECUPERACAO_E_NOTIFICACOES.md).
 
+### API de integração de Workflows (RF-021 / RF-023)
+
+Integrações são cadastradas em **Integrações** (`/app/integrations`) por Super Admin, Desenvolvedor ou Admin da Empresa, com nome, sistema externo e escopos (UC-020). Cada integração pertence a uma empresa, não age em nome de usuário e só acessa dados dessa empresa. O token `sic_...` aparece uma vez (o banco guarda o SHA-256) e pode ser renovado ou revogado.
+
+- Rotas: `/api/integrations/v1` (`Authorization: Bearer sic_...`): workflows, abertura de processo, status, histórico, `advance`, `return`, `restart`, `comments`, `cancel` e `transfer`. Campos e etapas aceitam código. Gestão em `/api/integrations/tokens` (JWT de sessão).
+- Escopos: `workflows:read`, `processes:read`, `processes:create`, `processes:move`, `processes:comment`, `processes:cancel` e `processes:transfer`.
+- Swagger separado: `/integrations/docs` (fora de Development, só com `Integrations:SwaggerEnabled=true`).
+- Configuração: `Integrations:TokenLifetimeDays` (90), `Integrations:RequestsPerMinute` (120) e `Integrations:CallRetentionDays` (90).
+- Banco: migration `AddIntegrationTokens` (`integration_tokens` e `integration_calls`).
+- Teste: `scratch/run_integration_workflows_test.sh` (Podman, banco descartável).
+
 ### SMTP Gmail no ambiente local
 
 O envio automático do link em **Esqueci minha senha** pode usar Gmail. Consulte o guia SMTP no [registro de 06/11/2026](../_mds/ATUALIZACOES/2026-11-06.md#guia-do-smtp-com-gmail) para preencher a senha de aplicativo em arquivo local ignorado e iniciar a API pelo script scripts/start-backend-smtp.ps1. A recuperação administrativa por senha temporária continua separada.
