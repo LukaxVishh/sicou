@@ -57,6 +57,8 @@ npm run preview
 
 ## 3. Pré-requisitos
 
+Use Node.js 22.13 ou mais recente na linha 22, ou Node.js 24 LTS, para executar o Vite e o ESLint.
+
 Antes de rodar o frontend, é esperado que o backend esteja disponível localmente.
 
 Backend esperado:
@@ -87,10 +89,10 @@ VITE_API_BASE_URL=http://localhost:5175
 
 ## 4. Como rodar o projeto
 
-Instale as dependências:
+Na pasta `frontend`, instale as versões fixadas no `package-lock.json`:
 
 ```bash
-npm install
+npm ci
 ```
 
 Rode em desenvolvimento:
