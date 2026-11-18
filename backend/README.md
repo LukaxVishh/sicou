@@ -387,6 +387,14 @@ HTTPS: https://localhost:7299
 Swagger: http://localhost:5175/swagger
 ```
 
+### Rodar testes unitários
+
+Na pasta `backend`, execute o projeto de testes unitários com o SDK .NET 8:
+
+```bash
+dotnet test tests/Sicou.UnitTests/Sicou.UnitTests.csproj
+```
+
 ### CORS
 
 O frontend local permitido por padrão é:
