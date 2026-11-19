@@ -12,6 +12,16 @@ Esta pasta centraliza as pendências e os registros das atualizações assistida
 - [Orientador](../backend/ORIENTADOR.md)
 - [Recuperação de senha e notificações](../backend/RECUPERACAO_E_NOTIFICACOES.md)
 
+## Onde fica cada parte do sistema
+
+O [frontend React](../frontend/src) chama a [API ASP.NET Core](../backend/src/Api) por HTTP. A API recebe as requisições e configura as dependências usadas pelas outras camadas do backend.
+
+| Camada | Responsabilidade |
+| --- | --- |
+| [Application](../backend/src/Application) | Define interfaces de serviços e repositórios, além dos contratos de entrada e saída. |
+| [Domain](../backend/src/Domain) | Reúne entidades e tipos que representam o negócio. |
+| [Infrastructure](../backend/src/Infrastructure) | Implementa serviços e repositórios, com persistência via Entity Framework Core e PostgreSQL. |
+
 ## Regra para atualizações usando IA
 
 **Toda atualização do projeto realizada com assistência de IA deve ter um registro Markdown em `_mds/ATUALIZACOES/`, incluindo o que foi feito e as decisões tomadas com seus motivos.**
@@ -38,6 +48,7 @@ Os documentos dos módulos complementam os registros diários com detalhes de us
 - [28/10/2026 — População de demonstração no Docker, tabela de processos, prévia de anexos do Orientador e publicação](ATUALIZACOES/2026-10-28.md)
 - [05/11/2026 — Conferência das pendências, perfil Desenvolvedor, transferência de usuários e backup](ATUALIZACOES/2026-11-05.md)
 - [08/11/2026 — API de integração de Workflows](ATUALIZACOES/2026-11-08.md)
+- [23/11/2026 — Ajustes de interface e documentação](ATUALIZACOES/2026-11-23.md)
 
 ## Dados de demonstração local
 
